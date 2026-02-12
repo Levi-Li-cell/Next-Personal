@@ -16,6 +16,7 @@ interface ChatAssistantProps {
 }
 
 export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000' }: ChatAssistantProps) {
+    const [mounted, setMounted] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -32,6 +33,7 @@ export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL
 
     // 检测是否为移动端
     useEffect(() => {
+        setMounted(true);
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
         };
@@ -227,6 +229,8 @@ export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL
             sendMessage();
         }
     };
+
+    if (!mounted) return null;
 
     return createPortal(
         <>
