@@ -23,6 +23,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow all internal API routes (chat, voice, etc.) without auth check
+  const isInternalApi = request.nextUrl.pathname.startsWith("/api/");
+  if (isInternalApi) {
+    return NextResponse.next();
+  }
+
   if (isAuthRoute()) {
     if (session) {
       return NextResponse.redirect(
@@ -33,7 +39,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!session && !isPublicRoute) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/signin", request.url));
   }
 
   return NextResponse.next();

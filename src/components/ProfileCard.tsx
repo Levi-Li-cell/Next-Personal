@@ -1,24 +1,66 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Plus, Loader2 } from 'lucide-react';
 
 interface ProfileCardProps {
   images: string[];
+  onUpload?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  isUploading?: boolean;
 }
 
-export default function ProfileCard({ images }: ProfileCardProps) {
+export default function ProfileCard({ images, onUpload, isUploading }: ProfileCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    setCurrentImageIndex((prev) => (prev + 1) % (images.length + 1));
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !onUpload) return;
+
+    const uploadedUrls: string[] = [];
+
+    // We handle the actual upload in the parent component for better state management
+    // But we pass the files up
+    // Actually, let's do the upload here for simplicity if the SDK is available
+    // or let the parent handle it. Parent is better.
+    // Let's just pass the FileList up.
+
+    // Convert FileList to Array
+    const fileArray = Array.from(files);
+    // Note: The parent will handle the @vercel/blob upload
+    // For now, let's assume the parent takes care of it and provides isUploading status
+  };
+
+  const triggerUpload = () => {
+    fileInputRef.current?.click();
   };
 
   return (
     <div className="relative w-full max-w-md mx-auto perspective-1000" style={{ perspective: '1000px' }}>
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={(e) => {
+          if (e.target.files && onUpload) {
+            onUpload(e as any);
+          }
+        }}
+        multiple
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* Poker Card Stack */}
       <div className="relative w-full aspect-[3/4]">
-        {images.map((img, index) => {
+        {[...images, 'upload-button'].map((img, index) => {
+          const isUploadButton = img === 'upload-button';
           const isActive = index === currentImageIndex;
-          const isPrev = index === (currentImageIndex - 1 + images.length) % images.length;
+          const totalItems = images.length + 1;
+          const isPrev = index === (currentImageIndex - 1 + totalItems) % totalItems;
           const offset = index - currentImageIndex;
 
           return (
@@ -52,7 +94,11 @@ export default function ProfileCard({ images }: ProfileCardProps) {
               } : {}}
               onClick={() => {
                 if (isActive) {
-                  nextImage();
+                  if (isUploadButton) {
+                    triggerUpload();
+                  } else {
+                    nextImage();
+                  }
                 } else {
                   setCurrentImageIndex(index);
                 }
@@ -61,20 +107,35 @@ export default function ProfileCard({ images }: ProfileCardProps) {
               {/* Card Border & Shadow */}
               <div className="relative w-full h-full rounded-2xl bg-white p-3 shadow-2xl">
                 {/* Inner Card */}
-                <div className="relative w-full h-full rounded-xl overflow-hidden bg-white shadow-inner">
-                  <img
-                    src={img}
-                    alt={`李伟 ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Removed Shine Effect to fix blue overlay issue */}
-                  {/* <motion.div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent" ... /> */}
+                <div className={`relative w-full h-full rounded-xl overflow-hidden ${isUploadButton ? 'bg-gray-50 border-2 border-dashed border-purple-200 flex flex-col items-center justify-center gap-4' : 'bg-white shadow-inner'}`}>
+                  {isUploadButton ? (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                        {isUploading ? (
+                          <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                        ) : (
+                          <Plus className="w-8 h-8 text-purple-500" />
+                        )}
+                      </div>
+                      <div className="text-center px-4">
+                        <p className="text-purple-600 font-medium">{isUploading ? '正在上传...' : '添加新头像'}</p>
+                        <p className="text-gray-400 text-xs mt-1">支持多图上传</p>
+                      </div>
+                    </>
+                  ) : (
+                    <img
+                      src={img}
+                      alt={`李伟 ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
 
                   {/* Card Number Badge */}
-                  <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
-                    <span className="text-white text-sm">{index + 1}/{images.length}</span>
-                  </div>
+                  {!isUploadButton && (
+                    <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
+                      <span className="text-white text-sm">{index + 1}/{images.length}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Corner Decorations */}
@@ -97,7 +158,7 @@ export default function ProfileCard({ images }: ProfileCardProps) {
           animate={{ opacity: [0.6, 1, 0.6] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          点击卡片切换 →
+          {currentImageIndex === images.length ? '点击“+”上传图片' : '点击卡片切换 →'}
         </motion.span>
       </motion.div>
     </div>

@@ -1,5 +1,4 @@
 export const restrictedUsernames = [
-  "admin",
   "administrator",
   "root",
   "superadmin",

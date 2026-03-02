@@ -36,17 +36,51 @@ import FloatingElements from '@/components/FloatingElements';
 import ChatAssistant from '@/components/ChatAssistant';
 import SidebarNav from '@/components/SidebarNav';
 
-const images: string[] = [
-    '/assets/photos/a.jpg',
-    '/assets/photos/headshot-176395480323.jpg',
-    '/assets/photos/stylized-1768828943890.png',
-    '/assets/photos/stylized-1768829842681.png'
+const initialImages: string[] = [
+    'https://eypphxaje0isjpo6.public.blob.vercel-storage.com/photos/a.jpg',
+    'https://eypphxaje0isjpo6.public.blob.vercel-storage.com/photos/headshot-176395480323.jpg',
+    'https://eypphxaje0isjpo6.public.blob.vercel-storage.com/photos/stylized-1768828943890.png',
+    'https://eypphxaje0isjpo6.public.blob.vercel-storage.com/photos/stylized-1768829842681.png'
 ];
 
-
-
 export default function App() {
+    const [imagesState, setImagesState] = useState<string[]>(initialImages);
+    const [isUploading, setIsUploading] = useState(false);
 
+    const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        setIsUploading(true);
+        const newUrls: string[] = [];
+
+        try {
+            for (const file of Array.from(files)) {
+                const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+                    method: 'POST',
+                    body: file,
+                });
+
+                if (response.ok) {
+                    const blob = await response.json();
+                    newUrls.push(blob.url);
+                } else {
+                    console.error('Upload failed for file:', file.name);
+                }
+            }
+
+            if (newUrls.length > 0) {
+                setImagesState(prev => [...prev, ...newUrls]);
+            }
+        } catch (error) {
+            console.error('Error uploading files:', error);
+            alert('上传失败，请稍后再试');
+        } finally {
+            setIsUploading(false);
+            // Reset input
+            event.target.value = '';
+        }
+    };
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -58,6 +92,7 @@ export default function App() {
 
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
+
     // 用于光晕效果的平滑过渡值
     const smoothMouseX = useSpring(mouseX, { damping: 25, stiffness: 400 });
     const smoothMouseY = useSpring(mouseY, { damping: 25, stiffness: 400 });
@@ -179,7 +214,7 @@ export default function App() {
                             animate={{ opacity: 1, x: 0, rotateY: 0 }}
                             transition={{ duration: 1, type: "spring", stiffness: 100 }}
                         >
-                            <ProfileCard images={images} />
+                            <ProfileCard images={imagesState} onUpload={handleUpload} isUploading={isUploading} />
                         </motion.div>
 
                         {/* Right: Hero Text */}

@@ -41,7 +41,23 @@ export default function SignInForm() {
         console.log("SIGN_IN:", response.error.message);
         toast.error(response.error.message);
       } else {
-        router.push("/");
+        // 检查是否为管理员
+        try {
+          const session = await signIn.getSession?.() || response.data;
+          if (session?.user?.id && data.username === "admin") {
+            await fetch("/api/check-admin", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: session.user.id,
+                username: data.username,
+              }),
+            });
+          }
+        } catch (e) {
+          console.error("Check admin error:", e);
+        }
+        router.push("/author");
       }
     });
   }

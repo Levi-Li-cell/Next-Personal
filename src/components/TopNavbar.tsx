@@ -3,7 +3,7 @@
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, LogIn, User, LogOut, Loader2 } from 'lucide-react';
+import { Sparkles, LogIn, User, LogOut, Loader2, Settings } from 'lucide-react';
 import { useSession, signOut } from '@/lib/auth/client';
 import {
     DropdownMenu,
@@ -15,10 +15,9 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const navItems = [
-    { id: 'home', label: '首页', href: '/' },
+    { id: 'author', label: '作者', href: '/author' },
     { id: 'blog', label: '博客', href: '/blog' },
     { id: 'projects', label: '项目', href: '/projects' },
-    { id: 'author', label: '作者', href: '/author' },
 ];
 
 export default function TopNavbar() {
@@ -41,7 +40,7 @@ export default function TopNavbar() {
             <div className="container mx-auto px-6 py-4">
                 <div className="flex items-center justify-between">
                     {/* Logo */}
-                    <Link href="/">
+                    <Link href="/author">
                         <motion.div
                             className="text-white text-2xl tracking-wider relative cursor-pointer"
                             whileHover={{ scale: 1.05 }}
@@ -133,6 +132,15 @@ export default function TopNavbar() {
                                         <p className="text-xs text-white/50 truncate">{user.email}</p>
                                     </div>
                                     <DropdownMenuSeparator className="bg-white/10" />
+                                    {/* 管理员菜单 - 后台管理 */}
+                                    {(user as any)?.role === 'admin' && (
+                                        <Link href="/admin">
+                                            <DropdownMenuItem className="cursor-pointer focus:bg-purple-500/20 focus:text-purple-400 text-purple-400 rounded-lg my-1">
+                                                <Settings className="mr-2 h-4 w-4" />
+                                                <span>后台管理</span>
+                                            </DropdownMenuItem>
+                                        </Link>
+                                    )}
                                     <Link href="/dashboard">
                                         <DropdownMenuItem className="cursor-pointer focus:bg-white/10 focus:text-white rounded-lg my-1">
                                             <User className="mr-2 h-4 w-4" />
