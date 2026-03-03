@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Sparkles, LogIn, User, LogOut, Loader2, Settings, ExternalLink } from 'lucide-react';
 import { useSession, signOut } from '@/lib/auth/client';
 import {
@@ -23,6 +23,7 @@ const navItems = [
 
 export default function TopNavbar() {
     const pathname = usePathname();
+    const router = useRouter();
     const session = useSession();
     const user = session.data?.user;
     const [adminLoading, setAdminLoading] = useState(false);
@@ -35,23 +36,15 @@ export default function TopNavbar() {
     // 进入后台管理
     const handleGoToAdmin = async () => {
         setAdminLoading(true);
-        try {
-            const response = await fetch('/api/admin/sso-token');
-            const data = await response.json();
 
-            if (data.success && data.token) {
-                // 重定向到后台，带上 SSO token
-                const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3001';
-                window.location.href = `${adminUrl}/login?sso=${data.token}`;
-            } else {
-                alert(data.error || '获取登录凭证失败');
-            }
-        } catch (error) {
-            console.error('获取SSO token失败:', error);
-            alert('获取登录凭证失败');
-        } finally {
-            setAdminLoading(false);
+        // 保存用户信息到 localStorage（后台需要）
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
         }
+
+        // 直接跳转到后台管理（同域）
+        router.push('/admin');
+        setAdminLoading(false);
     };
 
     return (

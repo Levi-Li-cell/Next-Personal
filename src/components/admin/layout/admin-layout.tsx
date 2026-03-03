@@ -7,6 +7,7 @@ import { AdminSidebar } from "./admin-sidebar";
 import { AdminHeader } from "./admin-header";
 import { AdminBreadcrumb } from "./admin-breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/lib/auth/client";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,31 +15,41 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
+  const { data: session, isPending } = useSession();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const checkAdmin = async () => {
+      // 如果 session 还在加载，等待
+      if (isPending) return;
+
+      // 如果没有登录，跳转到登录页
+      if (!session?.user) {
+        router.push("/signin?redirect=/admin");
+        return;
+      }
+
+      const user = session.user;
+
+      // 保存用户信息到 localStorage（供其他组件使用）
+      localStorage.setItem("user", JSON.stringify(user));
+
       try {
-        // 从 localStorage 获取用户信息
-        const userStr = localStorage.getItem("user");
-        if (!userStr) {
-          router.push("/signin");
-          return;
-        }
-
-        const user = JSON.parse(userStr);
-
         // 调用 API 验证管理员权限
         const response = await fetch("/api/check-admin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: user.id, username: user.username || user.name }),
+          body: JSON.stringify({
+            userId: user.id,
+            username: user.name
+          }),
         });
 
         const data = await response.json();
 
         if (!data.isAdmin) {
+          // 不是管理员，跳转到首页
           router.push("/");
           return;
         }
@@ -46,16 +57,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         setIsAdmin(true);
       } catch (error) {
         console.error("Admin check failed:", error);
-        router.push("/signin");
+        router.push("/signin?redirect=/admin");
       } finally {
         setIsLoading(false);
       }
     };
 
     checkAdmin();
-  }, [router]);
+  }, [session, isPending, router]);
 
-  if (isLoading) {
+  // 显示加载状态
+  if (isPending || isLoading) {
     return (
       <div className="flex h-screen w-full">
         <div className="w-64 border-r bg-muted/30 p-4">
@@ -72,6 +84,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
+  // 不是管理员
   if (!isAdmin) {
     return null;
   }
