@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { User } from "@/db/schema/auth/user";
+import { UserType } from "@/db/schema/auth/user";
 import { UserForm, UserFormValues } from "@/components/admin/users/user-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ export default function UserEditPage() {
   const params = useParams();
   const userId = params.id as string;
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 

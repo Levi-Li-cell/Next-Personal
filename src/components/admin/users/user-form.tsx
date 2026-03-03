@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User } from "@/db/schema/auth/user";
+import { UserType } from "@/db/schema/auth/user";
 
 const userFormSchema = z.object({
   name: z.string().min(1, "请输入用户名"),
@@ -34,7 +34,7 @@ const userFormSchema = z.object({
 export type UserFormValues = z.infer<typeof userFormSchema>;
 
 interface UserFormProps {
-  user?: User | null;
+  user?: UserType | null;
   onSubmit: (data: UserFormValues) => void;
   isLoading?: boolean;
 }

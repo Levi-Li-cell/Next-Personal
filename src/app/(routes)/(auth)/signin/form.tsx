@@ -19,7 +19,7 @@ import { SignInSchema, SignInValues } from "./validate";
 import InputStartIcon from "../components/input-start-icon";
 import InputPasswordContainer from "../components/input-password";
 import { cn } from "@/lib/utils";
-import { AtSign, Chrome } from "lucide-react";
+import { AtSign, Chrome, Loader2 } from "lucide-react";
 
 export default function SignInForm() {
   const [isPending, startTransition] = useTransition();
@@ -35,39 +35,76 @@ export default function SignInForm() {
 
   function onSubmit(data: SignInValues) {
     startTransition(async () => {
-      const response = await signIn.username(data);
+      try {
+        // 判断输入是邮箱还是用户名
+        const isEmail = data.username.includes("@");
 
-      if (response.error) {
-        console.log("SIGN_IN:", response.error.message);
-        toast.error(response.error.message);
-      } else {
-        // 检查是否为管理员
-        try {
-          const session = await signIn.getSession?.() || response.data;
-          if (session?.user?.id && data.username === "admin") {
-            await fetch("/api/check-admin", {
+        let response;
+        if (isEmail) {
+          // 使用邮箱登录
+          response = await signIn.email({
+            email: data.username,
+            password: data.password
+          });
+        } else {
+          // 使用用户名登录
+          response = await signIn.username({
+            username: data.username,
+            password: data.password
+          });
+        }
+
+        if (response.error) {
+          console.log("SIGN_IN_ERROR:", response.error);
+          toast.error(response.error.message || "登录失败");
+        } else {
+          // 存储用户信息到 localStorage
+          if (response.data?.user) {
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+          }
+
+          toast.success("登录成功");
+
+          // 检查是否为管理员
+          try {
+            const checkRes = await fetch("/api/check-admin", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                userId: session.user.id,
-                username: data.username,
+                userId: response.data?.user?.id,
+                username: response.data?.user?.name
               }),
             });
+            const checkData = await checkRes.json();
+
+            if (checkData.isAdmin) {
+              router.push("/admin");
+            } else {
+              router.push("/author");
+            }
+          } catch (e) {
+            console.error("Check admin error:", e);
+            router.push("/author");
           }
-        } catch (e) {
-          console.error("Check admin error:", e);
         }
-        router.push("/author");
+      } catch (error) {
+        console.error("SignIn error:", error);
+        toast.error("登录失败，请稍后重试");
       }
     });
   }
 
   const handleGoogleSignIn = () => {
     startTransition(async () => {
-      await signIn.social({
-        provider: "google",
-        callbackURL: "/",
-      });
+      try {
+        await signIn.social({
+          provider: "google",
+          callbackURL: "/",
+        });
+      } catch (error) {
+        console.error("Google sign in error:", error);
+        toast.error("Google 登录失败");
+      }
     });
   };
 
@@ -109,7 +146,7 @@ export default function SignInForm() {
               <FormControl>
                 <InputStartIcon icon={AtSign}>
                   <Input
-                    placeholder="用户名"
+                    placeholder="用户名或邮箱"
                     className={cn("peer ps-9", getInputClassName("username"))}
                     disabled={isPending}
                     {...field}
@@ -133,6 +170,7 @@ export default function SignInForm() {
                     className={cn("pe-9", getInputClassName("password"))}
                     placeholder="密码"
                     disabled={isPending}
+                    type="password"
                     {...field}
                   />
                 </InputPasswordContainer>
@@ -142,7 +180,14 @@ export default function SignInForm() {
           )}
         />
         <Button type="submit" disabled={isPending} className="mt-5 w-full">
-          登录
+          {isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              登录中...
+            </>
+          ) : (
+            "登录"
+          )}
         </Button>
       </form>
     </Form>

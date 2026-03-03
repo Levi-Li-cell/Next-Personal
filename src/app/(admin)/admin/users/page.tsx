@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { User } from "@/db/schema/auth/user";
+import { UserType } from "@/db/schema/auth/user";
 import { DataTable, Column } from "@/components/admin/data-table";
 import { PageHeader, ConfirmDialog } from "@/components/admin/common";
 import { getUserColumns } from "@/components/admin/users/user-table";
@@ -18,7 +18,7 @@ import { toast } from "sonner";
 
 export default function UsersPage() {
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -30,7 +30,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
-    user: User | null;
+    user: UserType | null;
   }>({ open: false, user: null });
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -67,7 +67,7 @@ export default function UsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: UserType) => {
     router.push(`/admin/users/${user.id}`);
   };
 
@@ -96,7 +96,7 @@ export default function UsersPage() {
     }
   };
 
-  const columns: Column<User>[] = [
+  const columns: Column<UserType>[] = [
     {
       key: "select",
       header: "",
@@ -104,7 +104,7 @@ export default function UsersPage() {
     },
     ...getUserColumns({
       onEdit: handleEdit,
-      onDelete: (user) => setDeleteDialog({ open: true, user }),
+      onDelete: (user: UserType) => setDeleteDialog({ open: true, user }),
     }),
   ];
 

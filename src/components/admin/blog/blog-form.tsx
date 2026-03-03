@@ -30,7 +30,7 @@ const blogFormSchema = z.object({
   excerpt: z.string().optional(),
   content: z.string().min(1, "请输入内容"),
   coverImage: z.string().url("请输入有效的URL").optional().or(z.literal("")),
-  category: z.string().default("未分类"),
+  category: z.string(),
   tags: z.string().optional(), // 逗号分隔的标签
   status: z.enum(["draft", "published"]),
 });

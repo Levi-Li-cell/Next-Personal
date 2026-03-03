@@ -1,8 +1,8 @@
 "use client";
 
-import { User } from "@/db/schema/auth/user";
+import { UserType } from "@/db/schema/auth/user";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,24 +13,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDate, StatusBadge, Column } from "../data-table";
 
 interface UserTableProps {
-  onEdit: (user: User) => void;
-  onDelete: (user: User) => void;
+  onEdit: (user: UserType) => void;
+  onDelete: (user: UserType) => void;
 }
 
-export function getUserColumns({ onEdit, onDelete }: UserTableProps): Column<User>[] {
+export function getUserColumns({ onEdit, onDelete }: UserTableProps): Column<UserType>[] {
   return [
     {
       key: "name",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          用户名
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: (user: User) => (
+      header: "用户名",
+      cell: (user: UserType) => (
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.image || ""} alt={user.name} />
@@ -46,12 +38,12 @@ export function getUserColumns({ onEdit, onDelete }: UserTableProps): Column<Use
     {
       key: "email",
       header: "邮箱",
-      cell: (user: User) => user.email,
+      cell: (user: UserType) => user.email,
     },
     {
       key: "role",
       header: "角色",
-      cell: (user: User) => {
+      cell: (user: UserType) => {
         const roleLabels: Record<string, { label: string; className: string }> = {
           admin: { label: "管理员", className: "bg-red-100 text-red-800" },
           member: { label: "成员", className: "bg-blue-100 text-blue-800" },
@@ -62,7 +54,7 @@ export function getUserColumns({ onEdit, onDelete }: UserTableProps): Column<Use
     {
       key: "emailVerified",
       header: "邮箱验证",
-      cell: (user: User) =>
+      cell: (user: UserType) =>
         user.emailVerified ? (
           <span className="text-green-600">已验证</span>
         ) : (
@@ -72,13 +64,13 @@ export function getUserColumns({ onEdit, onDelete }: UserTableProps): Column<Use
     {
       key: "createdAt",
       header: "注册时间",
-      cell: (user: User) => formatDate(user.createdAt),
+      cell: (user: UserType) => formatDate(user.createdAt),
     },
     {
       key: "actions",
       header: "",
       width: "50px",
-      cell: (user: User) => (
+      cell: (user: UserType) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">

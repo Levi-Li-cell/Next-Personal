@@ -3,7 +3,7 @@
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, LogIn, User, LogOut, Loader2, Settings } from 'lucide-react';
+import { Sparkles, LogIn, User, LogOut, Loader2, Settings, ExternalLink } from 'lucide-react';
 import { useSession, signOut } from '@/lib/auth/client';
 import {
     DropdownMenu,
@@ -13,6 +13,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useState } from 'react';
 
 const navItems = [
     { id: 'author', label: '作者', href: '/author' },
@@ -24,10 +25,33 @@ export default function TopNavbar() {
     const pathname = usePathname();
     const session = useSession();
     const user = session.data?.user;
+    const [adminLoading, setAdminLoading] = useState(false);
 
     const isActive = (href: string) => {
         if (href === '/') return pathname === '/';
         return pathname.startsWith(href);
+    };
+
+    // 进入后台管理
+    const handleGoToAdmin = async () => {
+        setAdminLoading(true);
+        try {
+            const response = await fetch('/api/admin/sso-token');
+            const data = await response.json();
+
+            if (data.success && data.token) {
+                // 重定向到后台，带上 SSO token
+                const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3001';
+                window.location.href = `${adminUrl}/login?sso=${data.token}`;
+            } else {
+                alert(data.error || '获取登录凭证失败');
+            }
+        } catch (error) {
+            console.error('获取SSO token失败:', error);
+            alert('获取登录凭证失败');
+        } finally {
+            setAdminLoading(false);
+        }
     };
 
     return (
@@ -134,12 +158,19 @@ export default function TopNavbar() {
                                     <DropdownMenuSeparator className="bg-white/10" />
                                     {/* 管理员菜单 - 后台管理 */}
                                     {(user as any)?.role === 'admin' && (
-                                        <Link href="/admin">
-                                            <DropdownMenuItem className="cursor-pointer focus:bg-purple-500/20 focus:text-purple-400 text-purple-400 rounded-lg my-1">
+                                        <DropdownMenuItem
+                                            className="cursor-pointer focus:bg-purple-500/20 focus:text-purple-400 text-purple-400 rounded-lg my-1"
+                                            onClick={handleGoToAdmin}
+                                            disabled={adminLoading}
+                                        >
+                                            {adminLoading ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
                                                 <Settings className="mr-2 h-4 w-4" />
-                                                <span>后台管理</span>
-                                            </DropdownMenuItem>
-                                        </Link>
+                                            )}
+                                            <span>后台管理</span>
+                                            <ExternalLink className="ml-auto h-3 w-3" />
+                                        </DropdownMenuItem>
                                     )}
                                     <Link href="/dashboard">
                                         <DropdownMenuItem className="cursor-pointer focus:bg-white/10 focus:text-white rounded-lg my-1">

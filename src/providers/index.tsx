@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import NextTopLoader from "nextjs-toploader";
+import { NotificationToast } from "@/components/NotificationToast";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <NextTopLoader easing="ease" showSpinner={false} color="var(--primary)" />
       {children}
       <Toaster position="top-center" />
+      <NotificationToast />
     </>
   );
 }
