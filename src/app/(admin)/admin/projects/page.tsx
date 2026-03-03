@@ -4,16 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ProjectType } from "@/db/schema/project";
 import { DataTable, Column } from "@/components/admin/data-table";
-import { PageHeader, ConfirmDialog } from "@/components/admin/common";
+import { PageHeader, ConfirmDialog, Toolbar, ToolbarIcons } from "@/components/admin/common";
 import { getProjectColumns } from "@/components/admin/projects/project-table";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 
 export default function ProjectsManagePage() {
@@ -28,6 +20,7 @@ export default function ProjectsManagePage() {
   });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     project: ProjectType | null;
@@ -96,6 +89,53 @@ export default function ProjectsManagePage() {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedRows.size === 0) return;
+
+    setIsDeleting(true);
+    try {
+      const deletePromises = Array.from(selectedRows).map((id) =>
+        fetch(`/api/projects/${id}`, { method: "DELETE" })
+      );
+
+      await Promise.all(deletePromises);
+      toast.success(`已删除 ${selectedRows.size} 个项目`);
+      setSelectedRows(new Set());
+      fetchProjects();
+    } catch (error) {
+      console.error("Failed to batch delete projects:", error);
+      toast.error("批量删除失败");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleExport = () => {
+    const data = projects.map((project) => ({
+      项目名称: project.title,
+      描述: project.description,
+      状态: project.status,
+      技术栈: project.techStack?.join(", "),
+      演示链接: project.demoUrl,
+      GitHub: project.githubUrl,
+      创建时间: project.createdAt,
+    }));
+
+    const csv = [
+      Object.keys(data[0]).join(","),
+      ...data.map((row) => Object.values(row).join(",")),
+    ].join("\n");
+
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `项目列表_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("导出成功");
+  };
+
   const columns: Column<ProjectType>[] = [
     {
       key: "select",
@@ -109,44 +149,63 @@ export default function ProjectsManagePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="项目管理"
         description="管理所有展示项目"
-        actionLabel="新建项目"
-        onAction={() => router.push("/admin/projects/create")}
-        onRefresh={fetchProjects}
-        isLoading={isLoading}
       />
 
-      {/* 筛选器 */}
-      <div className="flex gap-4">
-        <Input
-          placeholder="搜索项目名称..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-          className="max-w-sm"
-        />
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => {
-            setStatusFilter(value);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部状态</SelectItem>
-            <SelectItem value="published">已发布</SelectItem>
-            <SelectItem value="draft">草稿</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* 工具栏 */}
+      <Toolbar
+        searchPlaceholder="搜索项目名称..."
+        searchValue={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        selectFilters={[
+          {
+            name: "状态",
+            value: statusFilter,
+            options: [
+              { label: "全部状态", value: "all" },
+              { label: "已发布", value: "published" },
+              { label: "草稿", value: "draft" },
+            ],
+            onChange: (value) => {
+              setStatusFilter(value);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            },
+          },
+        ]}
+        onRefresh={fetchProjects}
+        isLoading={isLoading}
+        hasSelection={selectedRows.size > 0}
+        selectedCount={selectedRows.size}
+        batchActions={[
+          {
+            label: "删除",
+            icon: ToolbarIcons.Trash,
+            onClick: handleBatchDelete,
+            variant: "destructive",
+            loading: isDeleting,
+          },
+        ]}
+        secondaryActions={[
+          {
+            label: "导出",
+            icon: ToolbarIcons.Download,
+            onClick: handleExport,
+          },
+        ]}
+        primaryActions={[
+          {
+            label: "新增项目",
+            icon: ToolbarIcons.Plus,
+            onClick: () => router.push("/admin/projects/create"),
+          },
+        ]}
+      />
 
       {/* 数据表格 */}
       <DataTable
@@ -156,6 +215,8 @@ export default function ProjectsManagePage() {
         pagination={pagination}
         onPageChange={(page) => setPagination((prev) => ({ ...prev, pageIndex: page }))}
         getRowId={(project) => project.id}
+        selectedRows={selectedRows}
+        onRowSelectionChange={setSelectedRows}
         emptyTitle="暂无项目"
         emptyDescription="没有找到符合条件的项目"
       />

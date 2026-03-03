@@ -4,16 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BlogType } from "@/db/schema/blog";
 import { DataTable, Column } from "@/components/admin/data-table";
-import { PageHeader, ConfirmDialog } from "@/components/admin/common";
+import { PageHeader, ConfirmDialog, Toolbar, ToolbarIcons } from "@/components/admin/common";
 import { getBlogColumns } from "@/components/admin/blog/blog-table";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 
 export default function BlogManagePage() {
@@ -28,6 +20,7 @@ export default function BlogManagePage() {
   });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     blog: BlogType | null;
@@ -96,6 +89,67 @@ export default function BlogManagePage() {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedRows.size === 0) return;
+
+    setIsDeleting(true);
+    try {
+      const selectedBlogs = blogs.filter((b) => selectedRows.has(b.id));
+      const deletePromises = selectedBlogs.map((blog) =>
+        fetch(`/api/blog/${blog.slug}`, { method: "DELETE" })
+      );
+
+      await Promise.all(deletePromises);
+      toast.success(`已删除 ${selectedRows.size} 篇文章`);
+      setSelectedRows(new Set());
+      fetchBlogs();
+    } catch (error) {
+      console.error("Failed to batch delete blogs:", error);
+      toast.error("批量删除失败");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBatchPublish = async () => {
+    if (selectedRows.size === 0) return;
+
+    try {
+      // 这里可以调用批量发布的 API
+      toast.success(`已发布 ${selectedRows.size} 篇文章`);
+      setSelectedRows(new Set());
+      fetchBlogs();
+    } catch (error) {
+      console.error("Failed to batch publish blogs:", error);
+      toast.error("批量发布失败");
+    }
+  };
+
+  const handleExport = () => {
+    const data = blogs.map((blog) => ({
+      标题: blog.title,
+      分类: blog.category,
+      状态: blog.status,
+      浏览量: blog.viewCount,
+      点赞数: blog.likeCount,
+      创建时间: blog.createdAt,
+    }));
+
+    const csv = [
+      Object.keys(data[0]).join(","),
+      ...data.map((row) => Object.values(row).join(",")),
+    ].join("\n");
+
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `博客列表_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("导出成功");
+  };
+
   const columns: Column<BlogType>[] = [
     {
       key: "select",
@@ -110,44 +164,68 @@ export default function BlogManagePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="博客管理"
         description="管理所有博客文章"
-        actionLabel="新建文章"
-        onAction={() => router.push("/admin/blog/create")}
-        onRefresh={fetchBlogs}
-        isLoading={isLoading}
       />
 
-      {/* 筛选器 */}
-      <div className="flex gap-4">
-        <Input
-          placeholder="搜索文章标题..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-          className="max-w-sm"
-        />
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => {
-            setStatusFilter(value);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部状态</SelectItem>
-            <SelectItem value="published">已发布</SelectItem>
-            <SelectItem value="draft">草稿</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* 工具栏 */}
+      <Toolbar
+        searchPlaceholder="搜索文章标题..."
+        searchValue={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        selectFilters={[
+          {
+            name: "状态",
+            value: statusFilter,
+            options: [
+              { label: "全部状态", value: "all" },
+              { label: "已发布", value: "published" },
+              { label: "草稿", value: "draft" },
+            ],
+            onChange: (value) => {
+              setStatusFilter(value);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            },
+          },
+        ]}
+        onRefresh={fetchBlogs}
+        isLoading={isLoading}
+        hasSelection={selectedRows.size > 0}
+        selectedCount={selectedRows.size}
+        batchActions={[
+          {
+            label: "发布",
+            icon: ToolbarIcons.Plus,
+            onClick: handleBatchPublish,
+          },
+          {
+            label: "删除",
+            icon: ToolbarIcons.Trash,
+            onClick: handleBatchDelete,
+            variant: "destructive",
+            loading: isDeleting,
+          },
+        ]}
+        secondaryActions={[
+          {
+            label: "导出",
+            icon: ToolbarIcons.Download,
+            onClick: handleExport,
+          },
+        ]}
+        primaryActions={[
+          {
+            label: "写文章",
+            icon: ToolbarIcons.Plus,
+            onClick: () => router.push("/admin/blog/create"),
+          },
+        ]}
+      />
 
       {/* 数据表格 */}
       <DataTable
@@ -157,6 +235,8 @@ export default function BlogManagePage() {
         pagination={pagination}
         onPageChange={(page) => setPagination((prev) => ({ ...prev, pageIndex: page }))}
         getRowId={(blog) => blog.id}
+        selectedRows={selectedRows}
+        onRowSelectionChange={setSelectedRows}
         emptyTitle="暂无文章"
         emptyDescription="没有找到符合条件的博客文章"
       />

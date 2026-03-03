@@ -4,16 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { UserType } from "@/db/schema/auth/user";
 import { DataTable, Column } from "@/components/admin/data-table";
-import { PageHeader, ConfirmDialog } from "@/components/admin/common";
+import { PageHeader, ConfirmDialog, Toolbar, ToolbarIcons } from "@/components/admin/common";
 import { getUserColumns } from "@/components/admin/users/user-table";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 
 export default function UsersPage() {
@@ -28,6 +20,7 @@ export default function UsersPage() {
   });
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     user: UserType | null;
@@ -96,6 +89,50 @@ export default function UsersPage() {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedRows.size === 0) return;
+
+    setIsDeleting(true);
+    try {
+      const deletePromises = Array.from(selectedRows).map((id) =>
+        fetch(`/api/admin/users/${id}`, { method: "DELETE" })
+      );
+
+      await Promise.all(deletePromises);
+      toast.success(`已删除 ${selectedRows.size} 个用户`);
+      setSelectedRows(new Set());
+      fetchUsers();
+    } catch (error) {
+      console.error("Failed to batch delete users:", error);
+      toast.error("批量删除失败");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleExport = () => {
+    const data = users.map((user) => ({
+      用户名: user.name,
+      邮箱: user.email,
+      角色: user.role,
+      注册时间: user.createdAt,
+    }));
+
+    const csv = [
+      Object.keys(data[0]).join(","),
+      ...data.map((row) => Object.values(row).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `用户列表_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("导出成功");
+  };
+
   const columns: Column<UserType>[] = [
     {
       key: "select",
@@ -109,42 +146,63 @@ export default function UsersPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="用户管理"
         description="管理系统中的所有用户"
-        onRefresh={fetchUsers}
-        isLoading={isLoading}
       />
 
-      {/* 筛选器 */}
-      <div className="flex gap-4">
-        <Input
-          placeholder="搜索用户名或邮箱..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-          className="max-w-sm"
-        />
-        <Select
-          value={roleFilter}
-          onValueChange={(value) => {
-            setRoleFilter(value);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="角色" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部角色</SelectItem>
-            <SelectItem value="admin">管理员</SelectItem>
-            <SelectItem value="member">成员</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* 工具栏 */}
+      <Toolbar
+        searchPlaceholder="搜索用户名或邮箱..."
+        searchValue={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        selectFilters={[
+          {
+            name: "角色",
+            value: roleFilter,
+            options: [
+              { label: "全部角色", value: "all" },
+              { label: "管理员", value: "admin" },
+              { label: "成员", value: "member" },
+            ],
+            onChange: (value) => {
+              setRoleFilter(value);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            },
+          },
+        ]}
+        onRefresh={fetchUsers}
+        isLoading={isLoading}
+        hasSelection={selectedRows.size > 0}
+        selectedCount={selectedRows.size}
+        batchActions={[
+          {
+            label: "批量删除",
+            icon: ToolbarIcons.Trash,
+            onClick: handleBatchDelete,
+            variant: "destructive",
+            loading: isDeleting,
+          },
+        ]}
+        secondaryActions={[
+          {
+            label: "导出",
+            icon: ToolbarIcons.Download,
+            onClick: handleExport,
+          },
+        ]}
+        primaryActions={[
+          {
+            label: "新增用户",
+            icon: ToolbarIcons.Plus,
+            onClick: () => router.push("/admin/users/create"),
+          },
+        ]}
+      />
 
       {/* 数据表格 */}
       <DataTable
@@ -154,6 +212,8 @@ export default function UsersPage() {
         pagination={pagination}
         onPageChange={(page) => setPagination((prev) => ({ ...prev, pageIndex: page }))}
         getRowId={(user) => user.id}
+        selectedRows={selectedRows}
+        onRowSelectionChange={setSelectedRows}
         emptyTitle="暂无用户"
         emptyDescription="没有找到符合条件的用户"
       />

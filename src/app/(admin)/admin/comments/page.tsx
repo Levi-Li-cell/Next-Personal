@@ -2,16 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { DataTable, Column } from "@/components/admin/data-table";
-import { PageHeader, ConfirmDialog } from "@/components/admin/common";
+import { PageHeader, ConfirmDialog, Toolbar, ToolbarIcons } from "@/components/admin/common";
 import { getCommentColumns, CommentWithRelations } from "@/components/admin/comments/comment-table";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 
 export default function CommentsManagePage() {
@@ -25,6 +17,7 @@ export default function CommentsManagePage() {
   });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     comment: CommentWithRelations | null;
@@ -118,6 +111,71 @@ export default function CommentsManagePage() {
     }
   };
 
+  const handleBatchApprove = async () => {
+    if (selectedRows.size === 0) return;
+
+    try {
+      const updatePromises = Array.from(selectedRows).map((id) =>
+        fetch(`/api/admin/comments/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "approved" }),
+        })
+      );
+
+      await Promise.all(updatePromises);
+      toast.success(`已批准 ${selectedRows.size} 条评论`);
+      setSelectedRows(new Set());
+      fetchComments();
+    } catch (error) {
+      console.error("Failed to batch approve comments:", error);
+      toast.error("批量批准失败");
+    }
+  };
+
+  const handleBatchReject = async () => {
+    if (selectedRows.size === 0) return;
+
+    try {
+      const updatePromises = Array.from(selectedRows).map((id) =>
+        fetch(`/api/admin/comments/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "rejected" }),
+        })
+      );
+
+      await Promise.all(updatePromises);
+      toast.success(`已拒绝 ${selectedRows.size} 条评论`);
+      setSelectedRows(new Set());
+      fetchComments();
+    } catch (error) {
+      console.error("Failed to batch reject comments:", error);
+      toast.error("批量拒绝失败");
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedRows.size === 0) return;
+
+    setIsDeleting(true);
+    try {
+      const deletePromises = Array.from(selectedRows).map((id) =>
+        fetch(`/api/admin/comments/${id}`, { method: "DELETE" })
+      );
+
+      await Promise.all(deletePromises);
+      toast.success(`已删除 ${selectedRows.size} 条评论`);
+      setSelectedRows(new Set());
+      fetchComments();
+    } catch (error) {
+      console.error("Failed to batch delete comments:", error);
+      toast.error("批量删除失败");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const columns: Column<CommentWithRelations>[] = [
     {
       key: "select",
@@ -132,43 +190,60 @@ export default function CommentsManagePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="评论管理"
         description="审核和管理用户评论"
-        onRefresh={fetchComments}
-        isLoading={isLoading}
       />
 
-      {/* 筛选器 */}
-      <div className="flex gap-4">
-        <Input
-          placeholder="搜索评论内容..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-          className="max-w-sm"
-        />
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => {
-            setStatusFilter(value);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部状态</SelectItem>
-            <SelectItem value="pending">待审核</SelectItem>
-            <SelectItem value="approved">已批准</SelectItem>
-            <SelectItem value="rejected">已拒绝</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* 工具栏 */}
+      <Toolbar
+        searchPlaceholder="搜索评论内容..."
+        searchValue={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        selectFilters={[
+          {
+            name: "状态",
+            value: statusFilter,
+            options: [
+              { label: "全部状态", value: "all" },
+              { label: "待审核", value: "pending" },
+              { label: "已批准", value: "approved" },
+              { label: "已拒绝", value: "rejected" },
+            ],
+            onChange: (value) => {
+              setStatusFilter(value);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            },
+          },
+        ]}
+        onRefresh={fetchComments}
+        isLoading={isLoading}
+        hasSelection={selectedRows.size > 0}
+        selectedCount={selectedRows.size}
+        batchActions={[
+          {
+            label: "批准",
+            icon: ToolbarIcons.Plus,
+            onClick: handleBatchApprove,
+          },
+          {
+            label: "拒绝",
+            icon: ToolbarIcons.Refresh,
+            onClick: handleBatchReject,
+          },
+          {
+            label: "删除",
+            icon: ToolbarIcons.Trash,
+            onClick: handleBatchDelete,
+            variant: "destructive",
+            loading: isDeleting,
+          },
+        ]}
+      />
 
       {/* 数据表格 */}
       <DataTable
@@ -178,6 +253,8 @@ export default function CommentsManagePage() {
         pagination={pagination}
         onPageChange={(page) => setPagination((prev) => ({ ...prev, pageIndex: page }))}
         getRowId={(comment) => comment.id}
+        selectedRows={selectedRows}
+        onRowSelectionChange={setSelectedRows}
         emptyTitle="暂无评论"
         emptyDescription="没有找到符合条件的评论"
       />
