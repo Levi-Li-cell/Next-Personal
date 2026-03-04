@@ -47,7 +47,6 @@ export default function TopNavbar() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userId: user.id,
-                        username: user.name
                     }),
                 });
 

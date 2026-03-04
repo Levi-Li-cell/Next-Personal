@@ -221,28 +221,29 @@ export default function BlogPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {blogPosts.map((post, index) => (
-            <motion.article
-              key={post.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer"
-              whileHover={{ y: -5 }}
-            >
-              <div className="flex items-center gap-2 text-purple-400 text-sm mb-3">
-                <BookOpen className="w-4 h-4" />
-                <span>{post.category}</span>
-              </div>
-              <h2 className="text-xl font-semibold text-white mb-3 group-hover:text-purple-300 transition-colors" dangerouslySetInnerHTML={{ __html: highlightText(post.title, search) }} />
-              <p className="text-white/60 text-sm mb-4 line-clamp-2" dangerouslySetInnerHTML={{ __html: highlightText(post.excerpt, search) }} />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white/40 text-sm">
-                  <Calendar className="w-4 h-4" />
-                  <span>{new Date(post.createdAt).toLocaleDateString('zh-CN')}</span>
+            <Link key={post.id} href={`/blog/${post.slug}`}>
+              <motion.article
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer h-full"
+                whileHover={{ y: -5 }}
+              >
+                <div className="flex items-center gap-2 text-purple-400 text-sm mb-3">
+                  <BookOpen className="w-4 h-4" />
+                  <span>{post.category}</span>
                 </div>
-                <ArrowRight className="w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </motion.article>
+                <h2 className="text-xl font-semibold text-white mb-3 group-hover:text-purple-300 transition-colors" dangerouslySetInnerHTML={{ __html: highlightText(post.title, search) }} />
+                <p className="text-white/60 text-sm mb-4 line-clamp-2" dangerouslySetInnerHTML={{ __html: highlightText(post.excerpt, search) }} />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-white/40 text-sm">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date(post.createdAt).toLocaleDateString('zh-CN')}</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </motion.article>
+            </Link>
           ))}
         </div>
       )}

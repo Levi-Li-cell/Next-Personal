@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from 'motion/react';
-import { Folder, ExternalLink, Github, Loader2 } from 'lucide-react';
+import { Folder, ExternalLink, Github, Loader2, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Project {
   id: string;
@@ -94,48 +95,50 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project, index) => (
-            <motion.div
-              key={project.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all"
-              whileHover={{ y: -5 }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <Folder className="w-6 h-6 text-white" />
+            <Link key={project.id} href={`/projects/${project.id}`}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all h-full"
+                whileHover={{ y: -5 }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                    <Folder className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex gap-3">
+                    {project.githubUrl && (
+                      <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
+                        <Github className="w-5 h-5" />
+                      </a>
+                    )}
+                    {project.demoUrl && (
+                      <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
+                        <ExternalLink className="w-5 h-5" />
+                      </a>
+                    )}
+                    <ArrowRight className="w-5 h-5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  {project.githubUrl && (
-                    <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors">
-                      <Github className="w-5 h-5" />
-                    </a>
-                  )}
-                  {project.demoUrl && (
-                    <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors">
-                      <ExternalLink className="w-5 h-5" />
-                    </a>
-                  )}
+                <h2 className="text-xl font-semibold text-white mb-3 group-hover:text-purple-300 transition-colors">
+                  {project.title}
+                </h2>
+                <p className="text-white/60 text-sm mb-4">
+                  {project.description}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {project.techStack.map((tech) => (
+                    <span
+                      key={tech}
+                      className="px-3 py-1 text-xs bg-purple-500/20 text-purple-300 rounded-full"
+                    >
+                      {tech}
+                    </span>
+                  ))}
                 </div>
-              </div>
-              <h2 className="text-xl font-semibold text-white mb-3 group-hover:text-purple-300 transition-colors">
-                {project.title}
-              </h2>
-              <p className="text-white/60 text-sm mb-4">
-                {project.description}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {project.techStack.map((tech) => (
-                  <span
-                    key={tech}
-                    className="px-3 py-1 text-xs bg-purple-500/20 text-purple-300 rounded-full"
-                  >
-                    {tech}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
+              </motion.div>
+            </Link>
           ))}
         </div>
       )}

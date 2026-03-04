@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Settings,
   ChevronUp,
+  UserCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,11 @@ const menuItems = [
     title: "仪表盘",
     url: "/admin",
     icon: LayoutDashboard,
+  },
+  {
+    title: "作者管理",
+    url: "/admin/author",
+    icon: UserCircle,
   },
   {
     title: "用户管理",

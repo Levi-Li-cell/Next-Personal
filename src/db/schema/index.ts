@@ -5,3 +5,4 @@ export * from "./blog-like";
 export * from "./project";
 export * from "./photo";
 export * from "./sso-token";
+export * from "./author";

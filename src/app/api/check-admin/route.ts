@@ -3,20 +3,12 @@ import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { eq } from "drizzle-orm";
 
-// 管理员用户名
-const ADMIN_USERNAME = "admin";
-
 export async function POST(request: NextRequest) {
     try {
-        const { userId, username } = await request.json();
+        const { userId } = await request.json();
 
-        if (!userId || !username) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-        }
-
-        // 检查用户名是否为 admin
-        if (username !== ADMIN_USERNAME) {
-            return NextResponse.json({ isAdmin: false });
+        if (!userId) {
+            return NextResponse.json({ error: "Missing userId" }, { status: 400 });
         }
 
         // 获取用户信息
@@ -29,7 +21,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ isAdmin: false });
         }
 
-        // 确保角色为 admin（数据库中已预设为 admin）
+        // 检查角色是否为 admin
         return NextResponse.json({ isAdmin: foundUser.role === "admin" });
     } catch (error) {
         console.error("Check admin error:", error);

@@ -8,6 +8,13 @@
       "when": 1772464500838,
       "tag": "0000_complete_captain_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772613471870,
+      "tag": "0001_curly_blockbuster",
+      "breakpoints": true
     }
   ]
 }

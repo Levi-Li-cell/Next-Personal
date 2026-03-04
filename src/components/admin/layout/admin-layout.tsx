@@ -42,7 +42,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: user.id,
-            username: user.name
           }),
         });
 
