@@ -3,6 +3,7 @@
 import { motion } from 'motion/react';
 import { BookOpen, Calendar, ArrowRight, Loader2, ArrowLeft, ChevronDown, Search, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

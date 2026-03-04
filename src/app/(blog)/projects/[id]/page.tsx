@@ -4,6 +4,8 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Calendar, ExternalLink, Github, Folder } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Project {
   id: string;
@@ -172,7 +174,7 @@ export default function ProjectDetailPage() {
           <div className="mb-12">
             <h2 className="text-2xl font-bold text-white mb-4">项目详情</h2>
             <div className="prose prose-invert max-w-none">
-              <div dangerouslySetInnerHTML={{ __html: project.content }} />
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{project.content}</ReactMarkdown>
             </div>
           </div>
         )}

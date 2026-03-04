@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 import { useSession } from '@/lib/auth/client';
 import { toast } from 'sonner';
 import BlogComments from '@/components/BlogComments';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface BlogPost {
   id: string;
@@ -227,7 +229,7 @@ export default function BlogDetailPage() {
 
         {/* 内容 */}
         <div className="prose prose-invert max-w-none mb-12">
-          <div dangerouslySetInnerHTML={{ __html: post.content }} />
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
         </div>
 
         {/* 标签 */}

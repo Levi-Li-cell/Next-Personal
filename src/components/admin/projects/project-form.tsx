@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProjectType } from "@/db/schema/project";
+import { Editor } from "@tinymce/tinymce-react";
 
 const projectFormSchema = z.object({
   title: z.string().min(1, "请输入项目名称"),
@@ -44,6 +46,7 @@ interface ProjectFormProps {
 }
 
 export function ProjectForm({ project, onSubmit, isLoading }: ProjectFormProps) {
+  const [editorTab, setEditorTab] = useState<"visual" | "markdown">("visual");
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
     defaultValues: {
@@ -99,16 +102,95 @@ export function ProjectForm({ project, onSubmit, isLoading }: ProjectFormProps) 
           name="content"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>详细介绍</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>详细介绍</FormLabel>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={editorTab === "visual" ? "default" : "outline"}
+                    onClick={() => setEditorTab("visual")}
+                  >
+                    富文本
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={editorTab === "markdown" ? "default" : "outline"}
+                    onClick={() => setEditorTab("markdown")}
+                  >
+                    Markdown
+                  </Button>
+                </div>
+              </div>
               <FormControl>
-                <Textarea
-                  placeholder="项目的详细介绍（支持 Markdown）"
-                  className="resize-none font-mono"
-                  rows={10}
-                  {...field}
-                />
+                {editorTab === "visual" ? (
+                  <div className="border rounded-md overflow-hidden">
+                    <Editor
+                      licenseKey="gpl"
+                      value={field.value || ""}
+                      onEditorChange={(content) => field.onChange(content)}
+                      init={{
+                        height: 460,
+                        menubar: false,
+                        plugins: [
+                          "advlist",
+                          "autolink",
+                          "lists",
+                          "link",
+                          "image",
+                          "charmap",
+                          "preview",
+                          "anchor",
+                          "searchreplace",
+                          "visualblocks",
+                          "code",
+                          "fullscreen",
+                          "insertdatetime",
+                          "media",
+                          "table",
+                          "help",
+                          "wordcount",
+                        ],
+                        toolbar:
+                          "undo redo | blocks | bold italic underline strikethrough | " +
+                          "h1 h2 h3 | alignleft aligncenter alignright alignjustify | " +
+                          "bullist numlist outdent indent | link image media | " +
+                          "blockquote table | removeformat | code fullscreen preview",
+                        images_upload_handler: async (blobInfo) => {
+                          const file = blobInfo.blob();
+                          const uploadFile = new File([file], blobInfo.filename(), {
+                            type: file.type,
+                          });
+                          const uploadFormData = new FormData();
+                          uploadFormData.append("file", uploadFile);
+                          const response = await fetch(
+                            `/api/upload?filename=${encodeURIComponent(uploadFile.name)}`,
+                            {
+                              method: "POST",
+                              body: uploadFormData,
+                            }
+                          );
+                          const result = await response.json();
+                          if (!result.url) {
+                            throw new Error(result.error || "图片上传失败");
+                          }
+                          return result.url as string;
+                        },
+                        promotion: false,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <Textarea
+                    placeholder="项目的详细介绍（支持 Markdown）"
+                    className="resize-none font-mono"
+                    rows={10}
+                    {...field}
+                  />
+                )}
               </FormControl>
-              <FormDescription>支持 Markdown 格式</FormDescription>
+              <FormDescription>支持粗体、斜体、标题、图片上传、链接等常见编辑能力</FormDescription>
               <FormMessage />
             </FormItem>
           )}
