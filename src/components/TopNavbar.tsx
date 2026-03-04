@@ -13,7 +13,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const navItems = [
     { id: 'author', label: '作者', href: '/author' },
@@ -27,6 +27,42 @@ export default function TopNavbar() {
     const session = useSession();
     const user = session.data?.user;
     const [adminLoading, setAdminLoading] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [checkingAdmin, setCheckingAdmin] = useState(true);
+
+    // 检查管理员权限
+    useEffect(() => {
+        const checkAdmin = async () => {
+            if (session.isPending) return;
+
+            if (!user) {
+                setIsAdmin(false);
+                setCheckingAdmin(false);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/check-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        username: user.name
+                    }),
+                });
+
+                const data = await response.json();
+                setIsAdmin(data.isAdmin === true);
+            } catch (error) {
+                console.error('Failed to check admin status:', error);
+                setIsAdmin(false);
+            } finally {
+                setCheckingAdmin(false);
+            }
+        };
+
+        checkAdmin();
+    }, [user, session.isPending]);
 
     const isActive = (href: string) => {
         if (href === '/') return pathname === '/';
@@ -150,7 +186,7 @@ export default function TopNavbar() {
                                     </div>
                                     <DropdownMenuSeparator className="bg-white/10" />
                                     {/* 管理员菜单 - 后台管理 */}
-                                    {(user as any)?.role === 'admin' && (
+                                    {isAdmin && !checkingAdmin && (
                                         <DropdownMenuItem
                                             className="cursor-pointer focus:bg-purple-500/20 focus:text-purple-400 text-purple-400 rounded-lg my-1"
                                             onClick={handleGoToAdmin}
@@ -182,8 +218,8 @@ export default function TopNavbar() {
                             </DropdownMenu>
                         ) : (
                             <Link href="/signin">
-                                <motion.button
-                                    className="flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium"
+                                <motion.div
+                                    className="flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium cursor-pointer"
                                     whileHover={{
                                         scale: 1.05,
                                         boxShadow: '0 0 25px rgba(168, 85, 247, 0.5)'
@@ -192,7 +228,7 @@ export default function TopNavbar() {
                                 >
                                     <LogIn className="w-4 h-4" />
                                     <span>登录</span>
-                                </motion.button>
+                                </motion.div>
                             </Link>
                         )}
                     </div>
