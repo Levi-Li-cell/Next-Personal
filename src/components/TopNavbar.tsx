@@ -217,19 +217,18 @@ export default function TopNavbar() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         ) : (
-                            <Link href="/signin">
-                                <motion.div
-                                    className="flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium cursor-pointer"
-                                    whileHover={{
-                                        scale: 1.05,
-                                        boxShadow: '0 0 25px rgba(168, 85, 247, 0.5)'
-                                    }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    <LogIn className="w-4 h-4" />
-                                    <span>登录</span>
-                                </motion.div>
-                            </Link>
+                            <motion.button
+                                className="flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium cursor-pointer border-none"
+                                whileHover={{
+                                    scale: 1.05,
+                                    boxShadow: '0 0 25px rgba(168, 85, 247, 0.5)'
+                                }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => router.push('/signin')}
+                            >
+                                <LogIn className="w-4 h-4" />
+                                <span>登录</span>
+                            </motion.button>
                         )}
                     </div>
                 </div>
