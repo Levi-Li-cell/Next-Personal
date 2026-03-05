@@ -734,12 +734,12 @@ export default function AuthorManagePage() {
         return;
       }
 
-      const response = await fetch("/api/admin/author/photos", {
+      const photoResponse = await fetch("/api/admin/author/photos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: data.url }),
       });
-      const photoData = await response.json();
+      const photoData = await photoResponse.json();
       if (!photoData.success) {
         toast.error(photoData.error || "图片入库失败");
         return;
