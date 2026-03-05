@@ -18,20 +18,27 @@ async function ensureVisualTables() {
   `);
 }
 
+async function safeCount(rawSql: ReturnType<typeof sql>) {
+  try {
+    const result = await db.execute(rawSql);
+    const row = (result as unknown as { rows?: Array<{ count: number }> }).rows?.[0];
+    return Number(row?.count || 0);
+  } catch {
+    return 0;
+  }
+}
+
 export async function GET() {
   try {
     await ensureVisualTables();
 
-    const [summaryResult, eventDistResult, trendResult, recentResult] = await Promise.all([
-      db.execute(sql`
-        SELECT
-          (SELECT COUNT(*)::int FROM "user") AS users,
-          (SELECT COUNT(*)::int FROM blog) AS blogs,
-          (SELECT COUNT(*)::int FROM project) AS projects,
-          (SELECT COUNT(*)::int FROM blog_comment) AS comments,
-          (SELECT COUNT(*)::int FROM guestbook_message) AS guestbook,
-          (SELECT COUNT(*)::int FROM admin_notification WHERE read = false) AS unread
-      `),
+    const [users, blogs, projects, comments, guestbook, unread, eventDistResult, trendResult, recentResult] = await Promise.all([
+      safeCount(sql`SELECT COUNT(*)::int AS count FROM "user"`),
+      safeCount(sql`SELECT COUNT(*)::int AS count FROM blog`),
+      safeCount(sql`SELECT COUNT(*)::int AS count FROM project`),
+      safeCount(sql`SELECT COUNT(*)::int AS count FROM blog_comment`),
+      safeCount(sql`SELECT COUNT(*)::int AS count FROM guestbook_message`),
+      safeCount(sql`SELECT COUNT(*)::int AS count FROM admin_notification WHERE read = false`),
       db.execute(sql`
         SELECT event_type, COUNT(*)::int AS count
         FROM admin_notification
@@ -61,31 +68,13 @@ export async function GET() {
       `),
     ]);
 
-    const summary = (summaryResult as unknown as {
-      rows?: Array<{
-        users: number;
-        blogs: number;
-        projects: number;
-        comments: number;
-        guestbook: number;
-        unread: number;
-      }>;
-    }).rows?.[0] || {
-      users: 0,
-      blogs: 0,
-      projects: 0,
-      comments: 0,
-      guestbook: 0,
-      unread: 0,
-    };
+    const summary = { users, blogs, projects, comments, guestbook, unread };
 
     const eventDistRows = (eventDistResult as unknown as {
       rows?: Array<{ event_type: string; count: number }>;
     }).rows || [];
 
-    const trendRows = (trendResult as unknown as {
-      rows?: DailyPoint[];
-    }).rows || [];
+    const trendRows = (trendResult as unknown as { rows?: DailyPoint[] }).rows || [];
 
     const recentNotifications = (recentResult as unknown as {
       rows?: Array<{
