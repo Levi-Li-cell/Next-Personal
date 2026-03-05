@@ -254,6 +254,28 @@ export default function App() {
         '擅于团队协作开发，沟通交流，有意进入贵司成为开发岗中的一员',
     ];
 
+    const mobileSections = [
+        { key: 'about', label: '关于', hint: '基础资料与求职意向' },
+        { key: 'skills', label: '技能', hint: '技术栈与核心能力' },
+        { key: 'experience', label: '经历', hint: '项目与岗位经验' },
+        { key: 'education', label: '教育', hint: '学校与主修方向' },
+        { key: 'honors', label: '荣誉', hint: '证书与奖项' },
+        { key: 'contact', label: '联系', hint: '沟通方式与兴趣爱好' },
+    ] as const;
+
+    const mobileSectionIndex = Math.max(0, mobileSections.findIndex((item) => item.key === mobileSection));
+    const activeMobileSection = mobileSections[mobileSectionIndex] || mobileSections[0];
+
+    const gotoPrevMobileSection = () => {
+        const prevIndex = (mobileSectionIndex - 1 + mobileSections.length) % mobileSections.length;
+        setMobileSection(mobileSections[prevIndex].key);
+    };
+
+    const gotoNextMobileSection = () => {
+        const nextIndex = (mobileSectionIndex + 1) % mobileSections.length;
+        setMobileSection(mobileSections[nextIndex].key);
+    };
+
     return (
         <div ref={containerRef} className={`relative min-h-screen bg-black overflow-x-hidden ${isMobile ? '' : 'cursor-none'}`}>
             {/* Custom Cursor */}
@@ -558,23 +580,31 @@ export default function App() {
             {isMobile && (
                 <section className="relative py-3">
                     <div className="container mx-auto px-4">
-                        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-                            {[
-                                { key: 'about', label: '关于' },
-                                { key: 'skills', label: '技能' },
-                                { key: 'experience', label: '经历' },
-                                { key: 'education', label: '教育' },
-                                { key: 'honors', label: '荣誉' },
-                                { key: 'contact', label: '联系' },
-                            ].map((item) => (
+                        <div className="mb-3 rounded-2xl bg-white/[0.08] p-3">
+                            <div className="flex items-center justify-between">
                                 <button
-                                    key={item.key}
-                                    onClick={() => setMobileSection(item.key as typeof mobileSection)}
-                                    className={`shrink-0 rounded-full px-3 py-2 text-sm ${mobileSection === item.key ? 'bg-white/25 text-white' : 'bg-white/12 text-white/85'}`}
+                                    className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white"
+                                    onClick={gotoPrevMobileSection}
                                 >
-                                    {item.label}
+                                    上一项
                                 </button>
-                            ))}
+                                <div className="text-center">
+                                    <p className="text-base text-white font-medium">{activeMobileSection.label}</p>
+                                    <p className="text-xs text-white/70">{activeMobileSection.hint}</p>
+                                </div>
+                                <button
+                                    className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white"
+                                    onClick={gotoNextMobileSection}
+                                >
+                                    下一项
+                                </button>
+                            </div>
+                            <div className="mt-3 h-1 rounded-full bg-white/10">
+                                <div
+                                    className="h-1 rounded-full bg-gradient-to-r from-purple-400 to-cyan-400"
+                                    style={{ width: `${((mobileSectionIndex + 1) / mobileSections.length) * 100}%` }}
+                                />
+                            </div>
                         </div>
 
                         {mobileSection === 'about' && (
