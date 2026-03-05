@@ -73,6 +73,7 @@ const initialImages: string[] = [
 export default function App() {
     const [imagesState, setImagesState] = useState<string[]>(initialImages);
     const [isMobile, setIsMobile] = useState(false);
+    const [mobileSection, setMobileSection] = useState<'about' | 'skills' | 'experience' | 'education' | 'honors' | 'contact'>('about');
     const [authorData, setAuthorData] = useState<{
         profile: {
             name: string;
@@ -560,8 +561,115 @@ export default function App() {
                 </div>
             )}
 
+            {isMobile && (
+                <section className="relative py-3">
+                    <div className="container mx-auto px-4">
+                        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                            {[
+                                { key: 'about', label: '关于' },
+                                { key: 'skills', label: '技能' },
+                                { key: 'experience', label: '经历' },
+                                { key: 'education', label: '教育' },
+                                { key: 'honors', label: '荣誉' },
+                                { key: 'contact', label: '联系' },
+                            ].map((item) => (
+                                <button
+                                    key={item.key}
+                                    onClick={() => setMobileSection(item.key as typeof mobileSection)}
+                                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs ${mobileSection === item.key ? 'bg-white/20 text-white' : 'bg-white/5 text-white/70'}`}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {mobileSection === 'about' && (
+                            <div className="space-y-2">
+                                {[
+                                    { icon: User, label: '性别', value: authorData?.profile?.gender || '男' },
+                                    { icon: Calendar, label: '年龄', value: authorData?.profile?.age || '24' },
+                                    { icon: Phone, label: '联系电话', value: authorData?.profile?.phone || '13043428526' },
+                                    { icon: GraduationCap, label: '学历', value: authorData?.profile?.education || '本科' },
+                                    { icon: MapPin, label: '户籍', value: authorData?.profile?.location || '江西 · 汉族' },
+                                    { icon: Target, label: '意向城市', value: authorData?.profile?.preferredCity || '全国' },
+                                    { icon: Briefcase, label: '意向岗位', value: authorData?.profile?.preferredPosition || '前端开发师' },
+                                    { icon: DollarSign, label: '期望薪资', value: authorData?.profile?.expectedSalary || '面议' },
+                                ].map((item) => (
+                                    <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                        <div className="flex items-center gap-2 text-white/70 text-xs">
+                                            <item.icon className="w-4 h-4 text-purple-300" />
+                                            {item.label}
+                                        </div>
+                                        <p className="mt-1 text-sm text-white">{item.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {mobileSection === 'skills' && (
+                            <div className="space-y-2">
+                                {(groupedSkills || []).map((skill) => (
+                                    <div key={skill.category} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                        <p className="text-sm text-white font-medium">{skill.category}</p>
+                                        <p className="mt-1 text-xs text-white/70">{skill.items.slice(0, 6).join(' / ')}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {mobileSection === 'experience' && (
+                            <div className="space-y-2">
+                                {(experienceData || []).map((exp) => (
+                                    <div key={`${exp.company}-${exp.period}`} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                        <p className="text-sm text-white font-medium">{exp.project}</p>
+                                        <p className="text-xs text-white/60 mt-1">{exp.company} · {exp.period}</p>
+                                        <p className="text-xs text-white/80 mt-2 line-clamp-3">{exp.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {mobileSection === 'education' && educationData && (
+                            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                <p className="text-sm text-white font-medium">{educationData.school}</p>
+                                <p className="text-xs text-white/70 mt-1">{educationData.major} · {educationData.degree}</p>
+                                <p className="text-xs text-white/60 mt-1">{educationData.startDate} - {educationData.endDate}</p>
+                            </div>
+                        )}
+
+                        {mobileSection === 'honors' && (
+                            <div className="space-y-2">
+                                {(honorData || []).map((honor) => (
+                                    <div key={honor.title} className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-white">
+                                        {honor.title}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {mobileSection === 'contact' && (
+                            <div className="space-y-3">
+                                <a
+                                    href={`tel:${authorData?.profile?.phone || '13043428526'}`}
+                                    className="block rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-center text-sm text-white"
+                                >
+                                    电话联系：{authorData?.profile?.phone || '13043428526'}
+                                </a>
+                                <div className="flex flex-wrap gap-2">
+                                    {(authorData?.profile?.hobbies || selfEvaluation.slice(0, 4)).slice(0, 6).map((item) => (
+                                        <span key={item} className="rounded-full border border-white/15 bg-white/[0.05] px-2 py-1 text-[11px] text-white/80">
+                                            {item}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
+
             {/* About Section */}
-            <section id="about" className={`relative ${isMobile ? 'py-10' : 'py-32'}`}>
+            <section id="about" className={`relative ${isMobile ? 'hidden' : 'py-32'}`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -643,7 +751,7 @@ export default function App() {
             </section>
 
             {/* Skills Section */}
-            <section id="skills" className={`relative ${isMobile ? 'py-10' : 'py-32'} bg-white/5`}>
+            <section id="skills" className={`relative ${isMobile ? 'hidden' : 'py-32'} bg-white/5`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -671,7 +779,7 @@ export default function App() {
             </section>
 
             {/* Experience Section */}
-            <section id="experience" className={`relative ${isMobile ? 'py-10' : 'py-32'}`}>
+            <section id="experience" className={`relative ${isMobile ? 'hidden' : 'py-32'}`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -699,7 +807,7 @@ export default function App() {
             </section>
 
             {/* Education Section */}
-            <section id="education" className={`relative ${isMobile ? 'py-10' : 'py-32'} bg-white/5`}>
+            <section id="education" className={`relative ${isMobile ? 'hidden' : 'py-32'} bg-white/5`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -727,7 +835,7 @@ export default function App() {
             </section>
 
             {/* Honors Section */}
-            <section id="honors" className={`relative ${isMobile ? 'py-10' : 'py-32'}`}>
+            <section id="honors" className={`relative ${isMobile ? 'hidden' : 'py-32'}`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -755,7 +863,7 @@ export default function App() {
             </section>
 
             {/* Contact Section */}
-            <section id="contact" className={`relative ${isMobile ? 'py-10' : 'py-32'} bg-white/5`}>
+            <section id="contact" className={`relative ${isMobile ? 'hidden' : 'py-32'} bg-white/5`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
