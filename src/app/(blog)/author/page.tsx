@@ -327,7 +327,7 @@ export default function App() {
             />}
 
             {/* Hero Section */}
-            <section id="hero" className={`relative min-h-screen flex items-center justify-center ${isMobile ? 'pt-8 pb-14' : 'pt-20'}`}>
+            <section id="hero" className={`relative flex items-center justify-center ${isMobile ? 'min-h-[78vh] pt-6 pb-8' : 'min-h-screen pt-20'}`}>
                 <motion.div
                     className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}
                     style={{ scale, opacity }}
@@ -393,7 +393,7 @@ export default function App() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.6 }}
-                                className={`space-y-4 ${isMobile ? 'rounded-xl bg-white/[0.06] border border-white/10 p-4' : ''}`}
+                                className={`space-y-4 ${isMobile ? 'rounded-xl bg-white/[0.08] p-4' : ''}`}
                             >
                                 <div className="flex items-center gap-4">
                                     <motion.div
@@ -416,7 +416,7 @@ export default function App() {
                                 </div>
 
                                 <motion.p
-                                    className="text-white/80 text-sm sm:text-lg leading-relaxed max-w-xl"
+                                    className="text-white/90 text-base sm:text-lg leading-relaxed max-w-xl"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 2 }}
@@ -433,17 +433,17 @@ export default function App() {
                                     className="space-y-3"
                                 >
                                     <div className="grid grid-cols-3 gap-2">
-                                        <div className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
-                                            <p className="text-[10px] text-white/60">意向岗位</p>
-                                            <p className="mt-1 text-xs text-white">{authorData?.profile?.preferredPosition || '前端开发师'}</p>
+                                        <div className="rounded-xl bg-white/[0.10] px-3 py-2">
+                                            <p className="text-xs text-white/75">意向岗位</p>
+                                            <p className="mt-1 text-sm text-white">{authorData?.profile?.preferredPosition || '前端开发师'}</p>
                                         </div>
-                                        <div className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
-                                            <p className="text-[10px] text-white/60">意向城市</p>
-                                            <p className="mt-1 text-xs text-white">{authorData?.profile?.preferredCity || '全国'}</p>
+                                        <div className="rounded-xl bg-white/[0.10] px-3 py-2">
+                                            <p className="text-xs text-white/75">意向城市</p>
+                                            <p className="mt-1 text-sm text-white">{authorData?.profile?.preferredCity || '全国'}</p>
                                         </div>
-                                        <div className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
-                                            <p className="text-[10px] text-white/60">期望薪资</p>
-                                            <p className="mt-1 text-xs text-white">{authorData?.profile?.expectedSalary || '面议'}</p>
+                                        <div className="rounded-xl bg-white/[0.10] px-3 py-2">
+                                            <p className="text-xs text-white/75">期望薪资</p>
+                                            <p className="mt-1 text-sm text-white">{authorData?.profile?.expectedSalary || '面议'}</p>
                                         </div>
                                     </div>
 
@@ -455,7 +455,7 @@ export default function App() {
                                             电话联系
                                         </a>
                                         <button
-                                            className="rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-white"
+                                            className="rounded-xl bg-white/[0.14] px-3 py-2 text-sm text-white"
                                             onClick={() => scrollToSection('experience')}
                                         >
                                             查看经历
@@ -464,7 +464,7 @@ export default function App() {
 
                                     <div className="flex flex-wrap gap-2 pt-1">
                                         {(authorData?.profile?.hobbies?.slice(0, 4) || ['台球', '乒乓球', '羽毛球', '骑行']).map((hobby) => (
-                                            <span key={hobby} className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-1 text-[11px] text-white/80">
+                                            <span key={hobby} className="rounded-full bg-white/[0.14] px-2.5 py-1 text-xs text-white/90">
                                                 {hobby}
                                             </span>
                                         ))}
@@ -556,12 +556,6 @@ export default function App() {
             </section>
 
             {isMobile && (
-                <div className="fixed bottom-14 left-1/2 z-40 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white/90">
-                    预览中支持左右滑动切换
-                </div>
-            )}
-
-            {isMobile && (
                 <section className="relative py-3">
                     <div className="container mx-auto px-4">
                         <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
@@ -576,7 +570,7 @@ export default function App() {
                                 <button
                                     key={item.key}
                                     onClick={() => setMobileSection(item.key as typeof mobileSection)}
-                                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs ${mobileSection === item.key ? 'bg-white/20 text-white' : 'bg-white/5 text-white/70'}`}
+                                    className={`shrink-0 rounded-full px-3 py-2 text-sm ${mobileSection === item.key ? 'bg-white/25 text-white' : 'bg-white/12 text-white/85'}`}
                                 >
                                     {item.label}
                                 </button>
@@ -595,12 +589,12 @@ export default function App() {
                                     { icon: Briefcase, label: '意向岗位', value: authorData?.profile?.preferredPosition || '前端开发师' },
                                     { icon: DollarSign, label: '期望薪资', value: authorData?.profile?.expectedSalary || '面议' },
                                 ].map((item) => (
-                                    <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                                        <div className="flex items-center gap-2 text-white/70 text-xs">
+                                    <div key={item.label} className="rounded-xl bg-white/[0.10] p-3">
+                                        <div className="flex items-center gap-2 text-white/80 text-sm">
                                             <item.icon className="w-4 h-4 text-purple-300" />
                                             {item.label}
                                         </div>
-                                        <p className="mt-1 text-sm text-white">{item.value}</p>
+                                        <p className="mt-1 text-base text-white">{item.value}</p>
                                     </div>
                                 ))}
                             </div>
@@ -609,9 +603,9 @@ export default function App() {
                         {mobileSection === 'skills' && (
                             <div className="space-y-2">
                                 {(groupedSkills || []).map((skill) => (
-                                    <div key={skill.category} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                                        <p className="text-sm text-white font-medium">{skill.category}</p>
-                                        <p className="mt-1 text-xs text-white/70">{skill.items.slice(0, 6).join(' / ')}</p>
+                                    <div key={skill.category} className="rounded-xl bg-white/[0.10] p-3">
+                                        <p className="text-base text-white font-medium">{skill.category}</p>
+                                        <p className="mt-1 text-sm text-white/80">{skill.items.slice(0, 6).join(' / ')}</p>
                                     </div>
                                 ))}
                             </div>
@@ -620,27 +614,27 @@ export default function App() {
                         {mobileSection === 'experience' && (
                             <div className="space-y-2">
                                 {(experienceData || []).map((exp) => (
-                                    <div key={`${exp.company}-${exp.period}`} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                                        <p className="text-sm text-white font-medium">{exp.project}</p>
-                                        <p className="text-xs text-white/60 mt-1">{exp.company} · {exp.period}</p>
-                                        <p className="text-xs text-white/80 mt-2 line-clamp-3">{exp.description}</p>
+                                    <div key={`${exp.company}-${exp.period}`} className="rounded-xl bg-white/[0.10] p-3">
+                                        <p className="text-base text-white font-medium">{exp.project}</p>
+                                        <p className="text-sm text-white/70 mt-1">{exp.company} · {exp.period}</p>
+                                        <p className="text-sm text-white/85 mt-2 line-clamp-3">{exp.description}</p>
                                     </div>
                                 ))}
                             </div>
                         )}
 
                         {mobileSection === 'education' && educationData && (
-                            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                                <p className="text-sm text-white font-medium">{educationData.school}</p>
-                                <p className="text-xs text-white/70 mt-1">{educationData.major} · {educationData.degree}</p>
-                                <p className="text-xs text-white/60 mt-1">{educationData.startDate} - {educationData.endDate}</p>
+                            <div className="rounded-xl bg-white/[0.10] p-3">
+                                <p className="text-base text-white font-medium">{educationData.school}</p>
+                                <p className="text-sm text-white/80 mt-1">{educationData.major} · {educationData.degree}</p>
+                                <p className="text-sm text-white/70 mt-1">{educationData.startDate} - {educationData.endDate}</p>
                             </div>
                         )}
 
                         {mobileSection === 'honors' && (
                             <div className="space-y-2">
                                 {(honorData || []).map((honor) => (
-                                    <div key={honor.title} className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-white">
+                                    <div key={honor.title} className="rounded-xl bg-white/[0.10] p-3 text-base text-white">
                                         {honor.title}
                                     </div>
                                 ))}
@@ -651,13 +645,13 @@ export default function App() {
                             <div className="space-y-3">
                                 <a
                                     href={`tel:${authorData?.profile?.phone || '13043428526'}`}
-                                    className="block rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-center text-sm text-white"
+                                    className="block rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-center text-base text-white"
                                 >
                                     电话联系：{authorData?.profile?.phone || '13043428526'}
                                 </a>
                                 <div className="flex flex-wrap gap-2">
                                     {(authorData?.profile?.hobbies || selfEvaluation.slice(0, 4)).slice(0, 6).map((item) => (
-                                        <span key={item} className="rounded-full border border-white/15 bg-white/[0.05] px-2 py-1 text-[11px] text-white/80">
+                                        <span key={item} className="rounded-full bg-white/[0.14] px-2.5 py-1 text-xs text-white/90">
                                             {item}
                                         </span>
                                     ))}
