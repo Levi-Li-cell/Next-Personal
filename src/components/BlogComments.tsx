@@ -10,14 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Send, Reply } from "lucide-react";
+import { Loader2, Send, Reply, Trash2 } from "lucide-react";
 
 interface Comment {
   id: string;
   content: string;
   createdAt: Date;
   userId: string;
-  replies: Comment[];
+  replies?: Comment[];
 }
 
 interface BlogCommentsProps {
@@ -40,7 +40,11 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
         const response = await fetch(`/api/blog/${slug}/comments`);
         if (response.ok) {
           const data = await response.json();
-          setComments(data.comments);
+          const normalizedComments: Comment[] = (data.comments || []).map((comment: Comment) => ({
+            ...comment,
+            replies: comment.replies || [],
+          }));
+          setComments(normalizedComments);
         } else {
           toast.error("获取评论失败");
         }
@@ -76,7 +80,7 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setComments([data.comment, ...comments]);
+        setComments([{ ...data.comment, replies: data.comment?.replies || [] }, ...comments]);
         setCommentContent("");
         toast.success("评论成功");
       } else {
@@ -116,7 +120,7 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
           if (comment.id === parentId) {
             return {
               ...comment,
-              replies: [...comment.replies, data.comment],
+              replies: [...(comment.replies || []), data.comment],
             };
           }
           return comment;
@@ -134,6 +138,49 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
       toast.error("回复失败");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string, parentId?: string | null) => {
+    if (!session) {
+      toast.error("请先登录");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/blog/${slug}/comments`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ commentId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.error || "删除失败");
+        return;
+      }
+
+      if (parentId) {
+        setComments((prev) =>
+          prev.map((comment) =>
+            comment.id === parentId
+              ? {
+                  ...comment,
+                  replies: (comment.replies || []).filter((reply) => reply.id !== commentId),
+                }
+              : comment
+          )
+        );
+      } else {
+        setComments((prev) => prev.filter((comment) => comment.id !== commentId));
+      }
+
+      toast.success("评论已删除");
+    } catch (error) {
+      console.error("删除评论失败:", error);
+      toast.error("删除评论失败");
     }
   };
 
@@ -221,6 +268,15 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
                           <Reply className="w-4 h-4" />
                           回复
                         </button>
+                        {session?.user?.id === comment.userId && (
+                          <button
+                            onClick={() => handleDeleteComment(comment.id, null)}
+                            className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            删除
+                          </button>
+                        )}
                       </div>
 
                       {/* 回复表单 */}
@@ -266,9 +322,9 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
                       )}
 
                       {/* 回复列表 */}
-                      {comment.replies.length > 0 && (
+                      {(comment.replies?.length || 0) > 0 && (
                         <div className="mt-4 pl-4 border-l-2 border-white/10 space-y-3">
-                          {comment.replies.map((reply) => (
+                          {(comment.replies || []).map((reply) => (
                             <div key={reply.id} className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <h5 className="font-medium text-white/80">{session?.user?.name || "用户"}</h5>
@@ -277,6 +333,15 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
                                 </span>
                               </div>
                               <p className="text-white/70">{reply.content}</p>
+                              {session?.user?.id === reply.userId && (
+                                <button
+                                  onClick={() => handleDeleteComment(reply.id, comment.id)}
+                                  className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  删除
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
