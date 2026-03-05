@@ -130,6 +130,8 @@ export default function App() {
     // 用于光晕效果的平滑过渡值
     const smoothMouseX = useSpring(mouseX, { damping: 25, stiffness: 400 });
     const smoothMouseY = useSpring(mouseY, { damping: 25, stiffness: 400 });
+    const orbX = useTransform(smoothMouseX, [0, 1000], [-100, 100]);
+    const orbY = useTransform(smoothMouseY, [0, 1000], [-100, 100]);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -284,8 +286,8 @@ export default function App() {
                 <motion.div
                     className="absolute w-[600px] h-[600px] rounded-full bg-purple-600/30 blur-3xl"
                     style={{
-                        x: useTransform(smoothMouseX, [0, typeof window !== "undefined" ? window.innerWidth : 1000], [-100, 100]),
-                        y: useTransform(smoothMouseY, [0, typeof window !== "undefined" ? window.innerHeight : 1000], [-100, 100]),
+                        x: orbX,
+                        y: orbY,
                     }}
                 />
                 <motion.div
@@ -528,6 +530,17 @@ export default function App() {
                     </motion.div>
                 </motion.div>
             </section>
+
+            {isMobile && (
+                <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/80 backdrop-blur px-2 py-2">
+                    <div className="grid grid-cols-4 gap-1 text-[11px]">
+                        <button className="rounded-md bg-white/5 px-2 py-2 text-white" onClick={() => scrollToSection('hero')}>首页</button>
+                        <button className="rounded-md bg-white/5 px-2 py-2 text-white" onClick={() => scrollToSection('skills')}>技能</button>
+                        <button className="rounded-md bg-white/5 px-2 py-2 text-white" onClick={() => scrollToSection('experience')}>经历</button>
+                        <button className="rounded-md bg-white/5 px-2 py-2 text-white" onClick={() => scrollToSection('contact')}>联系</button>
+                    </div>
+                </div>
+            )}
 
             {/* About Section */}
             <section id="about" className={`relative ${isMobile ? 'py-10' : 'py-32'}`}>
