@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Save, Plus, Trash2, Edit } from "lucide-react";
+import { Loader2, Save, Plus, Trash2, Edit, Upload, ImagePlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -123,6 +123,8 @@ export default function AuthorManagePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newHobby, setNewHobby] = useState("");
+  const [newPhotoUrl, setNewPhotoUrl] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [skillDialogOpen, setSkillDialogOpen] = useState(false);
   const [experienceDialogOpen, setExperienceDialogOpen] = useState(false);
@@ -606,6 +608,69 @@ export default function AuthorManagePage() {
     });
   };
 
+  const handleAddPhotoUrl = () => {
+    const url = newPhotoUrl.trim();
+    if (!url) return;
+    if (profile.photos.includes(url)) {
+      toast.error("该图片已存在");
+      return;
+    }
+    setProfile({ ...profile, photos: [...profile.photos, url] });
+    setNewPhotoUrl("");
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setProfile({
+      ...profile,
+      photos: profile.photos.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleUpdatePhoto = (index: number, value: string) => {
+    const next = [...profile.photos];
+    next[index] = value;
+    setProfile({ ...profile, photos: next });
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingPhoto(true);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (!data.success || !data.url) {
+        toast.error(data.error || "图片上传失败");
+        return;
+      }
+
+      if (profile.photos.includes(data.url)) {
+        toast.success("图片已存在");
+        return;
+      }
+
+      setProfile({
+        ...profile,
+        photos: [...profile.photos, data.url],
+      });
+      toast.success("图片上传成功");
+    } catch (error) {
+      console.error("图片上传失败:", error);
+      toast.error("图片上传失败");
+    } finally {
+      setUploadingPhoto(false);
+      event.target.value = "";
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -788,6 +853,52 @@ export default function AuthorManagePage() {
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>作者图片（支持后台 CRUD）</Label>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    placeholder="粘贴图片 URL 后添加"
+                    value={newPhotoUrl}
+                    onChange={(e) => setNewPhotoUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddPhotoUrl()}
+                  />
+                  <Button type="button" onClick={handleAddPhotoUrl}>
+                    <ImagePlus className="w-4 h-4 mr-1" /> 添加图片
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+                  <Button type="button" variant="outline" disabled={uploadingPhoto}>
+                    {uploadingPhoto ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                    上传
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {profile.photos.length === 0 && (
+                    <p className="text-sm text-muted-foreground">暂无作者图片</p>
+                  )}
+
+                  {profile.photos.map((photo, index) => (
+                    <div key={`${photo}-${index}`} className="rounded-lg border p-3 space-y-2">
+                      <img src={photo} alt={`作者图片${index + 1}`} className="h-24 w-24 rounded-md object-cover border" />
+                      <Input
+                        value={photo}
+                        onChange={(e) => handleUpdatePhoto(index, e.target.value)}
+                        placeholder="图片 URL"
+                      />
+                      <div className="flex justify-end">
+                        <Button type="button" variant="destructive" size="sm" onClick={() => handleRemovePhoto(index)}>
+                          <Trash2 className="w-4 h-4 mr-1" /> 删除
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
