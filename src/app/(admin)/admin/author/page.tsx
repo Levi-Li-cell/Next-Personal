@@ -619,6 +619,19 @@ export default function AuthorManagePage() {
     setNewPhotoUrl("");
   };
 
+  const syncPhotosToServer = async (nextPhotos: string[]) => {
+    const response = await fetch("/api/admin/author", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...profile, photos: nextPhotos }),
+    });
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.error || "作者图片同步失败");
+    }
+    setProfile(data.data);
+  };
+
   const handleRemovePhoto = (index: number) => {
     setProfile({
       ...profile,
@@ -630,6 +643,70 @@ export default function AuthorManagePage() {
     const next = [...profile.photos];
     next[index] = value;
     setProfile({ ...profile, photos: next });
+  };
+
+  const addPhotoWithApi = async () => {
+    const url = newPhotoUrl.trim();
+    if (!url) return;
+    try {
+      const response = await fetch("/api/admin/author/photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || "新增图片失败");
+        return;
+      }
+      const nextPhotos = data.data || [];
+      await syncPhotosToServer(nextPhotos);
+      setNewPhotoUrl("");
+      toast.success("图片已新增");
+    } catch (error) {
+      console.error("新增图片失败:", error);
+      toast.error("新增图片失败");
+    }
+  };
+
+  const updatePhotoWithApi = async (index: number, value: string) => {
+    try {
+      const response = await fetch("/api/admin/author/photos", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index, url: value.trim() }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || "更新图片失败");
+        return;
+      }
+      await syncPhotosToServer(data.data || []);
+      toast.success("图片已更新");
+    } catch (error) {
+      console.error("更新图片失败:", error);
+      toast.error("更新图片失败");
+    }
+  };
+
+  const removePhotoWithApi = async (index: number) => {
+    try {
+      const response = await fetch("/api/admin/author/photos", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || "删除图片失败");
+        return;
+      }
+      await syncPhotosToServer(data.data || []);
+      toast.success("图片已删除");
+    } catch (error) {
+      console.error("删除图片失败:", error);
+      toast.error("删除图片失败");
+    }
   };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -657,10 +734,18 @@ export default function AuthorManagePage() {
         return;
       }
 
-      setProfile({
-        ...profile,
-        photos: [...profile.photos, data.url],
+      const response = await fetch("/api/admin/author/photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: data.url }),
       });
+      const photoData = await response.json();
+      if (!photoData.success) {
+        toast.error(photoData.error || "图片入库失败");
+        return;
+      }
+
+      await syncPhotosToServer(photoData.data || []);
       toast.success("图片上传成功");
     } catch (error) {
       console.error("图片上传失败:", error);
@@ -866,9 +951,9 @@ export default function AuthorManagePage() {
                     placeholder="粘贴图片 URL 后添加"
                     value={newPhotoUrl}
                     onChange={(e) => setNewPhotoUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddPhotoUrl()}
+                    onKeyDown={(e) => e.key === "Enter" && addPhotoWithApi()}
                   />
-                  <Button type="button" onClick={handleAddPhotoUrl}>
+                  <Button type="button" onClick={addPhotoWithApi}>
                     <ImagePlus className="w-4 h-4 mr-1" /> 添加图片
                   </Button>
                 </div>
@@ -892,10 +977,11 @@ export default function AuthorManagePage() {
                       <Input
                         value={photo}
                         onChange={(e) => handleUpdatePhoto(index, e.target.value)}
+                        onBlur={(e) => updatePhotoWithApi(index, e.target.value)}
                         placeholder="图片 URL"
                       />
                       <div className="flex justify-end">
-                        <Button type="button" variant="destructive" size="sm" onClick={() => handleRemovePhoto(index)}>
+                        <Button type="button" variant="destructive" size="sm" onClick={() => removePhotoWithApi(index)}>
                           <Trash2 className="w-4 h-4 mr-1" /> 删除
                         </Button>
                       </div>
