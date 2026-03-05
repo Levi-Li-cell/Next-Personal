@@ -11,6 +11,7 @@ export default function ProfileCard({ images }: ProfileCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [cachedImages, setCachedImages] = useState<Record<string, string>>({});
   const [isMobile, setIsMobile] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -65,6 +66,24 @@ export default function ProfileCard({ images }: ProfileCardProps) {
   };
 
   const getImageSrc = (url: string) => cachedImages[url] || url;
+
+  const onViewerTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    setTouchStartX(event.changedTouches[0]?.clientX ?? null);
+  };
+
+  const onViewerTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX === null) return;
+    const endX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const delta = endX - touchStartX;
+    setTouchStartX(null);
+
+    if (Math.abs(delta) < 40) return;
+    if (delta > 0) {
+      prevImage();
+    } else {
+      nextImage();
+    }
+  };
 
   if (validImages.length === 0) {
     return null;
@@ -181,7 +200,11 @@ export default function ProfileCard({ images }: ProfileCardProps) {
       )}
 
       {viewerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 p-4 flex items-center justify-center">
+        <div
+          className="fixed inset-0 z-50 bg-black/90 p-4 flex items-center justify-center"
+          onTouchStart={onViewerTouchStart}
+          onTouchEnd={onViewerTouchEnd}
+        >
           <button
             type="button"
             className="absolute top-4 right-4 text-white text-sm bg-white/10 px-3 py-2 rounded"
@@ -201,6 +224,9 @@ export default function ProfileCard({ images }: ProfileCardProps) {
             alt={`预览 ${currentImageIndex + 1}`}
             className="max-h-[85vh] max-w-[92vw] rounded-lg object-contain"
           />
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 text-xs text-white/90">
+            {currentImageIndex + 1} / {validImages.length}
+          </div>
           <button
             type="button"
             className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-sm bg-white/10 px-3 py-2 rounded"

@@ -326,7 +326,7 @@ export default function App() {
             />}
 
             {/* Hero Section */}
-            <section id="hero" className={`relative min-h-screen flex items-center justify-center ${isMobile ? 'pt-10 pb-8' : 'pt-20'}`}>
+            <section id="hero" className={`relative min-h-screen flex items-center justify-center ${isMobile ? 'pt-8 pb-14' : 'pt-20'}`}>
                 <motion.div
                     className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}
                     style={{ scale, opacity }}
@@ -539,6 +539,12 @@ export default function App() {
                         <button className="rounded-md bg-white/5 px-2 py-2 text-white" onClick={() => scrollToSection('experience')}>经历</button>
                         <button className="rounded-md bg-white/5 px-2 py-2 text-white" onClick={() => scrollToSection('contact')}>联系</button>
                     </div>
+                </div>
+            )}
+
+            {isMobile && (
+                <div className="fixed bottom-14 left-1/2 z-40 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white/90">
+                    图片支持左右滑动切换
                 </div>
             )}
 
