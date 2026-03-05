@@ -1,65 +1,72 @@
-import { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
 
 interface ProfileCardProps {
   images: string[];
-  onUpload?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  isUploading?: boolean;
 }
 
-export default function ProfileCard({ images, onUpload, isUploading }: ProfileCardProps) {
+export default function ProfileCard({ images }: ProfileCardProps) {
+  const validImages = useMemo(() => images.filter(Boolean), [images]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [cachedImages, setCachedImages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let disposed = false;
+    const urlsToRevoke: string[] = [];
+
+    const preload = async () => {
+      const next: Record<string, string> = {};
+
+      for (const url of validImages) {
+        try {
+          const response = await fetch(url, { cache: 'force-cache' });
+          if (!response.ok) continue;
+          const blob = await response.blob();
+          const localUrl = URL.createObjectURL(blob);
+          urlsToRevoke.push(localUrl);
+          next[url] = localUrl;
+        } catch {
+          next[url] = url;
+        }
+      }
+
+      if (!disposed) {
+        setCachedImages((prev) => ({ ...prev, ...next }));
+      }
+    };
+
+    preload();
+
+    return () => {
+      disposed = true;
+      urlsToRevoke.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [validImages]);
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % (images.length + 1));
+    if (validImages.length === 0) return;
+    setCurrentImageIndex((prev) => (prev + 1) % validImages.length);
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !onUpload) return;
-
-    const uploadedUrls: string[] = [];
-
-    // We handle the actual upload in the parent component for better state management
-    // But we pass the files up
-    // Actually, let's do the upload here for simplicity if the SDK is available
-    // or let the parent handle it. Parent is better.
-    // Let's just pass the FileList up.
-
-    // Convert FileList to Array
-    const fileArray = Array.from(files);
-    // Note: The parent will handle the @vercel/blob upload
-    // For now, let's assume the parent takes care of it and provides isUploading status
+  const prevImage = () => {
+    if (validImages.length === 0) return;
+    setCurrentImageIndex((prev) => (prev - 1 + validImages.length) % validImages.length);
   };
 
-  const triggerUpload = () => {
-    fileInputRef.current?.click();
-  };
+  const getImageSrc = (url: string) => cachedImages[url] || url;
+
+  if (validImages.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="relative w-full max-w-md mx-auto perspective-1000" style={{ perspective: '1000px' }}>
-      {/* Hidden File Input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={(e) => {
-          if (e.target.files && onUpload) {
-            onUpload(e as any);
-          }
-        }}
-        multiple
-        accept="image/*"
-        className="hidden"
-      />
+    <div className="relative w-full max-w-md mx-auto" style={{ perspective: '1000px' }}>
 
-      {/* Poker Card Stack */}
-      <div className="relative w-full aspect-[3/4]">
-        {[...images, 'upload-button'].map((img, index) => {
-          const isUploadButton = img === 'upload-button';
+      <div className="relative w-full aspect-[4/5] sm:aspect-[3/4]">
+        {validImages.map((img, index) => {
           const isActive = index === currentImageIndex;
-          const totalItems = images.length + 1;
+          const totalItems = validImages.length;
           const isPrev = index === (currentImageIndex - 1 + totalItems) % totalItems;
           const offset = index - currentImageIndex;
 
@@ -94,11 +101,7 @@ export default function ProfileCard({ images, onUpload, isUploading }: ProfileCa
               } : {}}
               onClick={() => {
                 if (isActive) {
-                  if (isUploadButton) {
-                    triggerUpload();
-                  } else {
-                    nextImage();
-                  }
+                  nextImage();
                 } else {
                   setCurrentImageIndex(index);
                 }
@@ -107,38 +110,13 @@ export default function ProfileCard({ images, onUpload, isUploading }: ProfileCa
               {/* Card Border & Shadow */}
               <div className="relative w-full h-full rounded-2xl bg-white p-3 shadow-2xl">
                 {/* Inner Card */}
-                <div className={`relative w-full h-full rounded-xl overflow-hidden ${isUploadButton ? 'bg-gray-50 border-2 border-dashed border-purple-200 flex flex-col items-center justify-center gap-4' : 'bg-white shadow-inner'}`}>
-                  {isUploadButton ? (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                        {isUploading ? (
-                          <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
-                        ) : (
-                          <Plus className="w-8 h-8 text-purple-500" />
-                        )}
-                      </div>
-                      <div className="text-center px-4">
-                        <p className="text-purple-600 font-medium">{isUploading ? '正在上传...' : '添加新头像'}</p>
-                        <p className="text-gray-400 text-xs mt-1">支持多图上传</p>
-                      </div>
-                    </>
-                  ) : (
-                    <img
-                      src={img}
-                      alt={`李伟 ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
+                <div className="relative w-full h-full rounded-xl overflow-hidden bg-white shadow-inner">
+                  <img src={getImageSrc(img)} alt={`李伟 ${index + 1}`} className="w-full h-full object-cover" loading="eager" />
 
-                  {/* Card Number Badge */}
-                  {!isUploadButton && (
-                    <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
-                      <span className="text-white text-sm">{index + 1}/{images.length}</span>
-                    </div>
-                  )}
+                  <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
+                    <span className="text-white text-sm">{index + 1}/{validImages.length}</span>
+                  </div>
                 </div>
-
-                {/* Card Corner Decorations */}
                 <div className="absolute top-1 left-1 w-8 h-8 border-t-2 border-l-2 border-purple-500 rounded-tl-xl opacity-50"></div>
                 <div className="absolute bottom-1 right-1 w-8 h-8 border-b-2 border-r-2 border-cyan-500 rounded-br-xl opacity-50"></div>
               </div>
@@ -147,9 +125,8 @@ export default function ProfileCard({ images, onUpload, isUploading }: ProfileCa
         })}
       </div>
 
-      {/* Hint Text */}
       <motion.div
-        className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-white/60 text-sm whitespace-nowrap"
+        className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-white/60 text-xs sm:text-sm whitespace-nowrap"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, duration: 0.5 }}
@@ -158,9 +135,64 @@ export default function ProfileCard({ images, onUpload, isUploading }: ProfileCa
           animate={{ opacity: [0.6, 1, 0.6] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          {currentImageIndex === images.length ? '点击“+”上传图片' : '点击卡片切换 →'}
+          点击切换 / 长按查看
         </motion.span>
       </motion.div>
+
+      <div className="mt-16 flex items-center justify-center gap-2 sm:hidden">
+        <button
+          type="button"
+          className="rounded-md bg-white/10 px-3 py-1 text-xs text-white"
+          onClick={prevImage}
+        >
+          上一张
+        </button>
+        <button
+          type="button"
+          className="rounded-md bg-white/10 px-3 py-1 text-xs text-white"
+          onClick={() => setViewerOpen(true)}
+        >
+          预览
+        </button>
+        <button
+          type="button"
+          className="rounded-md bg-white/10 px-3 py-1 text-xs text-white"
+          onClick={nextImage}
+        >
+          下一张
+        </button>
+      </div>
+
+      {viewerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/90 p-4 flex items-center justify-center">
+          <button
+            type="button"
+            className="absolute top-4 right-4 text-white text-sm bg-white/10 px-3 py-2 rounded"
+            onClick={() => setViewerOpen(false)}
+          >
+            关闭
+          </button>
+          <button
+            type="button"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-sm bg-white/10 px-3 py-2 rounded"
+            onClick={prevImage}
+          >
+            上一张
+          </button>
+          <img
+            src={getImageSrc(validImages[currentImageIndex])}
+            alt={`预览 ${currentImageIndex + 1}`}
+            className="max-h-[85vh] max-w-[92vw] rounded-lg object-contain"
+          />
+          <button
+            type="button"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-sm bg-white/10 px-3 py-2 rounded"
+            onClick={nextImage}
+          >
+            下一张
+          </button>
+        </div>
+      )}
     </div>
   );
 }

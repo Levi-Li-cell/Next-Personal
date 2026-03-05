@@ -1,6 +1,20 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 
+function sanitizeFilename(name: string) {
+    const dotIndex = name.lastIndexOf('.');
+    const ext = dotIndex > -1 ? name.slice(dotIndex).toLowerCase() : '';
+    const base = dotIndex > -1 ? name.slice(0, dotIndex) : name;
+    const safeBase = base
+        .normalize('NFKD')
+        .replace(/[^a-zA-Z0-9-_]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        || 'image';
+    const stamp = Date.now();
+    return `author/${safeBase}-${stamp}${ext}`;
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
     const { searchParams } = new URL(request.url);
     const filename = searchParams.get('filename');
@@ -15,7 +29,7 @@ export async function POST(request: Request): Promise<NextResponse> {
                 return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
             }
 
-            const blob = await put(filename || file.name, file, {
+            const blob = await put(sanitizeFilename(filename || file.name), file, {
                 access: 'public',
             });
 
@@ -30,7 +44,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             return NextResponse.json({ success: false, error: 'No body provided' }, { status: 400 });
         }
 
-        const blob = await put(filename, request.body, {
+        const blob = await put(sanitizeFilename(filename), request.body, {
             access: 'public',
         });
 

@@ -72,7 +72,6 @@ const initialImages: string[] = [
 
 export default function App() {
     const [imagesState, setImagesState] = useState<string[]>(initialImages);
-    const [isUploading, setIsUploading] = useState(false);
     const [authorData, setAuthorData] = useState<{
         profile: {
             name: string;
@@ -115,40 +114,6 @@ export default function App() {
         honors: Array<{ id: string; title: string }>;
     } | null>(null);
 
-    const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files || files.length === 0) return;
-
-        setIsUploading(true);
-        const newUrls: string[] = [];
-
-        try {
-            for (const file of Array.from(files)) {
-                const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
-                    method: 'POST',
-                    body: file,
-                });
-
-                if (response.ok) {
-                    const blob = await response.json();
-                    newUrls.push(blob.url);
-                } else {
-                    console.error('Upload failed for file:', file.name);
-                }
-            }
-
-            if (newUrls.length > 0) {
-                setImagesState(prev => [...prev, ...newUrls]);
-            }
-        } catch (error) {
-            console.error('Error uploading files:', error);
-            alert('上传失败，请稍后再试');
-        } finally {
-            setIsUploading(false);
-            // Reset input
-            event.target.value = '';
-        }
-    };
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -172,7 +137,7 @@ export default function App() {
                 const data = await response.json();
                 if (data.success) {
                     setAuthorData(data.data);
-                    if (data.data?.profile?.photos?.length) {
+                    if (Array.isArray(data.data?.profile?.photos) && data.data.profile.photos.length > 0) {
                         setImagesState(data.data.profile.photos);
                     }
                 }
@@ -351,7 +316,7 @@ export default function App() {
                     className="container mx-auto px-6"
                     style={{ scale, opacity }}
                 >
-                    <div className="grid lg:grid-cols-2 gap-12 items-center">
+                    <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start lg:items-center">
                         {/* Left: Profile Card */}
                         <motion.div
                             initial={{ opacity: 0, x: -100, rotateY: -90 }}
@@ -366,7 +331,7 @@ export default function App() {
                             initial={{ opacity: 0, x: 100 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.8, delay: 0.2 }}
-                            className="space-y-6"
+                            className="space-y-4 sm:space-y-6"
                         >
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -374,7 +339,7 @@ export default function App() {
                                 transition={{ delay: 0.4 }}
                             >
                                 <motion.h1
-                                    className="text-6xl lg:text-7xl mb-4"
+                                    className="text-4xl sm:text-5xl lg:text-7xl mb-3 sm:mb-4 leading-tight"
                                     style={{
                                         textShadow: "0 0 30px rgba(168, 85, 247, 0.3)"
                                     }}
@@ -428,14 +393,14 @@ export default function App() {
                                         transition={{ duration: 2, repeat: Infinity }}
                                     />
                                     <TypeWriter
-                                        text={authorData?.profile?.title || '前端开发工程师'}
-                                        className="text-2xl text-cyan-300"
+                                        text={authorData?.profile?.title || '前端开发师'}
+                                        className="text-lg sm:text-2xl text-cyan-300"
                                         delay={1.5}
                                     />
                                 </div>
 
                                 <motion.p
-                                    className="text-white/70 text-lg leading-relaxed max-w-xl"
+                                    className="text-white/80 text-sm sm:text-lg leading-relaxed max-w-xl"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 2 }}
@@ -448,7 +413,7 @@ export default function App() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.8 }}
-                                className="flex flex-wrap gap-4 pt-4"
+                                className="flex flex-wrap gap-2 sm:gap-4 pt-2 sm:pt-4"
                             >
                                 <MagneticButton onClick={() => scrollToSection('contact')}>
                                     <motion.div
