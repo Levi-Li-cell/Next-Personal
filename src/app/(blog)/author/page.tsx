@@ -72,6 +72,7 @@ const initialImages: string[] = [
 
 export default function App() {
     const [imagesState, setImagesState] = useState<string[]>(initialImages);
+    const [isMobile, setIsMobile] = useState(false);
     const [authorData, setAuthorData] = useState<{
         profile: {
             name: string;
@@ -131,6 +132,16 @@ export default function App() {
     const smoothMouseY = useSpring(mouseY, { damping: 25, stiffness: 400 });
 
     useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const media = window.matchMedia('(max-width: 767px)');
+            const update = () => setIsMobile(media.matches);
+            update();
+            media.addEventListener('change', update);
+            return () => media.removeEventListener('change', update);
+        }
+    }, []);
+
+    useEffect(() => {
         const fetchAuthorData = async () => {
             try {
                 const response = await fetch('/api/author');
@@ -166,13 +177,15 @@ export default function App() {
             }, 1000);
         };
 
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('click', handleClick);
+        if (!isMobile) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('click', handleClick);
+        }
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('click', handleClick);
         };
-    }, [mouseX, mouseY]);
+    }, [mouseX, mouseY, isMobile]);
 
     const scrollToSection = (id: string) => {
         const element = document.getElementById(id);
@@ -239,12 +252,12 @@ export default function App() {
     ];
 
     return (
-        <div ref={containerRef} className="relative min-h-screen bg-black overflow-x-hidden cursor-none">
+        <div ref={containerRef} className={`relative min-h-screen bg-black overflow-x-hidden ${isMobile ? '' : 'cursor-none'}`}>
             {/* Custom Cursor */}
-            <CustomCursor mouseX={mouseX} mouseY={mouseY} smoothMouseX={smoothMouseX} smoothMouseY={smoothMouseY} />
+            {!isMobile && <CustomCursor mouseX={mouseX} mouseY={mouseY} smoothMouseX={smoothMouseX} smoothMouseY={smoothMouseY} />}
 
             {/* Click Ripples */}
-            {ripples.map(ripple => (
+            {!isMobile && ripples.map(ripple => (
                 <motion.div
                     key={ripple.id}
                     className="fixed pointer-events-none z-50"
@@ -261,10 +274,10 @@ export default function App() {
             ))}
 
             {/* Floating Elements */}
-            <FloatingElements />
+            {!isMobile && <FloatingElements />}
 
             {/* Particle Background */}
-            <ParticleBackground />
+            {!isMobile && <ParticleBackground />}
 
             {/* Gradient Orbs */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -302,7 +315,7 @@ export default function App() {
             </div>
 
             {/* Sidebar Navigation */}
-            <SidebarNav />
+            {!isMobile && <SidebarNav />}
 
             {/* Scroll Progress */}
             <motion.div
@@ -311,9 +324,9 @@ export default function App() {
             />
 
             {/* Hero Section */}
-            <section id="hero" className="relative min-h-screen flex items-center justify-center pt-20">
+            <section id="hero" className={`relative min-h-screen flex items-center justify-center ${isMobile ? 'pt-10 pb-8' : 'pt-20'}`}>
                 <motion.div
-                    className="container mx-auto px-6"
+                    className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}
                     style={{ scale, opacity }}
                 >
                     <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start lg:items-center">
@@ -331,7 +344,7 @@ export default function App() {
                             initial={{ opacity: 0, x: 100 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.8, delay: 0.2 }}
-                            className="space-y-4 sm:space-y-6"
+                            className={`space-y-4 ${isMobile ? 'pt-2' : 'sm:space-y-6'}`}
                         >
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -517,8 +530,8 @@ export default function App() {
             </section>
 
             {/* About Section */}
-            <section id="about" className="relative py-32">
-                <div className="container mx-auto px-6">
+            <section id="about" className={`relative ${isMobile ? 'py-16' : 'py-32'}`}>
+                <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -599,8 +612,8 @@ export default function App() {
             </section>
 
             {/* Skills Section */}
-            <section id="skills" className="relative py-32 bg-white/5">
-                <div className="container mx-auto px-6">
+            <section id="skills" className={`relative ${isMobile ? 'py-16' : 'py-32'} bg-white/5`}>
+                <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -627,8 +640,8 @@ export default function App() {
             </section>
 
             {/* Experience Section */}
-            <section id="experience" className="relative py-32">
-                <div className="container mx-auto px-6">
+            <section id="experience" className={`relative ${isMobile ? 'py-16' : 'py-32'}`}>
+                <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -655,8 +668,8 @@ export default function App() {
             </section>
 
             {/* Education Section */}
-            <section id="education" className="relative py-32 bg-white/5">
-                <div className="container mx-auto px-6">
+            <section id="education" className={`relative ${isMobile ? 'py-16' : 'py-32'} bg-white/5`}>
+                <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -683,8 +696,8 @@ export default function App() {
             </section>
 
             {/* Honors Section */}
-            <section id="honors" className="relative py-32">
-                <div className="container mx-auto px-6">
+            <section id="honors" className={`relative ${isMobile ? 'py-16' : 'py-32'}`}>
+                <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -711,8 +724,8 @@ export default function App() {
             </section>
 
             {/* Contact Section */}
-            <section id="contact" className="relative py-32 bg-white/5">
-                <div className="container mx-auto px-6">
+            <section id="contact" className={`relative ${isMobile ? 'py-16' : 'py-32'} bg-white/5`}>
+                <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}

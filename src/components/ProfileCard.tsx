@@ -10,6 +10,16 @@ export default function ProfileCard({ images }: ProfileCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [cachedImages, setCachedImages] = useState<Record<string, string>>({});
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     let disposed = false;
@@ -64,7 +74,25 @@ export default function ProfileCard({ images }: ProfileCardProps) {
     <div className="relative w-full max-w-md mx-auto" style={{ perspective: '1000px' }}>
 
       <div className="relative w-full aspect-[4/5] sm:aspect-[3/4]">
-        {validImages.map((img, index) => {
+        {isMobile ? (
+          <button
+            type="button"
+            className="relative block h-full w-full rounded-2xl overflow-hidden border border-white/20"
+            onClick={() => setViewerOpen(true)}
+          >
+            <img
+              src={getImageSrc(validImages[currentImageIndex])}
+              alt={`李伟 ${currentImageIndex + 1}`}
+              className="h-full w-full object-cover"
+              loading="eager"
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-black/50 backdrop-blur px-3 py-2 flex items-center justify-between text-white text-xs">
+              <span>{currentImageIndex + 1}/{validImages.length}</span>
+              <span>点击预览</span>
+            </div>
+          </button>
+        ) : (
+        validImages.map((img, index) => {
           const isActive = index === currentImageIndex;
           const totalItems = validImages.length;
           const isPrev = index === (currentImageIndex - 1 + totalItems) % totalItems;
@@ -122,7 +150,8 @@ export default function ProfileCard({ images }: ProfileCardProps) {
               </div>
             </motion.div>
           );
-        })}
+        })
+        )}
       </div>
 
       <motion.div
@@ -135,33 +164,21 @@ export default function ProfileCard({ images }: ProfileCardProps) {
           animate={{ opacity: [0.6, 1, 0.6] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          点击切换 / 长按查看
+          {isMobile ? '点击预览后左右切换' : '点击卡片切换'}
         </motion.span>
       </motion.div>
 
-      <div className="mt-16 flex items-center justify-center gap-2 sm:hidden">
-        <button
-          type="button"
-          className="rounded-md bg-white/10 px-3 py-1 text-xs text-white"
-          onClick={prevImage}
-        >
-          上一张
-        </button>
-        <button
-          type="button"
-          className="rounded-md bg-white/10 px-3 py-1 text-xs text-white"
-          onClick={() => setViewerOpen(true)}
-        >
-          预览
-        </button>
-        <button
-          type="button"
-          className="rounded-md bg-white/10 px-3 py-1 text-xs text-white"
-          onClick={nextImage}
-        >
-          下一张
-        </button>
-      </div>
+      {isMobile && (
+        <div className="mt-16 flex items-center justify-center gap-2 sm:hidden">
+          <button
+            type="button"
+            className="rounded-md bg-white/10 px-4 py-2 text-xs text-white"
+            onClick={() => setViewerOpen(true)}
+          >
+            预览图片
+          </button>
+        </div>
+      )}
 
       {viewerOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 p-4 flex items-center justify-center">
