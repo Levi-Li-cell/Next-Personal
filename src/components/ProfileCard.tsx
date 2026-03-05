@@ -187,21 +187,9 @@ export default function ProfileCard({ images }: ProfileCardProps) {
         </motion.span>
       </motion.div>
 
-      {isMobile && (
-        <div className="mt-16 flex items-center justify-center gap-2 sm:hidden">
-          <button
-            type="button"
-            className="rounded-md bg-white/10 px-4 py-2 text-xs text-white"
-            onClick={() => setViewerOpen(true)}
-          >
-            预览图片
-          </button>
-        </div>
-      )}
-
       {viewerOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 p-4 flex items-center justify-center"
+          className="fixed inset-0 z-50 bg-black flex items-center justify-center"
           onTouchStart={onViewerTouchStart}
           onTouchEnd={onViewerTouchEnd}
         >
@@ -212,28 +200,14 @@ export default function ProfileCard({ images }: ProfileCardProps) {
           >
             关闭
           </button>
-          <button
-            type="button"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-sm bg-white/10 px-3 py-2 rounded"
-            onClick={prevImage}
-          >
-            上一张
-          </button>
           <img
             src={getImageSrc(validImages[currentImageIndex])}
             alt={`预览 ${currentImageIndex + 1}`}
-            className="max-h-[85vh] max-w-[92vw] rounded-lg object-contain"
+            className="h-full w-full object-contain"
           />
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 text-xs text-white/90">
             {currentImageIndex + 1} / {validImages.length}
           </div>
-          <button
-            type="button"
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-sm bg-white/10 px-3 py-2 rounded"
-            onClick={nextImage}
-          >
-            下一张
-          </button>
         </div>
       )}
     </div>
