@@ -16,8 +16,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface AuthorProfile {
   id: string | null;
@@ -44,6 +53,7 @@ interface Skill {
   name: string;
   level: string;
   category: string;
+  sortOrder?: string;
 }
 
 interface Experience {
@@ -55,6 +65,7 @@ interface Experience {
   description: string;
   achievements: string[];
   techStack: string[];
+  sortOrder?: string;
 }
 
 interface Education {
@@ -66,6 +77,7 @@ interface Education {
   endDate: string;
   description: string;
   achievements: string[];
+  sortOrder?: string;
 }
 
 interface Honor {
@@ -75,21 +87,28 @@ interface Honor {
   date: string;
   description: string;
   imageUrl: string;
+  sortOrder?: string;
 }
+
+type DeleteTarget = {
+  type: "skills" | "experiences" | "education" | "honors";
+  id: string;
+  label: string;
+};
 
 export default function AuthorManagePage() {
   const [profile, setProfile] = useState<AuthorProfile>({
     id: null,
     name: "李伟",
-    title: "前端开发工程师",
+    title: "前端开发师",
     bio: "",
     gender: "男",
-    age: "23岁",
+    age: "24",
     phone: "13043428526",
     education: "本科",
     location: "江西 · 汉族",
     preferredCity: "全国",
-    preferredPosition: "前端开发工程师",
+    preferredPosition: "前端开发师",
     expectedSalary: "面议",
     githubUrl: "",
     linkedinUrl: "",
@@ -104,51 +123,447 @@ export default function AuthorManagePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newHobby, setNewHobby] = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [skillDialogOpen, setSkillDialogOpen] = useState(false);
+  const [experienceDialogOpen, setExperienceDialogOpen] = useState(false);
+  const [educationDialogOpen, setEducationDialogOpen] = useState(false);
+  const [honorDialogOpen, setHonorDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  // 加载数据
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [profileRes, skillsRes, expRes, eduRes, honorsRes] = await Promise.all([
-          fetch("/api/admin/author"),
-          fetch("/api/admin/author/skills"),
-          fetch("/api/admin/author/experiences"),
-          fetch("/api/admin/author/education"),
-          fetch("/api/admin/author/honors"),
-        ]);
+  const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
+  const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
+  const [editingEducationId, setEditingEducationId] = useState<string | null>(null);
+  const [editingHonorId, setEditingHonorId] = useState<string | null>(null);
 
-        const profileData = await profileRes.json();
-        const skillsData = await skillsRes.json();
-        const expData = await expRes.json();
-        const eduData = await eduRes.json();
-        const honorsData = await honorsRes.json();
+  const [skillForm, setSkillForm] = useState({
+    name: "",
+    level: "80",
+    category: "前端基础",
+    sortOrder: "",
+  });
 
-        if (profileData.success) {
-          setProfile(profileData.data);
-        }
-        if (skillsData.success) {
-          setSkills(skillsData.data);
-        }
-        if (expData.success) {
-          setExperiences(expData.data);
-        }
-        if (eduData.success) {
-          setEducation(eduData.data);
-        }
-        if (honorsData.success) {
-          setHonors(honorsData.data);
-        }
-      } catch (error) {
-        console.error("加载数据失败:", error);
-        toast.error("加载数据失败");
-      } finally {
-        setLoading(false);
+  const [experienceForm, setExperienceForm] = useState({
+    company: "",
+    position: "前端工程师",
+    startDate: "",
+    endDate: "",
+    description: "",
+    achievementsText: "",
+    techStackText: "",
+    sortOrder: "",
+  });
+
+  const [educationForm, setEducationForm] = useState({
+    school: "",
+    major: "",
+    degree: "本科",
+    startDate: "",
+    endDate: "",
+    description: "",
+    achievementsText: "",
+    sortOrder: "",
+  });
+
+  const [honorForm, setHonorForm] = useState({
+    title: "",
+    issuer: "",
+    date: "",
+    description: "",
+    imageUrl: "",
+    sortOrder: "",
+  });
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [profileRes, skillsRes, expRes, eduRes, honorsRes] = await Promise.all([
+        fetch("/api/admin/author"),
+        fetch("/api/admin/author/skills"),
+        fetch("/api/admin/author/experiences"),
+        fetch("/api/admin/author/education"),
+        fetch("/api/admin/author/honors"),
+      ]);
+
+      const profileData = await profileRes.json();
+      const skillsData = await skillsRes.json();
+      const expData = await expRes.json();
+      const eduData = await eduRes.json();
+      const honorsData = await honorsRes.json();
+
+      if (profileData.success) {
+        setProfile(profileData.data);
       }
-    };
+      if (skillsData.success) {
+        setSkills(skillsData.data);
+      }
+      if (expData.success) {
+        setExperiences(expData.data);
+      }
+      if (eduData.success) {
+        setEducation(eduData.data);
+      }
+      if (honorsData.success) {
+        setHonors(honorsData.data);
+      }
+    } catch (error) {
+      console.error("加载数据失败:", error);
+      toast.error("加载数据失败");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, []);
+
+  const handleSyncResumeTemplate = async () => {
+    try {
+      const response = await fetch("/api/admin/author/sync", { method: "POST" });
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || "同步失败");
+        return;
+      }
+      toast.success("已按简历模板同步作者数据");
+      fetchData();
+    } catch (error) {
+      console.error("同步简历模板失败:", error);
+      toast.error("同步失败");
+    }
+  };
+
+  const parseCommaList = (value: string) =>
+    value
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+  const openCreateSkillDialog = () => {
+    setEditingSkillId(null);
+    setSkillForm({ name: "", level: "80", category: "前端基础", sortOrder: String(skills.length + 1) });
+    setSkillDialogOpen(true);
+  };
+
+  const openEditSkillDialog = (item: Skill) => {
+    setEditingSkillId(item.id);
+    setSkillForm({
+      name: item.name,
+      level: item.level,
+      category: item.category,
+      sortOrder: item.sortOrder || "",
+    });
+    setSkillDialogOpen(true);
+  };
+
+  const submitSkillForm = async () => {
+    if (!skillForm.name.trim()) {
+      toast.error("请填写技能名称");
+      return;
+    }
+
+    const levelNumber = Number(skillForm.level);
+    if (Number.isNaN(levelNumber) || levelNumber < 0 || levelNumber > 100) {
+      toast.error("熟练度必须是 0-100 的数字");
+      return;
+    }
+
+    try {
+      setFormSubmitting(true);
+      const isEdit = Boolean(editingSkillId);
+      const response = await fetch(
+        isEdit ? `/api/admin/author/skills/${editingSkillId}` : "/api/admin/author/skills",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: skillForm.name.trim(),
+            level: String(levelNumber),
+            category: skillForm.category.trim() || "前端基础",
+            sortOrder: skillForm.sortOrder.trim() || "0",
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || "保存技能失败");
+        return;
+      }
+
+      toast.success(isEdit ? "技能已更新" : "技能已新增");
+      setSkillDialogOpen(false);
+      fetchData();
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const openCreateExperienceDialog = () => {
+    setEditingExperienceId(null);
+    setExperienceForm({
+      company: "",
+      position: "前端工程师",
+      startDate: "",
+      endDate: "",
+      description: "",
+      achievementsText: "",
+      techStackText: "",
+      sortOrder: String(experiences.length + 1),
+    });
+    setExperienceDialogOpen(true);
+  };
+
+  const openEditExperienceDialog = (item: Experience) => {
+    setEditingExperienceId(item.id);
+    setExperienceForm({
+      company: item.company,
+      position: item.position,
+      startDate: item.startDate,
+      endDate: item.endDate || "",
+      description: item.description || "",
+      achievementsText: (item.achievements || []).join(", "),
+      techStackText: (item.techStack || []).join(", "),
+      sortOrder: item.sortOrder || "",
+    });
+    setExperienceDialogOpen(true);
+  };
+
+  const submitExperienceForm = async () => {
+    if (!experienceForm.company.trim()) {
+      toast.error("请填写公司名称");
+      return;
+    }
+    if (!experienceForm.position.trim()) {
+      toast.error("请填写职位");
+      return;
+    }
+    if (!experienceForm.startDate.trim()) {
+      toast.error("请填写开始时间");
+      return;
+    }
+
+    try {
+      setFormSubmitting(true);
+      const isEdit = Boolean(editingExperienceId);
+      const response = await fetch(
+        isEdit ? `/api/admin/author/experiences/${editingExperienceId}` : "/api/admin/author/experiences",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            company: experienceForm.company.trim(),
+            position: experienceForm.position.trim(),
+            startDate: experienceForm.startDate.trim(),
+            endDate: experienceForm.endDate.trim(),
+            description: experienceForm.description.trim(),
+            achievements: parseCommaList(experienceForm.achievementsText),
+            techStack: parseCommaList(experienceForm.techStackText),
+            sortOrder: experienceForm.sortOrder.trim() || "0",
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || "保存工作经历失败");
+        return;
+      }
+
+      toast.success(isEdit ? "工作经历已更新" : "工作经历已新增");
+      setExperienceDialogOpen(false);
+      fetchData();
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const openCreateEducationDialog = () => {
+    setEditingEducationId(null);
+    setEducationForm({
+      school: "",
+      major: "",
+      degree: "本科",
+      startDate: "",
+      endDate: "",
+      description: "",
+      achievementsText: "",
+      sortOrder: String(education.length + 1),
+    });
+    setEducationDialogOpen(true);
+  };
+
+  const openEditEducationDialog = (item: Education) => {
+    setEditingEducationId(item.id);
+    setEducationForm({
+      school: item.school,
+      major: item.major,
+      degree: item.degree,
+      startDate: item.startDate,
+      endDate: item.endDate,
+      description: item.description || "",
+      achievementsText: (item.achievements || []).join(", "),
+      sortOrder: item.sortOrder || "",
+    });
+    setEducationDialogOpen(true);
+  };
+
+  const submitEducationForm = async () => {
+    if (!educationForm.school.trim()) {
+      toast.error("请填写学校名称");
+      return;
+    }
+    if (!educationForm.major.trim()) {
+      toast.error("请填写专业");
+      return;
+    }
+    if (!educationForm.startDate.trim()) {
+      toast.error("请填写开始时间");
+      return;
+    }
+    if (!educationForm.endDate.trim()) {
+      toast.error("请填写结束时间");
+      return;
+    }
+
+    try {
+      setFormSubmitting(true);
+      const isEdit = Boolean(editingEducationId);
+      const response = await fetch(
+        isEdit ? `/api/admin/author/education/${editingEducationId}` : "/api/admin/author/education",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            school: educationForm.school.trim(),
+            major: educationForm.major.trim(),
+            degree: educationForm.degree.trim() || "本科",
+            startDate: educationForm.startDate.trim(),
+            endDate: educationForm.endDate.trim(),
+            description: educationForm.description.trim(),
+            achievements: parseCommaList(educationForm.achievementsText),
+            sortOrder: educationForm.sortOrder.trim() || "0",
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || "保存教育经历失败");
+        return;
+      }
+
+      toast.success(isEdit ? "教育经历已更新" : "教育经历已新增");
+      setEducationDialogOpen(false);
+      fetchData();
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const openCreateHonorDialog = () => {
+    setEditingHonorId(null);
+    setHonorForm({
+      title: "",
+      issuer: "",
+      date: "",
+      description: "",
+      imageUrl: "",
+      sortOrder: String(honors.length + 1),
+    });
+    setHonorDialogOpen(true);
+  };
+
+  const openEditHonorDialog = (item: Honor) => {
+    setEditingHonorId(item.id);
+    setHonorForm({
+      title: item.title,
+      issuer: item.issuer || "",
+      date: item.date || "",
+      description: item.description || "",
+      imageUrl: item.imageUrl || "",
+      sortOrder: item.sortOrder || "",
+    });
+    setHonorDialogOpen(true);
+  };
+
+  const submitHonorForm = async () => {
+    if (!honorForm.title.trim()) {
+      toast.error("请填写荣誉名称");
+      return;
+    }
+
+    try {
+      setFormSubmitting(true);
+      const isEdit = Boolean(editingHonorId);
+      const response = await fetch(
+        isEdit ? `/api/admin/author/honors/${editingHonorId}` : "/api/admin/author/honors",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: honorForm.title.trim(),
+            issuer: honorForm.issuer.trim(),
+            date: honorForm.date.trim(),
+            description: honorForm.description.trim(),
+            imageUrl: honorForm.imageUrl.trim(),
+            sortOrder: honorForm.sortOrder.trim() || "0",
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || "保存荣誉失败");
+        return;
+      }
+
+      toast.success(isEdit ? "荣誉已更新" : "荣誉已新增");
+      setHonorDialogOpen(false);
+      fetchData();
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const requestDelete = (target: DeleteTarget) => {
+    setDeleteTarget(target);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    const pathMap: Record<DeleteTarget["type"], string> = {
+      skills: "skills",
+      experiences: "experiences",
+      education: "education",
+      honors: "honors",
+    };
+
+    const textMap: Record<DeleteTarget["type"], string> = {
+      skills: "技能",
+      experiences: "工作经历",
+      education: "教育经历",
+      honors: "荣誉",
+    };
+
+    try {
+      setFormSubmitting(true);
+      const response = await fetch(`/api/admin/author/${pathMap[deleteTarget.type]}/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || `删除${textMap[deleteTarget.type]}失败`);
+        return;
+      }
+      toast.success(`${textMap[deleteTarget.type]}已删除`);
+      setDeleteTarget(null);
+      fetchData();
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
 
   // 保存基本信息
   const handleSaveProfile = async () => {
@@ -206,6 +621,9 @@ export default function AuthorManagePage() {
           <h1 className="text-2xl font-bold tracking-tight">作者管理</h1>
           <p className="text-muted-foreground">管理个人简介、技能、经历等信息</p>
         </div>
+        <Button variant="outline" onClick={handleSyncResumeTemplate}>
+          一键同步简历模板
+        </Button>
       </div>
 
       <Tabs defaultValue="profile" className="space-y-4">
@@ -351,7 +769,7 @@ export default function AuthorManagePage() {
                     placeholder="添加爱好"
                     value={newHobby}
                     onChange={(e) => setNewHobby(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleAddHobby()}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddHobby()}
                   />
                   <Button onClick={handleAddHobby} type="button">
                     <Plus className="w-4 h-4" />
@@ -391,16 +809,30 @@ export default function AuthorManagePage() {
               <CardDescription>管理您的专业技能</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <Button size="sm" onClick={openCreateSkillDialog}>
+                  <Plus className="w-4 h-4 mr-1" /> 新增技能
+                </Button>
+              </div>
               <div className="space-y-4">
                 {skills.map((skill) => (
                   <div key={skill.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <p className="font-medium">{skill.name}</p>
-                      <p className="text-sm text-muted-foreground">熟练度: {skill.level}%</p>
+                      <p className="text-sm text-muted-foreground">分类: {skill.category} · 熟练度: {skill.level}%</p>
                     </div>
-                    <Button variant="ghost" size="icon">
-                      <Edit className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEditSkillDialog(skill)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => requestDelete({ type: "skills", id: skill.id, label: skill.name })}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {skills.length === 0 && (
@@ -419,6 +851,11 @@ export default function AuthorManagePage() {
               <CardDescription>管理您的工作经历</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <Button size="sm" onClick={openCreateExperienceDialog}>
+                  <Plus className="w-4 h-4 mr-1" /> 新增工作经历
+                </Button>
+              </div>
               <div className="space-y-4">
                 {experiences.map((exp) => (
                   <div key={exp.id} className="p-4 border rounded-lg">
@@ -432,6 +869,24 @@ export default function AuthorManagePage() {
                       </p>
                     </div>
                     {exp.description && <p className="text-sm">{exp.description}</p>}
+                    {exp.achievements?.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">职责: {exp.achievements.join(" / ")}</p>
+                    )}
+                    {exp.techStack?.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">技术栈: {exp.techStack.join(" · ")}</p>
+                    )}
+                    <div className="flex gap-1 mt-3">
+                      <Button variant="outline" size="sm" onClick={() => openEditExperienceDialog(exp)}>
+                        编辑
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => requestDelete({ type: "experiences", id: exp.id, label: `${exp.company} - ${exp.position}` })}
+                      >
+                        删除
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {experiences.length === 0 && (
@@ -450,6 +905,11 @@ export default function AuthorManagePage() {
               <CardDescription>管理您的教育背景</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <Button size="sm" onClick={openCreateEducationDialog}>
+                  <Plus className="w-4 h-4 mr-1" /> 新增教育经历
+                </Button>
+              </div>
               <div className="space-y-4">
                 {education.map((edu) => (
                   <div key={edu.id} className="p-4 border rounded-lg">
@@ -463,6 +923,21 @@ export default function AuthorManagePage() {
                       </p>
                     </div>
                     {edu.description && <p className="text-sm">{edu.description}</p>}
+                    {edu.achievements?.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">亮点: {edu.achievements.join(" / ")}</p>
+                    )}
+                    <div className="flex gap-1 mt-3">
+                      <Button variant="outline" size="sm" onClick={() => openEditEducationDialog(edu)}>
+                        编辑
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => requestDelete({ type: "education", id: edu.id, label: `${edu.school} - ${edu.major}` })}
+                      >
+                        删除
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {education.length === 0 && (
@@ -481,12 +956,30 @@ export default function AuthorManagePage() {
               <CardDescription>管理您的荣誉和证书</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <Button size="sm" onClick={openCreateHonorDialog}>
+                  <Plus className="w-4 h-4 mr-1" /> 新增荣誉证书
+                </Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {honors.map((honor) => (
                   <div key={honor.id} className="p-4 border rounded-lg">
                     <p className="font-medium mb-1">{honor.title}</p>
                     {honor.issuer && <p className="text-sm text-muted-foreground">{honor.issuer}</p>}
                     {honor.date && <p className="text-xs text-muted-foreground mt-1">{honor.date}</p>}
+                    {honor.description && <p className="text-xs mt-2 line-clamp-3">{honor.description}</p>}
+                    <div className="flex gap-1 mt-3">
+                      <Button variant="outline" size="sm" onClick={() => openEditHonorDialog(honor)}>
+                        编辑
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => requestDelete({ type: "honors", id: honor.id, label: honor.title })}
+                      >
+                        删除
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {honors.length === 0 && (
@@ -499,6 +992,329 @@ export default function AuthorManagePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={skillDialogOpen} onOpenChange={setSkillDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{editingSkillId ? "编辑技能" : "新增技能"}</DialogTitle>
+            <DialogDescription>完善技能名称、分类、熟练度和排序</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="skill-name">技能名称</Label>
+              <Input
+                id="skill-name"
+                value={skillForm.name}
+                onChange={(e) => setSkillForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="例如：React、TypeScript"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="skill-category">技能分类</Label>
+              <Input
+                id="skill-category"
+                value={skillForm.category}
+                onChange={(e) => setSkillForm((prev) => ({ ...prev, category: e.target.value }))}
+                placeholder="例如：前端基础"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="skill-level">熟练度 (0-100)</Label>
+              <Input
+                id="skill-level"
+                type="number"
+                min={0}
+                max={100}
+                value={skillForm.level}
+                onChange={(e) => setSkillForm((prev) => ({ ...prev, level: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="skill-order">排序值</Label>
+              <Input
+                id="skill-order"
+                value={skillForm.sortOrder}
+                onChange={(e) => setSkillForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
+                placeholder="数字越小越靠前"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSkillDialogOpen(false)} disabled={formSubmitting}>
+              取消
+            </Button>
+            <Button onClick={submitSkillForm} disabled={formSubmitting}>
+              {formSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={experienceDialogOpen} onOpenChange={setExperienceDialogOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{editingExperienceId ? "编辑工作经历" : "新增工作经历"}</DialogTitle>
+            <DialogDescription>支持维护公司、职责、技术栈和排序</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="exp-company">公司名称</Label>
+              <Input
+                id="exp-company"
+                value={experienceForm.company}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, company: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="exp-position">职位</Label>
+              <Input
+                id="exp-position"
+                value={experienceForm.position}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, position: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="exp-start">开始时间</Label>
+              <Input
+                id="exp-start"
+                value={experienceForm.startDate}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                placeholder="例如：2024.03"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="exp-end">结束时间</Label>
+              <Input
+                id="exp-end"
+                value={experienceForm.endDate}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                placeholder="为空表示至今"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="exp-description">项目描述</Label>
+              <Textarea
+                id="exp-description"
+                rows={3}
+                value={experienceForm.description}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="exp-achievements">职责亮点（逗号分隔）</Label>
+              <Textarea
+                id="exp-achievements"
+                rows={2}
+                value={experienceForm.achievementsText}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, achievementsText: e.target.value }))}
+                placeholder="例如：负责组件库重构, 首屏性能优化 40%"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="exp-tech">技术栈（逗号分隔）</Label>
+              <Textarea
+                id="exp-tech"
+                rows={2}
+                value={experienceForm.techStackText}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, techStackText: e.target.value }))}
+                placeholder="例如：React, Next.js, TypeScript"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="exp-order">排序值</Label>
+              <Input
+                id="exp-order"
+                value={experienceForm.sortOrder}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExperienceDialogOpen(false)} disabled={formSubmitting}>
+              取消
+            </Button>
+            <Button onClick={submitExperienceForm} disabled={formSubmitting}>
+              {formSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={educationDialogOpen} onOpenChange={setEducationDialogOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{editingEducationId ? "编辑教育经历" : "新增教育经历"}</DialogTitle>
+            <DialogDescription>支持维护院校、专业、亮点和排序</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edu-school">学校</Label>
+              <Input
+                id="edu-school"
+                value={educationForm.school}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, school: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edu-major">专业</Label>
+              <Input
+                id="edu-major"
+                value={educationForm.major}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, major: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edu-degree">学历</Label>
+              <Input
+                id="edu-degree"
+                value={educationForm.degree}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, degree: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edu-order">排序值</Label>
+              <Input
+                id="edu-order"
+                value={educationForm.sortOrder}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edu-start">开始时间</Label>
+              <Input
+                id="edu-start"
+                value={educationForm.startDate}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edu-end">结束时间</Label>
+              <Input
+                id="edu-end"
+                value={educationForm.endDate}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, endDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="edu-description">描述</Label>
+              <Textarea
+                id="edu-description"
+                rows={2}
+                value={educationForm.description}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="edu-achievements">亮点（逗号分隔）</Label>
+              <Textarea
+                id="edu-achievements"
+                rows={2}
+                value={educationForm.achievementsText}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, achievementsText: e.target.value }))}
+                placeholder="例如：获国家奖学金, 竞赛一等奖"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEducationDialogOpen(false)} disabled={formSubmitting}>
+              取消
+            </Button>
+            <Button onClick={submitEducationForm} disabled={formSubmitting}>
+              {formSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={honorDialogOpen} onOpenChange={setHonorDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingHonorId ? "编辑荣誉" : "新增荣誉"}</DialogTitle>
+            <DialogDescription>支持维护描述、证书图链接、排序</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="honor-title">荣誉名称</Label>
+              <Input
+                id="honor-title"
+                value={honorForm.title}
+                onChange={(e) => setHonorForm((prev) => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="honor-issuer">颁发机构</Label>
+              <Input
+                id="honor-issuer"
+                value={honorForm.issuer}
+                onChange={(e) => setHonorForm((prev) => ({ ...prev, issuer: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="honor-date">时间</Label>
+              <Input
+                id="honor-date"
+                value={honorForm.date}
+                onChange={(e) => setHonorForm((prev) => ({ ...prev, date: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="honor-image">证书图片 URL</Label>
+              <Input
+                id="honor-image"
+                value={honorForm.imageUrl}
+                onChange={(e) => setHonorForm((prev) => ({ ...prev, imageUrl: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="honor-description">描述</Label>
+              <Textarea
+                id="honor-description"
+                rows={3}
+                value={honorForm.description}
+                onChange={(e) => setHonorForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="honor-order">排序值</Label>
+              <Input
+                id="honor-order"
+                value={honorForm.sortOrder}
+                onChange={(e) => setHonorForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHonorDialogOpen(false)} disabled={formSubmitting}>
+              取消
+            </Button>
+            <Button onClick={submitHonorForm} disabled={formSubmitting}>
+              {formSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget ? `将删除：${deleteTarget.label}。该操作不可恢复。` : "该操作不可恢复。"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={formSubmitting}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={formSubmitting}>
+              {formSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              确认删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
