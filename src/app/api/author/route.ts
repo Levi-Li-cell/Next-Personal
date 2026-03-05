@@ -5,6 +5,25 @@ import { asc, desc } from "drizzle-orm";
 
 // GET /api/author - 获取所有作者信息（公开API）
 export async function GET() {
+  const fallbackProfile = {
+    name: "李伟",
+    title: "前端开发师",
+    bio: "本人性格踏实稳重，严谨务实、有较强抗压能力；具备良好审美与代码习惯；对互联网行业有较强学习热情，擅长团队协作开发与沟通。",
+    gender: "男",
+    age: "24",
+    phone: "13043428526",
+    education: "本科",
+    location: "江西 · 汉族",
+    preferredCity: "全国",
+    preferredPosition: "前端开发师",
+    expectedSalary: "面议",
+    githubUrl: "",
+    linkedinUrl: "",
+    email: "",
+    hobbies: ["台球", "乒乓球", "羽毛球", "篮球", "骑行", "平面设计", "绘画"],
+    photos: [],
+  };
+
   try {
     // 并行获取所有数据
     const [profiles, skills, experiences, education, honors] = await Promise.all([
@@ -15,24 +34,7 @@ export async function GET() {
       db.select().from(authorHonor).orderBy(asc(authorHonor.sortOrder)),
     ]);
 
-    const profile = profiles[0] || {
-      name: "李伟",
-      title: "前端开发工程师",
-      bio: "专注于创造优秀的用户体验，精通现代前端技术栈，具备丰富的项目经验和持续学习的热情。致力于用代码构建美好的数字世界。",
-      gender: "男",
-      age: "23岁",
-      phone: "13043428526",
-      education: "本科",
-      location: "江西 · 汉族",
-      preferredCity: "全国",
-      preferredPosition: "前端开发工程师",
-      expectedSalary: "面议",
-      githubUrl: "",
-      linkedinUrl: "",
-      email: "",
-      hobbies: ["台球", "乒乓球", "羽毛球", "篮球", "骑行", "平面设计", "绘画"],
-      photos: [],
-    };
+    const profile = profiles[0] || fallbackProfile;
 
     return NextResponse.json({
       success: true,
@@ -46,9 +48,16 @@ export async function GET() {
     });
   } catch (error) {
     console.error("获取作者信息失败:", error);
-    return NextResponse.json(
-      { success: false, error: "获取作者信息失败" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: true,
+      data: {
+        profile: fallbackProfile,
+        skills: [],
+        experiences: [],
+        education: [],
+        honors: [],
+      },
+      degraded: true,
+    });
   }
 }
