@@ -2,11 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { guestbookMessage } from "@/db/schema/guestbook";
 import { and, desc, eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { sendAdminNotificationEmail } from "@/lib/admin/email";
 
+async function ensureGuestbookTable() {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS guestbook_message (
+      id text PRIMARY KEY,
+      name text NOT NULL,
+      content text NOT NULL,
+      contact text,
+      status text NOT NULL DEFAULT 'approved',
+      created_at timestamp DEFAULT now() NOT NULL,
+      updated_at timestamp DEFAULT now() NOT NULL
+    )
+  `);
+}
+
 export async function GET(request: NextRequest) {
   try {
+    await ensureGuestbookTable();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || "approved";
     const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
@@ -32,6 +48,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureGuestbookTable();
     const body = await request.json();
     const name = String(body.name || "").trim();
     const content = String(body.content || "").trim();

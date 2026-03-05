@@ -94,9 +94,10 @@ export async function POST(
 
     try {
       await sendAdminNotificationEmail({
-        eventType: "blog_comment",
+        eventType: parentId ? "comment_reply" : "blog_comment",
         userName: session.user.name || "匿名用户",
         userEmail: session.user.email || "comment@anonymous.local",
+        content: content.trim(),
       });
     } catch (emailError) {
       console.error("发送评论通知邮件失败:", emailError);
