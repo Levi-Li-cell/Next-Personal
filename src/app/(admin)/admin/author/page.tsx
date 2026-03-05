@@ -123,19 +123,20 @@ export default function AuthorManagePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newHobby, setNewHobby] = useState("");
-  const [newPhotoUrl, setNewPhotoUrl] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [skillDialogOpen, setSkillDialogOpen] = useState(false);
   const [experienceDialogOpen, setExperienceDialogOpen] = useState(false);
   const [educationDialogOpen, setEducationDialogOpen] = useState(false);
   const [honorDialogOpen, setHonorDialogOpen] = useState(false);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
   const [editingEducationId, setEditingEducationId] = useState<string | null>(null);
   const [editingHonorId, setEditingHonorId] = useState<string | null>(null);
+  const [editingPhotoIndex, setEditingPhotoIndex] = useState<number | null>(null);
 
   const [skillForm, setSkillForm] = useState({
     name: "",
@@ -174,6 +175,8 @@ export default function AuthorManagePage() {
     imageUrl: "",
     sortOrder: "",
   });
+
+  const [photoFormUrl, setPhotoFormUrl] = useState("");
 
   const fetchData = async () => {
     try {
@@ -608,17 +611,6 @@ export default function AuthorManagePage() {
     });
   };
 
-  const handleAddPhotoUrl = () => {
-    const url = newPhotoUrl.trim();
-    if (!url) return;
-    if (profile.photos.includes(url)) {
-      toast.error("该图片已存在");
-      return;
-    }
-    setProfile({ ...profile, photos: [...profile.photos, url] });
-    setNewPhotoUrl("");
-  };
-
   const syncPhotosToServer = async (nextPhotos: string[]) => {
     const response = await fetch("/api/admin/author", {
       method: "POST",
@@ -632,21 +624,8 @@ export default function AuthorManagePage() {
     setProfile(data.data);
   };
 
-  const handleRemovePhoto = (index: number) => {
-    setProfile({
-      ...profile,
-      photos: profile.photos.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleUpdatePhoto = (index: number, value: string) => {
-    const next = [...profile.photos];
-    next[index] = value;
-    setProfile({ ...profile, photos: next });
-  };
-
-  const addPhotoWithApi = async () => {
-    const url = newPhotoUrl.trim();
+  const addPhotoWithApi = async (urlInput: string) => {
+    const url = urlInput.trim();
     if (!url) return;
     try {
       const response = await fetch("/api/admin/author/photos", {
@@ -661,7 +640,6 @@ export default function AuthorManagePage() {
       }
       const nextPhotos = data.data || [];
       await syncPhotosToServer(nextPhotos);
-      setNewPhotoUrl("");
       toast.success("图片已新增");
     } catch (error) {
       console.error("新增图片失败:", error);
@@ -706,6 +684,39 @@ export default function AuthorManagePage() {
     } catch (error) {
       console.error("删除图片失败:", error);
       toast.error("删除图片失败");
+    }
+  };
+
+  const openCreatePhotoDialog = () => {
+    setEditingPhotoIndex(null);
+    setPhotoFormUrl("");
+    setPhotoDialogOpen(true);
+  };
+
+  const openEditPhotoDialog = (index: number, url: string) => {
+    setEditingPhotoIndex(index);
+    setPhotoFormUrl(url);
+    setPhotoDialogOpen(true);
+  };
+
+  const submitPhotoForm = async () => {
+    const url = photoFormUrl.trim();
+    if (!url) {
+      toast.error("图片 URL 不能为空");
+      return;
+    }
+
+    try {
+      setFormSubmitting(true);
+      if (editingPhotoIndex === null) {
+        await addPhotoWithApi(url);
+      } else {
+        await updatePhotoWithApi(editingPhotoIndex, url);
+      }
+      setPhotoDialogOpen(false);
+      fetchData();
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
@@ -779,6 +790,7 @@ export default function AuthorManagePage() {
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">基本信息</TabsTrigger>
+          <TabsTrigger value="photos">作者图片</TabsTrigger>
           <TabsTrigger value="skills">技能特长</TabsTrigger>
           <TabsTrigger value="experience">工作经历</TabsTrigger>
           <TabsTrigger value="education">教育经历</TabsTrigger>
@@ -943,21 +955,25 @@ export default function AuthorManagePage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label>作者图片（支持后台 CRUD）</Label>
+              <Button onClick={handleSaveProfile} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                保存信息
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    placeholder="粘贴图片 URL 后添加"
-                    value={newPhotoUrl}
-                    onChange={(e) => setNewPhotoUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addPhotoWithApi()}
-                  />
-                  <Button type="button" onClick={addPhotoWithApi}>
-                    <ImagePlus className="w-4 h-4 mr-1" /> 添加图片
-                  </Button>
-                </div>
-
+        <TabsContent value="photos">
+          <Card>
+            <CardHeader>
+              <CardTitle>作者图片管理</CardTitle>
+              <CardDescription>支持新增、编辑、删除和上传作者展示图片</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={openCreatePhotoDialog}>
+                  <ImagePlus className="w-4 h-4 mr-1" /> 新增图片
+                </Button>
                 <div className="flex items-center gap-2">
                   <Input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
                   <Button type="button" variant="outline" disabled={uploadingPhoto}>
@@ -965,35 +981,31 @@ export default function AuthorManagePage() {
                     上传
                   </Button>
                 </div>
+              </div>
 
-                <div className="space-y-3">
-                  {profile.photos.length === 0 && (
-                    <p className="text-sm text-muted-foreground">暂无作者图片</p>
-                  )}
-
-                  {profile.photos.map((photo, index) => (
-                    <div key={`${photo}-${index}`} className="rounded-lg border p-3 space-y-2">
-                      <img src={photo} alt={`作者图片${index + 1}`} className="h-24 w-24 rounded-md object-cover border" />
-                      <Input
-                        value={photo}
-                        onChange={(e) => handleUpdatePhoto(index, e.target.value)}
-                        onBlur={(e) => updatePhotoWithApi(index, e.target.value)}
-                        placeholder="图片 URL"
-                      />
-                      <div className="flex justify-end">
-                        <Button type="button" variant="destructive" size="sm" onClick={() => removePhotoWithApi(index)}>
-                          <Trash2 className="w-4 h-4 mr-1" /> 删除
+              <div className="space-y-3">
+                {profile.photos.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">暂无作者图片</p>
+                ) : (
+                  profile.photos.map((photo, index) => (
+                    <div key={`${photo}-${index}`} className="flex items-center gap-4 rounded-lg border p-3">
+                      <img src={photo} alt={`作者图片${index + 1}`} className="h-20 w-20 rounded-md object-cover border" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">图片 #{index + 1}</p>
+                        <p className="text-xs text-muted-foreground break-all">{photo}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEditPhotoDialog(index, photo)}>
+                          编辑
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => removePhotoWithApi(index)}>
+                          删除
                         </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
-
-              <Button onClick={handleSaveProfile} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                保存信息
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1488,6 +1500,33 @@ export default function AuthorManagePage() {
               取消
             </Button>
             <Button onClick={submitHonorForm} disabled={formSubmitting}>
+              {formSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{editingPhotoIndex === null ? "新增作者图片" : "编辑作者图片"}</DialogTitle>
+            <DialogDescription>维护作者展示图片 URL，保存后即时生效。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="author-photo-url">图片 URL</Label>
+            <Input
+              id="author-photo-url"
+              value={photoFormUrl}
+              onChange={(e) => setPhotoFormUrl(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPhotoDialogOpen(false)} disabled={formSubmitting}>
+              取消
+            </Button>
+            <Button onClick={submitPhotoForm} disabled={formSubmitting}>
               {formSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               保存
             </Button>
