@@ -424,90 +424,113 @@ export default function App() {
                                 </motion.p>
                             </motion.div>
 
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.8 }}
-                                className="flex flex-wrap gap-2 sm:gap-4 pt-2 sm:pt-4"
-                            >
-                                <MagneticButton onClick={() => scrollToSection('contact')}>
-                                    <motion.div
-                                        className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full relative overflow-hidden"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <motion.span
-                                            className="relative z-10"
-                                            animate={{
-                                                textShadow: [
-                                                    "0 0 10px rgba(255, 255, 255, 0.5)",
-                                                    "0 0 20px rgba(255, 255, 255, 0.8)",
-                                                    "0 0 10px rgba(255, 255, 255, 0.5)",
-                                                ]
-                                            }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                        >
-                                            联系我
-                                        </motion.span>
-                                        <motion.div
-                                            className="absolute inset-0 bg-gradient-to-r from-pink-500 to-cyan-500"
-                                            initial={{ x: '100%' }}
-                                            whileHover={{ x: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                        />
-                                    </motion.div>
-                                </MagneticButton>
-
-                                <MagneticButton onClick={() => scrollToSection('experience')}>
-                                    <motion.div
-                                        className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-full border border-white/20 hover:border-white/40 transition-colors"
-                                        whileHover={{ scale: 1.05, borderColor: "rgba(255, 255, 255, 0.6)" }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        查看作品
-                                    </motion.div>
-                                </MagneticButton>
-                            </motion.div>
-
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 1 }}
-                                className="flex flex-col gap-4 pt-6"
-                            >
-                                <MagneticButton>
-                                    <motion.a
-                                        href="/sponsor"
-                                        className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all relative overflow-hidden group"
-                                        initial={{ scale: 0, rotate: -180 }}
-                                        animate={{ scale: 1, rotate: 0 }}
-                                        transition={{ delay: 1, type: "spring" }}
-                                        whileHover={{
-                                            scale: 1.3,
-                                            rotate: 360,
-                                            boxShadow: "0 0 20px rgba(168, 85, 247, 0.6)"
-                                        }}
-                                        whileTap={{ scale: 0.9 }}
-                                    >
-                                        <Coffee className="w-6 h-6 relative z-10" />
-                                        <motion.div
-                                            className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500"
-                                            initial={{ scale: 0 }}
-                                            whileHover={{ scale: 1 }}
-                                            transition={{ duration: 0.3 }}
-                                        />
-                                    </motion.a>
-                                </MagneticButton>
-                                <motion.p
-                                    className="text-white/80 text-sm font-medium"
-                                    initial={{ opacity: 0, y: 20 }}
+                            {isMobile ? (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 16 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 1.2 }}
-                                    whileHover={{ scale: 1.1, color: "#ffffff" }}
+                                    transition={{ delay: 0.8 }}
+                                    className="space-y-3"
                                 >
-                                    请我喝杯咖啡吧～ 代码更香浓 😊
-                                </motion.p>
-                            </motion.div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
+                                            <p className="text-[10px] text-white/60">意向岗位</p>
+                                            <p className="mt-1 text-xs text-white">{authorData?.profile?.preferredPosition || '前端开发师'}</p>
+                                        </div>
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
+                                            <p className="text-[10px] text-white/60">意向城市</p>
+                                            <p className="mt-1 text-xs text-white">{authorData?.profile?.preferredCity || '全国'}</p>
+                                        </div>
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2">
+                                            <p className="text-[10px] text-white/60">期望薪资</p>
+                                            <p className="mt-1 text-xs text-white">{authorData?.profile?.expectedSalary || '面议'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <a
+                                            href={`tel:${authorData?.profile?.phone || '13043428526'}`}
+                                            className="rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-2 text-center text-sm font-medium text-white"
+                                        >
+                                            电话联系
+                                        </a>
+                                        <button
+                                            className="rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-white"
+                                            onClick={() => scrollToSection('experience')}
+                                        >
+                                            查看经历
+                                        </button>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        {(authorData?.profile?.hobbies?.slice(0, 4) || ['台球', '乒乓球', '羽毛球', '骑行']).map((hobby) => (
+                                            <span key={hobby} className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-1 text-[11px] text-white/80">
+                                                {hobby}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.8 }}
+                                        className="flex flex-wrap gap-2 sm:gap-4 pt-2 sm:pt-4"
+                                    >
+                                        <MagneticButton onClick={() => scrollToSection('contact')}>
+                                            <motion.div
+                                                className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full relative overflow-hidden"
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                            >
+                                                <motion.span className="relative z-10">联系我</motion.span>
+                                            </motion.div>
+                                        </MagneticButton>
+
+                                        <MagneticButton onClick={() => scrollToSection('experience')}>
+                                            <motion.div
+                                                className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-full border border-white/20 hover:border-white/40 transition-colors"
+                                                whileHover={{ scale: 1.05, borderColor: "rgba(255, 255, 255, 0.6)" }}
+                                                whileTap={{ scale: 0.95 }}
+                                            >
+                                                查看作品
+                                            </motion.div>
+                                        </MagneticButton>
+                                    </motion.div>
+
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: 1 }}
+                                        className="flex flex-col gap-4 pt-6"
+                                    >
+                                        <MagneticButton>
+                                            <motion.a
+                                                href="/sponsor"
+                                                className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all relative overflow-hidden group"
+                                                initial={{ scale: 0, rotate: -180 }}
+                                                animate={{ scale: 1, rotate: 0 }}
+                                                transition={{ delay: 1, type: "spring" }}
+                                                whileHover={{
+                                                    scale: 1.3,
+                                                    rotate: 360,
+                                                    boxShadow: "0 0 20px rgba(168, 85, 247, 0.6)"
+                                                }}
+                                                whileTap={{ scale: 0.9 }}
+                                            >
+                                                <Coffee className="w-6 h-6 relative z-10" />
+                                                <motion.div
+                                                    className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500"
+                                                    initial={{ scale: 0 }}
+                                                    whileHover={{ scale: 1 }}
+                                                    transition={{ duration: 0.3 }}
+                                                />
+                                            </motion.a>
+                                        </MagneticButton>
+                                        <motion.p className="text-white/80 text-sm font-medium">请我喝杯咖啡吧～ 代码更香浓 😊</motion.p>
+                                    </motion.div>
+                                </>
+                            )}
                         </motion.div>
                     </div>
                 </motion.div>
@@ -548,7 +571,7 @@ export default function App() {
                         className="max-w-4xl mx-auto"
                     >
                         <motion.h2
-                            className="text-5xl text-white mb-16 text-center"
+                            className="text-3xl sm:text-5xl text-white mb-8 sm:mb-16 text-center"
                             whileInView={{
                                 scale: [0.8, 1.05, 1],
                                 rotate: [0, 5, 0]
@@ -561,7 +584,7 @@ export default function App() {
                             </span>
                         </motion.h2>
 
-                        <div className="grid md:grid-cols-2 gap-6">
+                        <div className={`grid md:grid-cols-2 ${isMobile ? 'gap-3' : 'gap-6'}`}>
                             {[
                                 { icon: User, label: '性别', value: authorData?.profile?.gender || '男' },
                                 { icon: Calendar, label: '年龄', value: authorData?.profile?.age || '24' },
@@ -588,7 +611,7 @@ export default function App() {
                                         y: -10,
                                         boxShadow: "0 20px 40px rgba(168, 85, 247, 0.3)"
                                     }}
-                                    className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-purple-500/50 transition-all group cursor-pointer"
+                                    className={`bg-white/5 backdrop-blur-xl rounded-2xl ${isMobile ? 'p-4' : 'p-6'} border border-white/10 hover:border-purple-500/50 transition-all group cursor-pointer`}
                                 >
                                     <div className="flex items-center gap-4">
                                         <motion.div
@@ -629,7 +652,7 @@ export default function App() {
                         transition={{ duration: 0.6 }}
                     >
                         <motion.h2
-                            className="text-5xl text-white mb-16 text-center"
+                            className="text-3xl sm:text-5xl text-white mb-8 sm:mb-16 text-center"
                             whileInView={{
                                 scale: [0.8, 1.05, 1],
                                 rotate: [0, -5, 0]
@@ -657,7 +680,7 @@ export default function App() {
                         transition={{ duration: 0.6 }}
                     >
                         <motion.h2
-                            className="text-5xl text-white mb-16 text-center"
+                            className="text-3xl sm:text-5xl text-white mb-8 sm:mb-16 text-center"
                             whileInView={{
                                 scale: [0.8, 1.05, 1],
                                 rotate: [0, 5, 0]
@@ -685,7 +708,7 @@ export default function App() {
                         transition={{ duration: 0.6 }}
                     >
                         <motion.h2
-                            className="text-5xl text-white mb-16 text-center"
+                            className="text-3xl sm:text-5xl text-white mb-8 sm:mb-16 text-center"
                             whileInView={{
                                 scale: [0.8, 1.05, 1],
                                 rotate: [0, -5, 0]
@@ -713,7 +736,7 @@ export default function App() {
                         transition={{ duration: 0.6 }}
                     >
                         <motion.h2
-                            className="text-5xl text-white mb-16 text-center"
+                            className="text-3xl sm:text-5xl text-white mb-8 sm:mb-16 text-center"
                             whileInView={{
                                 scale: [0.8, 1.05, 1],
                                 rotate: [0, 5, 0]
@@ -742,7 +765,7 @@ export default function App() {
                         className="max-w-4xl mx-auto text-center"
                     >
                         <motion.h2
-                            className="text-5xl text-white mb-8"
+                            className="text-3xl sm:text-5xl text-white mb-6 sm:mb-8"
                             whileInView={{
                                 scale: [0.8, 1.05, 1],
                                 rotate: [0, -5, 0]
@@ -756,7 +779,7 @@ export default function App() {
                         </motion.h2>
 
                         <motion.p
-                            className="text-white/70 text-xl mb-12 leading-relaxed"
+                            className="text-white/70 text-sm sm:text-xl mb-8 sm:mb-12 leading-relaxed"
                             initial={{ opacity: 0 }}
                             whileInView={{ opacity: 1 }}
                             viewport={{ once: true }}
@@ -769,7 +792,7 @@ export default function App() {
 
                         <MagneticButton>
                             <motion.div
-                                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xl cursor-pointer"
+                                className="inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-base sm:text-xl cursor-pointer"
                                 whileHover={{
                                     scale: 1.1,
                                     boxShadow: "0 0 40px rgba(168, 85, 247, 0.8)"
@@ -789,7 +812,7 @@ export default function App() {
                             </motion.div>
                         </MagneticButton>
 
-                        <div className="mt-12 pt-12 border-t border-white/10">
+                        <div className="mt-8 sm:mt-12 pt-8 sm:pt-12 border-t border-white/10">
                             <div className="flex items-center justify-center gap-3 text-white/70 mb-6">
                                 <motion.div
                                     animate={{ scale: [1, 1.2, 1] }}
