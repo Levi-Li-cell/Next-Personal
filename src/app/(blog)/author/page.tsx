@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'motion/react';
 import {
     Mail,
@@ -531,17 +530,6 @@ export default function App() {
                     </motion.div>
                 </motion.div>
             </section>
-
-            {isMobile && (
-                <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/80 backdrop-blur px-2 py-2">
-                    <div className="grid grid-cols-4 gap-1 text-[11px]">
-                        <Link href="/author" className="rounded-md bg-white/10 px-2 py-2 text-white text-center">作者</Link>
-                        <Link href="/blog" className="rounded-md bg-white/5 px-2 py-2 text-white text-center">博客</Link>
-                        <Link href="/projects" className="rounded-md bg-white/5 px-2 py-2 text-white text-center">项目</Link>
-                        <Link href="/guestbook" className="rounded-md bg-white/5 px-2 py-2 text-white text-center">留言</Link>
-                    </div>
-                </div>
-            )}
 
             {isMobile && (
                 <div className="fixed bottom-14 left-1/2 z-40 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white/90">
