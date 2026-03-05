@@ -280,7 +280,7 @@ export default function App() {
             {!isMobile && <ParticleBackground />}
 
             {/* Gradient Orbs */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+            {!isMobile && <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <motion.div
                     className="absolute w-[600px] h-[600px] rounded-full bg-purple-600/30 blur-3xl"
                     style={{
@@ -312,16 +312,16 @@ export default function App() {
                         repeat: Infinity,
                     }}
                 />
-            </div>
+            </div>}
 
             {/* Sidebar Navigation */}
             {!isMobile && <SidebarNav />}
 
             {/* Scroll Progress */}
-            <motion.div
+            {!isMobile && <motion.div
                 className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 origin-left z-50"
                 style={{ scaleX: scrollYProgress }}
-            />
+            />}
 
             {/* Hero Section */}
             <section id="hero" className={`relative min-h-screen flex items-center justify-center ${isMobile ? 'pt-10 pb-8' : 'pt-20'}`}>
@@ -390,7 +390,7 @@ export default function App() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.6 }}
-                                className="space-y-4"
+                                className={`space-y-4 ${isMobile ? 'rounded-xl bg-white/[0.06] border border-white/10 p-4' : ''}`}
                             >
                                 <div className="flex items-center gap-4">
                                     <motion.div
@@ -530,7 +530,7 @@ export default function App() {
             </section>
 
             {/* About Section */}
-            <section id="about" className={`relative ${isMobile ? 'py-16' : 'py-32'}`}>
+            <section id="about" className={`relative ${isMobile ? 'py-10' : 'py-32'}`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -612,7 +612,7 @@ export default function App() {
             </section>
 
             {/* Skills Section */}
-            <section id="skills" className={`relative ${isMobile ? 'py-16' : 'py-32'} bg-white/5`}>
+            <section id="skills" className={`relative ${isMobile ? 'py-10' : 'py-32'} bg-white/5`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -640,7 +640,7 @@ export default function App() {
             </section>
 
             {/* Experience Section */}
-            <section id="experience" className={`relative ${isMobile ? 'py-16' : 'py-32'}`}>
+            <section id="experience" className={`relative ${isMobile ? 'py-10' : 'py-32'}`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -668,7 +668,7 @@ export default function App() {
             </section>
 
             {/* Education Section */}
-            <section id="education" className={`relative ${isMobile ? 'py-16' : 'py-32'} bg-white/5`}>
+            <section id="education" className={`relative ${isMobile ? 'py-10' : 'py-32'} bg-white/5`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -696,7 +696,7 @@ export default function App() {
             </section>
 
             {/* Honors Section */}
-            <section id="honors" className={`relative ${isMobile ? 'py-16' : 'py-32'}`}>
+            <section id="honors" className={`relative ${isMobile ? 'py-10' : 'py-32'}`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
@@ -724,7 +724,7 @@ export default function App() {
             </section>
 
             {/* Contact Section */}
-            <section id="contact" className={`relative ${isMobile ? 'py-16' : 'py-32'} bg-white/5`}>
+            <section id="contact" className={`relative ${isMobile ? 'py-10' : 'py-32'} bg-white/5`}>
                 <div className={`container mx-auto ${isMobile ? 'px-4' : 'px-6'}`}>
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
