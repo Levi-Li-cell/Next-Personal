@@ -137,6 +137,8 @@ export default function AuthorManagePage() {
   const [editingEducationId, setEditingEducationId] = useState<string | null>(null);
   const [editingHonorId, setEditingHonorId] = useState<string | null>(null);
   const [editingPhotoIndex, setEditingPhotoIndex] = useState<number | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState('');
 
   const [skillForm, setSkillForm] = useState({
     name: "",
@@ -699,6 +701,11 @@ export default function AuthorManagePage() {
     setPhotoDialogOpen(true);
   };
 
+  const openPreviewDialog = (url: string) => {
+    setPreviewImageUrl(url);
+    setPreviewDialogOpen(true);
+  };
+
   const submitPhotoForm = async () => {
     const url = photoFormUrl.trim();
     if (!url) {
@@ -995,6 +1002,9 @@ export default function AuthorManagePage() {
                         <p className="text-xs text-muted-foreground break-all">{photo}</p>
                       </div>
                       <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => openPreviewDialog(photo)}>
+                          预览
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => openEditPhotoDialog(index, photo)}>
                           编辑
                         </Button>
@@ -1531,6 +1541,28 @@ export default function AuthorManagePage() {
               保存
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 图片全屏预览 */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-full max-h-full p-0 bg-black/95">
+          <div className="relative w-full h-screen flex items-center justify-center">
+            <button
+              className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors"
+              onClick={() => setPreviewDialogOpen(false)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            <img 
+              src={previewImageUrl} 
+              alt="预览图片" 
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
