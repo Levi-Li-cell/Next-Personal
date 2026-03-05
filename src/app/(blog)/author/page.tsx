@@ -9,6 +9,7 @@ import {
     User,
     GraduationCap,
     Briefcase,
+    Smartphone,
     Award,
     Code,
     Calendar,
@@ -16,12 +17,14 @@ import {
     DollarSign,
     Users,
     Heart,
+    Layers,
     Menu,
     X,
     Github,
     Linkedin,
     ChevronDown,
-    Sparkles
+    Sparkles,
+    Coffee
 } from 'lucide-react';
 import SkillRadar from '@/components/SkillRadar';
 import ExperienceTimeline from '@/components/ExperienceTimeline';
@@ -36,6 +39,30 @@ import FloatingElements from '@/components/FloatingElements';
 import ChatAssistant from '@/components/ChatAssistant';
 import SidebarNav from '@/components/SidebarNav';
 
+const skillColorByCategory: Record<string, string> = {
+    '前端基础': 'from-purple-500 to-pink-500',
+    '框架技术': 'from-cyan-500 to-blue-500',
+    '鸿蒙开发': 'from-pink-500 to-rose-500',
+    '后端技能': 'from-green-500 to-teal-500',
+    '工程化': 'from-yellow-500 to-orange-500',
+    '性能优化': 'from-indigo-500 to-purple-500',
+    '小程序': 'from-emerald-500 to-green-500',
+    'Web3': 'from-fuchsia-500 to-purple-500',
+    '通信': 'from-sky-500 to-cyan-500',
+};
+
+const skillIconByCategory: Record<string, typeof Code> = {
+    '前端基础': Code,
+    '框架技术': Layers,
+    '鸿蒙开发': Smartphone,
+    '后端技能': Briefcase,
+    '工程化': Sparkles,
+    '性能优化': Target,
+    '小程序': Users,
+    'Web3': Github,
+    '通信': Phone,
+};
+
 const initialImages: string[] = [
     'https://eypphxaje0isjpo6.public.blob.vercel-storage.com/photos/a.jpg',
     'https://eypphxaje0isjpo6.public.blob.vercel-storage.com/photos/headshot-176395480323.jpg',
@@ -46,6 +73,47 @@ const initialImages: string[] = [
 export default function App() {
     const [imagesState, setImagesState] = useState<string[]>(initialImages);
     const [isUploading, setIsUploading] = useState(false);
+    const [authorData, setAuthorData] = useState<{
+        profile: {
+            name: string;
+            title: string;
+            bio: string;
+            gender: string;
+            age: string;
+            phone: string;
+            education: string;
+            location: string;
+            preferredCity: string;
+            preferredPosition: string;
+            expectedSalary: string;
+            githubUrl?: string;
+            linkedinUrl?: string;
+            hobbies: string[];
+            photos?: string[];
+        };
+        skills: Array<{ id: string; name: string; level: string; category: string }>;
+        experiences: Array<{
+            id: string;
+            company: string;
+            position: string;
+            startDate: string;
+            endDate: string;
+            description: string;
+            achievements: string[];
+            techStack: string[];
+        }>;
+        education: Array<{
+            id: string;
+            school: string;
+            major: string;
+            degree: string;
+            startDate: string;
+            endDate: string;
+            description: string;
+            achievements: string[];
+        }>;
+        honors: Array<{ id: string; title: string }>;
+    } | null>(null);
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
@@ -98,6 +166,23 @@ export default function App() {
     const smoothMouseY = useSpring(mouseY, { damping: 25, stiffness: 400 });
 
     useEffect(() => {
+        const fetchAuthorData = async () => {
+            try {
+                const response = await fetch('/api/author');
+                const data = await response.json();
+                if (data.success) {
+                    setAuthorData(data.data);
+                    if (data.data?.profile?.photos?.length) {
+                        setImagesState(data.data.profile.photos);
+                    }
+                }
+            } catch (error) {
+                console.error('获取作者信息失败:', error);
+            }
+        };
+
+        fetchAuthorData();
+
         const handleMouseMove = (e: MouseEvent) => {
             setMousePosition({ x: e.clientX, y: e.clientY });
             mouseX.set(e.clientX);
@@ -128,6 +213,65 @@ export default function App() {
         const element = document.getElementById(id);
         element?.scrollIntoView({ behavior: 'smooth' });
     };
+
+    const groupedSkills = authorData?.skills
+        ? Object.entries(
+            authorData.skills.reduce<Record<string, Array<{ name: string; level: string }>>>((acc, item) => {
+                if (!acc[item.category]) {
+                    acc[item.category] = [];
+                }
+                acc[item.category].push({ name: item.name, level: item.level });
+                return acc;
+            }, {})
+        ).map(([category, items]) => ({
+            category,
+            icon: skillIconByCategory[category] || Code,
+            items: items.map((item) => item.name),
+            level:
+                Math.round(
+                    items.reduce((sum, item) => sum + Number(item.level || 0), 0) /
+                    Math.max(items.length, 1)
+                ) || 80,
+            color: skillColorByCategory[category] || 'from-purple-500 to-pink-500',
+        }))
+        : undefined;
+
+    const experienceData = authorData?.experiences?.map((exp, index) => {
+        const projectName = exp.description?.startsWith('项目：')
+            ? exp.description.replace('项目：', '').trim()
+            : exp.description;
+        return {
+            period: `${exp.startDate} - ${exp.endDate}`,
+            company: exp.company,
+            position: exp.position,
+            project: projectName || `${exp.company} 项目`,
+            techStack: exp.techStack || [],
+            description: exp.description || '',
+            responsibilities: exp.achievements || [],
+            color: ['from-purple-500 to-pink-500', 'from-cyan-500 to-blue-500', 'from-pink-500 to-rose-500'][index % 3],
+        };
+    });
+
+    const educationData = authorData?.education?.[0]
+        ? {
+            school: authorData.education[0].school,
+            major: authorData.education[0].major,
+            degree: authorData.education[0].degree,
+            startDate: authorData.education[0].startDate,
+            endDate: authorData.education[0].endDate,
+            courses: authorData.education[0].achievements || [],
+        }
+        : undefined;
+
+    const honorData = authorData?.honors?.map((item) => ({ title: item.title }));
+
+    const selfEvaluation = [
+        '本人性格踏实稳重，严谨务实、有较强的抗压能力',
+        '设计上具备良好的审美能力，有良好的代码编程习惯',
+        '对互联网行业有较强的学习热情和自学能力，有较强的独立思考能力',
+        '乐于在开发者社区Github上交流学习，将新的知识纳入自己的知识体系中',
+        '擅于团队协作开发，沟通交流，有意进入贵司成为开发岗中的一员',
+    ];
 
     return (
         <div ref={containerRef} className="relative min-h-screen bg-black overflow-x-hidden cursor-none">
@@ -214,7 +358,7 @@ export default function App() {
                             animate={{ opacity: 1, x: 0, rotateY: 0 }}
                             transition={{ duration: 1, type: "spring", stiffness: 100 }}
                         >
-                            <ProfileCard images={imagesState} onUpload={handleUpload} isUploading={isUploading} />
+                            <ProfileCard images={imagesState} />
                         </motion.div>
 
                         {/* Right: Hero Text */}
@@ -235,21 +379,31 @@ export default function App() {
                                         textShadow: "0 0 30px rgba(168, 85, 247, 0.3)"
                                     }}
                                 >
-                                    <TypeWriter
-                                        text="你好，我是"
+                                    <motion.span
                                         className="text-white"
-                                        delay={0.5}
-                                    />
+                                        initial={{ opacity: 0, x: -50 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.5, duration: 0.8 }}
+                                    >
+                                        你好，我是
+                                    </motion.span>
                                     <br />
                                     <motion.span
                                         className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent inline-block"
+                                        initial={{ opacity: 0, x: 50 }}
                                         animate={{
+                                            opacity: 1,
+                                            x: 0,
                                             backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
                                         }}
-                                        transition={{ duration: 5, repeat: Infinity }}
+                                        transition={{
+                                            opacity: { delay: 1.3, duration: 0.8 },
+                                            x: { delay: 1.3, duration: 0.8 },
+                                            backgroundPosition: { duration: 5, repeat: Infinity }
+                                        }}
                                         style={{ backgroundSize: "200% 200%" }}
                                     >
-                                        李伟
+                                        {authorData?.profile?.name || '李伟'}
                                     </motion.span>
                                 </motion.h1>
                             </motion.div>
@@ -274,7 +428,7 @@ export default function App() {
                                         transition={{ duration: 2, repeat: Infinity }}
                                     />
                                     <TypeWriter
-                                        text="前端开发工程师"
+                                        text={authorData?.profile?.title || '前端开发工程师'}
                                         className="text-2xl text-cyan-300"
                                         delay={1.5}
                                     />
@@ -286,9 +440,7 @@ export default function App() {
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 2 }}
                                 >
-                                    专注于创造优秀的用户体验，精通现代前端技术栈，
-                                    具备丰富的项目经验和持续学习的热情。
-                                    致力于用代码构建美好的数字世界。
+                                    {authorData?.profile?.bio || '专注于创造优秀的用户体验，精通现代前端技术栈，具备丰富的项目经验和持续学习的热情。'}
                                 </motion.p>
                             </motion.div>
 
@@ -341,36 +493,40 @@ export default function App() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 1 }}
-                                className="flex gap-4 pt-6"
+                                className="flex flex-col gap-4 pt-6"
                             >
-                                {[
-                                    { Icon: Github, href: '#', delay: 0 },
-                                    { Icon: Linkedin, href: '#', delay: 0.1 }
-                                ].map(({ Icon, href, delay }, index) => (
-                                    <MagneticButton key={index}>
-                                        <motion.a
-                                            href={href}
-                                            className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all relative overflow-hidden group"
-                                            initial={{ scale: 0, rotate: -180 }}
-                                            animate={{ scale: 1, rotate: 0 }}
-                                            transition={{ delay: 1 + delay, type: "spring" }}
-                                            whileHover={{
-                                                scale: 1.2,
-                                                rotate: 360,
-                                                boxShadow: "0 0 20px rgba(168, 85, 247, 0.6)"
-                                            }}
-                                            whileTap={{ scale: 0.9 }}
-                                        >
-                                            <Icon className="w-5 h-5 relative z-10" />
-                                            <motion.div
-                                                className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500"
-                                                initial={{ scale: 0 }}
-                                                whileHover={{ scale: 1 }}
-                                                transition={{ duration: 0.3 }}
-                                            />
-                                        </motion.a>
-                                    </MagneticButton>
-                                ))}
+                                <MagneticButton>
+                                    <motion.a
+                                        href="/sponsor"
+                                        className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all relative overflow-hidden group"
+                                        initial={{ scale: 0, rotate: -180 }}
+                                        animate={{ scale: 1, rotate: 0 }}
+                                        transition={{ delay: 1, type: "spring" }}
+                                        whileHover={{
+                                            scale: 1.3,
+                                            rotate: 360,
+                                            boxShadow: "0 0 20px rgba(168, 85, 247, 0.6)"
+                                        }}
+                                        whileTap={{ scale: 0.9 }}
+                                    >
+                                        <Coffee className="w-6 h-6 relative z-10" />
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500"
+                                            initial={{ scale: 0 }}
+                                            whileHover={{ scale: 1 }}
+                                            transition={{ duration: 0.3 }}
+                                        />
+                                    </motion.a>
+                                </MagneticButton>
+                                <motion.p
+                                    className="text-white/80 text-sm font-medium"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 1.2 }}
+                                    whileHover={{ scale: 1.1, color: "#ffffff" }}
+                                >
+                                    请我喝杯咖啡吧～ 代码更香浓 😊
+                                </motion.p>
                             </motion.div>
                         </motion.div>
                     </div>
@@ -421,14 +577,14 @@ export default function App() {
 
                         <div className="grid md:grid-cols-2 gap-6">
                             {[
-                                { icon: User, label: '性别', value: '男' },
-                                { icon: Calendar, label: '年龄', value: '23岁' },
-                                { icon: Phone, label: '联系电话', value: '13043428526' },
-                                { icon: GraduationCap, label: '学历', value: '本科' },
-                                { icon: MapPin, label: '户籍', value: '江西 · 汉族' },
-                                { icon: Target, label: '意向城市', value: '全国' },
-                                { icon: Briefcase, label: '意向岗位', value: '前端开发工程师' },
-                                { icon: DollarSign, label: '期望薪资', value: '面议' },
+                                { icon: User, label: '性别', value: authorData?.profile?.gender || '男' },
+                                { icon: Calendar, label: '年龄', value: authorData?.profile?.age || '24' },
+                                { icon: Phone, label: '联系电话', value: authorData?.profile?.phone || '13043428526' },
+                                { icon: GraduationCap, label: '学历', value: authorData?.profile?.education || '本科' },
+                                { icon: MapPin, label: '户籍', value: authorData?.profile?.location || '江西 · 汉族' },
+                                { icon: Target, label: '意向城市', value: authorData?.profile?.preferredCity || '全国' },
+                                { icon: Briefcase, label: '意向岗位', value: authorData?.profile?.preferredPosition || '前端开发师' },
+                                { icon: DollarSign, label: '期望薪资', value: authorData?.profile?.expectedSalary || '面议' },
                             ].map((item, index) => (
                                 <motion.div
                                     key={item.label}
@@ -500,7 +656,7 @@ export default function App() {
                             </span>
                         </motion.h2>
 
-                        <SkillRadar />
+                        <SkillRadar skillsData={groupedSkills} />
                     </motion.div>
                 </div>
             </section>
@@ -528,7 +684,7 @@ export default function App() {
                             </span>
                         </motion.h2>
 
-                        <ExperienceTimeline />
+                        <ExperienceTimeline experiencesData={experienceData} />
                     </motion.div>
                 </div>
             </section>
@@ -556,7 +712,7 @@ export default function App() {
                             </span>
                         </motion.h2>
 
-                        <EducationSection />
+                        <EducationSection educationData={educationData} />
                     </motion.div>
                 </div>
             </section>
@@ -584,7 +740,7 @@ export default function App() {
                             </span>
                         </motion.h2>
 
-                        <HonorGallery />
+                        <HonorGallery honorsData={honorData} selfEvaluation={selfEvaluation} />
                     </motion.div>
                 </div>
             </section>
@@ -643,7 +799,7 @@ export default function App() {
                                 transition={{ duration: 2, repeat: Infinity }}
                             >
                                 <Phone className="w-6 h-6" />
-                                <span>13043428526</span>
+                                <span>{authorData?.profile?.phone || '13043428526'}</span>
                             </motion.div>
                         </MagneticButton>
 
@@ -658,7 +814,7 @@ export default function App() {
                                 <span className="text-lg">兴趣爱好</span>
                             </div>
                             <div className="flex flex-wrap justify-center gap-3">
-                                {['台球', '乒乓球', '羽毛球', '篮球', '骑行', '平面设计', '绘画'].map((hobby, index) => (
+                                {(authorData?.profile?.hobbies?.length ? authorData.profile.hobbies : ['台球', '乒乓球', '羽毛球', '篮球', '骑行', '平面设计', '绘画']).map((hobby, index) => (
                                     <motion.span
                                         key={hobby}
                                         initial={{ opacity: 0, scale: 0, rotate: -180 }}
@@ -695,7 +851,7 @@ export default function App() {
                         whileInView={{ opacity: 1 }}
                         viewport={{ once: true }}
                     >
-                        © 2024 李伟. All rights reserved.
+                        © 2024 {authorData?.profile?.name || '李伟'}. All rights reserved.
                     </motion.p>
                 </div>
             </footer>
