@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { project } from "@/db/schema/project";
 import { eq, desc, like, and, sql, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { htmlToMarkdown } from "@/lib/admin/markdown";
+import { createPublicNotification } from "@/lib/notifications/public-notify";
 
 // GET /api/admin/projects - 获取项目列表（包含草稿）
 export async function GET(request: NextRequest) {
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: projects,
       pagination: {
-        page: page - 1,
+        page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
@@ -82,6 +84,8 @@ export async function POST(request: NextRequest) {
       status,
     } = body;
 
+    const contentHtml = String(content || "");
+    const markdownContent = htmlToMarkdown(contentHtml);
     // 创建项目
     const [newProject] = await db
       .insert(project)
@@ -89,7 +93,7 @@ export async function POST(request: NextRequest) {
         id: randomUUID(),
         title,
         description,
-        content,
+        content: markdownContent,
         coverImage,
         techStack: techStack || [],
         demoUrl,
@@ -98,6 +102,15 @@ export async function POST(request: NextRequest) {
         publishedAt: status === "published" ? new Date() : null,
       })
       .returning();
+
+    if (newProject.status === "published") {
+      await createPublicNotification({
+        eventType: "project_published",
+        title: `新项目上线：${newProject.title}`,
+        content: newProject.description || "点击查看项目详情",
+        link: `/projects/${newProject.id}`,
+      });
+    }
 
     return NextResponse.json({ success: true, data: newProject });
   } catch (error) {

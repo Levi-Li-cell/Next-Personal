@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { blog } from "@/db/schema/blog";
 import { eq, desc, like, and, sql, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { extractImageUrlsFromHtml, htmlToMarkdown } from "@/lib/admin/markdown";
+import { createPublicNotification } from "@/lib/notifications/public-notify";
 
 // GET /api/admin/blog - 获取博客列表（包含草稿）
 export async function GET(request: NextRequest) {
@@ -56,7 +58,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: blogs,
       pagination: {
-        page: page - 1,
+        page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
@@ -87,6 +89,10 @@ export async function POST(request: NextRequest) {
       authorId,
     } = body;
 
+    const contentHtml = String(content || "");
+    const markdownContent = htmlToMarkdown(contentHtml);
+    const imageLinks = [...new Set([...extractImageUrlsFromHtml(contentHtml), coverImage].filter(Boolean))];
+
     // 检查 slug 是否已存在
     const [existingBlog] = await db
       .select()
@@ -108,8 +114,9 @@ export async function POST(request: NextRequest) {
         title,
         slug,
         excerpt,
-        content,
+        content: markdownContent,
         coverImage,
+        imageLinks,
         category: category || "未分类",
         tags: tags || [],
         status: status || "draft",
@@ -117,6 +124,15 @@ export async function POST(request: NextRequest) {
         publishedAt: status === "published" ? new Date() : null,
       })
       .returning();
+
+    if (newBlog.status === "published") {
+      await createPublicNotification({
+        eventType: "blog_published",
+        title: `新博客上线：${newBlog.title}`,
+        content: newBlog.excerpt || "点击查看最新博客内容",
+        link: `/blog/${newBlog.slug}`,
+      });
+    }
 
     return NextResponse.json({ success: true, data: newBlog });
   } catch (error) {

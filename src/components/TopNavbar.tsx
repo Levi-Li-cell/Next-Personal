@@ -14,11 +14,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useState, useEffect } from 'react';
+import FrontendNotificationBell from '@/components/FrontendNotificationBell';
 
 const navItems = [
     { id: 'author', label: '作者', href: '/author' },
     { id: 'blog', label: '博客', href: '/blog' },
     { id: 'projects', label: '项目', href: '/projects' },
+    { id: 'guestbook', label: '留言板', href: '/guestbook' },
 ];
 
 export default function TopNavbar() {
@@ -156,6 +158,7 @@ export default function TopNavbar() {
 
                     {/* Login/User Button */}
                     <div className="flex items-center gap-4">
+                        <FrontendNotificationBell />
                         {session.isPending ? (
                             <div className="h-10 w-10 flex items-center justify-center">
                                 <Loader2 className="w-5 h-5 animate-spin text-white/50" />

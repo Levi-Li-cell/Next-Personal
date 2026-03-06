@@ -27,6 +27,19 @@ if (isValidConfig) {
 
 export { supabase };
 
+export type AdminNotificationRealtimePayload = {
+  id: string;
+  user_name: string;
+  user_email: string;
+  event_type: string;
+  title: string | null;
+  content: string | null;
+  link: string | null;
+  audience: string;
+  read: boolean;
+  created_at: string;
+};
+
 // 订阅用户表的 INSERT 事件
 export const subscribeToNewUsers = (callback: (payload: any) => void) => {
   if (!supabase) {
@@ -46,6 +59,32 @@ export const subscribeToNewUsers = (callback: (payload: any) => void) => {
         table: 'users',
       },
       callback
+    )
+    .subscribe();
+
+  return subscription;
+};
+
+// 订阅后台通知表 INSERT 事件（WebSocket 实时）
+export const subscribeToAdminNotifications = (
+  callback: (payload: { new: AdminNotificationRealtimePayload }) => void
+) => {
+  if (!supabase) {
+    return {
+      unsubscribe: () => {},
+    };
+  }
+
+  const subscription = supabase
+    .channel('public:admin_notification')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'admin_notification',
+      },
+      callback as (payload: { new: AdminNotificationRealtimePayload }) => void
     )
     .subscribe();
 
