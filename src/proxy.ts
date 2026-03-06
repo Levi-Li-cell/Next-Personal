@@ -10,13 +10,19 @@ import {
 
 export async function proxy(request: NextRequest) {
   const session = getSessionCookie(request);
+  const pathname = request.nextUrl.pathname;
 
-  const isApiAuth = request.nextUrl.pathname.startsWith(apiAuthPrefix);
+  const isApiAuth = pathname.startsWith(apiAuthPrefix);
 
-  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname);
+  const isPublicRoute = publicRoutes.some((route) => {
+    if (route === "/") {
+      return pathname === "/";
+    }
+    return pathname === route || pathname.startsWith(`${route}/`);
+  });
 
   const isAuthRoute = () => {
-    return authRoutes.some((path) => request.nextUrl.pathname.startsWith(path));
+    return authRoutes.some((path) => pathname.startsWith(path));
   };
 
   if (isApiAuth) {
@@ -24,7 +30,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Allow all internal API routes (chat, voice, etc.) without auth check
-  const isInternalApi = request.nextUrl.pathname.startsWith("/api/");
+  const isInternalApi = pathname.startsWith("/api/");
   if (isInternalApi) {
     return NextResponse.next();
   }

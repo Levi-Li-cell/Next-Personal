@@ -5,11 +5,18 @@ import { and, desc, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { sendAdminNotificationEmail } from "@/lib/admin/email";
+import { getServerSession } from "@/lib/auth/get-session";
 
 async function ensureGuestbookTable() {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS guestbook_message (
       id text PRIMARY KEY,
+      user_id text,
+      user_name text,
+      user_email text,
+      user_image text,
+      ip_address text,
+      user_agent text,
       name text NOT NULL,
       content text NOT NULL,
       contact text,
@@ -17,6 +24,24 @@ async function ensureGuestbookTable() {
       created_at timestamp DEFAULT now() NOT NULL,
       updated_at timestamp DEFAULT now() NOT NULL
     )
+  `);
+
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS user_id text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS user_name text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS user_email text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS user_image text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS ip_address text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS user_agent text`);
+
+  await db.execute(sql`
+    DO $$
+    BEGIN
+      ALTER TABLE "guestbook_message"
+      ADD CONSTRAINT "guestbook_message_user_id_user_id_fk"
+      FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;
   `);
 }
 
@@ -49,10 +74,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await ensureGuestbookTable();
+    const session = await getServerSession();
     const body = await request.json();
-    const name = String(body.name || "").trim();
+    const nameInput = String(body.name || "").trim();
     const content = String(body.content || "").trim();
     const contact = String(body.contact || "").trim();
+
+    const name = nameInput || String(session?.user?.name || "").trim();
+    const userAgent = String(request.headers.get("user-agent") || "").trim() || null;
+    const forwardedFor = String(request.headers.get("x-forwarded-for") || "").trim();
+    const ipAddress = (forwardedFor.split(",")[0] || request.headers.get("x-real-ip") || "").trim() || null;
 
     if (!name || name.length < 2) {
       return NextResponse.json({ success: false, error: "昵称至少 2 个字符" }, { status: 400 });
@@ -65,6 +96,12 @@ export async function POST(request: NextRequest) {
       .insert(guestbookMessage)
       .values({
         id: nanoid(),
+        userId: session?.user?.id || null,
+        userName: session?.user?.name || null,
+        userEmail: session?.user?.email || null,
+        userImage: session?.user?.image || null,
+        ipAddress,
+        userAgent,
         name,
         content,
         contact: contact || null,
@@ -76,7 +113,7 @@ export async function POST(request: NextRequest) {
       await sendAdminNotificationEmail({
         eventType: "guestbook_message",
         userName: name,
-        userEmail: contact || "guestbook@anonymous.local",
+        userEmail: session?.user?.email || contact || "guestbook@anonymous.local",
         content,
       });
     } catch (emailError) {
