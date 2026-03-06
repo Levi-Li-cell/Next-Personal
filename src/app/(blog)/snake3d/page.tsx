@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 type Cell = { x: number; z: number };
 type ThemeName = "forest" | "desert";
+const OBSTACLE_COUNT = 16;
 
 const THEMES: Record<ThemeName, {
   label: string;
@@ -33,6 +34,7 @@ const THEMES: Record<ThemeName, {
   headColor: string;
   foodColor: string;
   starsColor: string;
+  obstacleColor: string;
 }> = {
   forest: {
     label: "森林绿洲",
@@ -59,6 +61,7 @@ const THEMES: Record<ThemeName, {
     headColor: "#14b85e",
     foodColor: "#ff8a33",
     starsColor: "#ffffff",
+    obstacleColor: "#6b3f22",
   },
   desert: {
     label: "荒漠橙色",
@@ -85,6 +88,7 @@ const THEMES: Record<ThemeName, {
     headColor: "#9a6430",
     foodColor: "#ff5d2e",
     starsColor: "#fff4dc",
+    obstacleColor: "#8a4d1e",
   },
 };
 
@@ -106,20 +110,36 @@ function randomCell(excluded: Cell[]) {
   }
 }
 
-export default function Snake3DPage() {
-  const mountRef = useRef<HTMLDivElement | null>(null);
-  const stateRef = useRef({
-    snake: [
-      { x: 5, z: 7 },
-      { x: 4, z: 7 },
-      { x: 3, z: 7 },
-    ] as Cell[],
+function generateObstacles(excluded: Cell[], count: number) {
+  const obstacles: Cell[] = [];
+  while (obstacles.length < count) {
+    const cell = randomCell([...excluded, ...obstacles]);
+    obstacles.push(cell);
+  }
+  return obstacles;
+}
+
+function createInitialState() {
+  const snake: Cell[] = [
+    { x: 5, z: 7 },
+    { x: 4, z: 7 },
+    { x: 3, z: 7 },
+  ];
+  const obstacles = generateObstacles(snake, OBSTACLE_COUNT);
+  return {
+    snake,
     direction: { x: 1, z: 0 },
     nextDirection: { x: 1, z: 0 },
-    food: { x: 9, z: 7 } as Cell,
+    obstacles,
+    food: randomCell([...snake, ...obstacles]) as Cell,
     score: 0,
     gameOver: false,
-  });
+  };
+}
+
+export default function Snake3DPage() {
+  const mountRef = useRef<HTMLDivElement | null>(null);
+  const stateRef = useRef(createInitialState());
 
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -255,6 +275,7 @@ export default function Snake3DPage() {
     const snakeMaterial = new THREE.MeshStandardMaterial({ color: activeTheme.snakeColor, roughness: 0.34, metalness: 0.07 });
     const headMaterial = new THREE.MeshStandardMaterial({ color: activeTheme.headColor, roughness: 0.28, metalness: 0.08 });
     const foodMaterial = new THREE.MeshStandardMaterial({ color: activeTheme.foodColor, roughness: 0.22, metalness: 0.06 });
+    const obstacleMaterial = new THREE.MeshStandardMaterial({ color: activeTheme.obstacleColor, roughness: 0.75, metalness: 0.04 });
 
     const cube = new THREE.BoxGeometry(0.9, 0.9, 0.9);
     const foodGeo = new THREE.SphereGeometry(0.35, 24, 24);
@@ -262,6 +283,7 @@ export default function Snake3DPage() {
     scene.add(foodMesh);
 
     const snakeMeshes: THREE.Mesh[] = [];
+    const obstacleMeshes: THREE.Mesh[] = [];
 
     function syncMeshes() {
       const state = stateRef.current;
@@ -283,6 +305,21 @@ export default function Snake3DPage() {
       });
 
       foodMesh.position.set(state.food.x, 0, state.food.z);
+
+      while (obstacleMeshes.length < state.obstacles.length) {
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.44, 0.9, 8), obstacleMaterial);
+        scene.add(mesh);
+        obstacleMeshes.push(mesh);
+      }
+      while (obstacleMeshes.length > state.obstacles.length) {
+        const mesh = obstacleMeshes.pop();
+        if (mesh) scene.remove(mesh);
+      }
+
+      obstacleMeshes.forEach((mesh, i) => {
+        const obstacle = state.obstacles[i];
+        mesh.position.set(obstacle.x, 0, obstacle.z);
+      });
     }
 
     let raf = 0;
@@ -300,11 +337,15 @@ export default function Snake3DPage() {
         state.direction = state.nextDirection;
 
         const nextHead = {
-          x: (state.snake[0].x + state.direction.x + GRID_SIZE) % GRID_SIZE,
-          z: (state.snake[0].z + state.direction.z + GRID_SIZE) % GRID_SIZE,
+          x: state.snake[0].x + state.direction.x,
+          z: state.snake[0].z + state.direction.z,
         };
 
-        if (state.snake.some((part) => sameCell(part, nextHead))) {
+        const hitBoundary = nextHead.x < 0 || nextHead.x >= GRID_SIZE || nextHead.z < 0 || nextHead.z >= GRID_SIZE;
+        const hitSelf = state.snake.some((part) => sameCell(part, nextHead));
+        const hitObstacle = state.obstacles.some((item) => sameCell(item, nextHead));
+
+        if (hitBoundary || hitSelf || hitObstacle) {
           state.gameOver = true;
           setGameOver(true);
         } else {
@@ -312,7 +353,7 @@ export default function Snake3DPage() {
           if (sameCell(nextHead, state.food)) {
             state.score += 1;
             setScore(state.score);
-            state.food = randomCell(state.snake);
+            state.food = randomCell([...state.snake, ...state.obstacles]);
           } else {
             state.snake.pop();
           }
@@ -364,22 +405,7 @@ export default function Snake3DPage() {
   }, [theme]);
 
   const restart = () => {
-    stateRef.current = {
-      snake: [
-        { x: 5, z: 7 },
-        { x: 4, z: 7 },
-        { x: 3, z: 7 },
-      ],
-      direction: { x: 1, z: 0 },
-      nextDirection: { x: 1, z: 0 },
-      food: randomCell([
-        { x: 5, z: 7 },
-        { x: 4, z: 7 },
-        { x: 3, z: 7 },
-      ]),
-      score: 0,
-      gameOver: false,
-    };
+    stateRef.current = createInitialState();
     setScore(0);
     setGameOver(false);
   };
@@ -416,7 +442,7 @@ export default function Snake3DPage() {
         <div ref={mountRef} className="h-[70vh] min-h-[420px] w-full rounded-xl overflow-hidden" />
       </div>
 
-      <p className="mt-3 text-sm text-white/70">操作方式：键盘方向键 / WASD。参考了 `three-snake-live` 的 3D 交互风格并集成到站点路由。</p>
+      <p className="mt-3 text-sm text-white/70">操作方式：键盘方向键 / WASD。新增路障与边界死亡机制，撞到自身、路障或边界都会结束游戏。</p>
     </div>
   );
 }
