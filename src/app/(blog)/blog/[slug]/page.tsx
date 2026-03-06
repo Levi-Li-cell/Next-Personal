@@ -3,7 +3,7 @@
 import { motion } from 'motion/react';
 import { ArrowLeft, Calendar, BookOpen, Eye, ThumbsUp, MessageSquare } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSession } from '@/lib/auth/client';
 import { toast } from 'sonner';
 import BlogComments from '@/components/BlogComments';
@@ -59,6 +59,36 @@ export default function BlogDetailPage() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
+
+  const galleryImages = useMemo(() => {
+    if (!post) return [];
+
+    const markdownImages = [...post.content.matchAll(/!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map(
+      (match) => match[1]
+    );
+
+    return [...new Set([post.coverImage, ...markdownImages].filter((url): url is string => Boolean(url)))];
+  }, [post]);
+
+  const openImageViewer = (imageUrl: string) => {
+    const index = galleryImages.findIndex((url) => url === imageUrl);
+    if (index >= 0) {
+      setActiveImageIndex(index);
+      return;
+    }
+    setActiveImageIndex(0);
+  };
+
+  const showPrevImage = () => {
+    if (activeImageIndex === null || galleryImages.length === 0) return;
+    setActiveImageIndex((activeImageIndex - 1 + galleryImages.length) % galleryImages.length);
+  };
+
+  const showNextImage = () => {
+    if (activeImageIndex === null || galleryImages.length === 0) return;
+    setActiveImageIndex((activeImageIndex + 1) % galleryImages.length);
+  };
 
   // 处理点赞
   const handleLike = async () => {
@@ -218,18 +248,46 @@ export default function BlogDetailPage() {
 
         {/* 封面图片 */}
         {post.coverImage && (
-          <div className="mb-8 rounded-xl overflow-hidden">
-            <img 
-              src={post.coverImage} 
-              alt={post.title} 
-              className="w-full h-auto object-cover"
-            />
+          <div className="mb-8 rounded-xl overflow-hidden border border-white/10">
+            <button
+              type="button"
+              className="block w-full cursor-zoom-in"
+              onClick={() => openImageViewer(post.coverImage!)}
+            >
+              <img
+                src={post.coverImage}
+                alt={post.title}
+                className="block w-full h-auto object-top"
+              />
+            </button>
           </div>
         )}
 
         {/* 内容 */}
-        <div className="prose prose-invert max-w-none mb-12">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+        <div className="prose prose-invert max-w-none mb-12 text-white prose-headings:text-white prose-p:text-white prose-strong:text-white prose-li:text-white prose-blockquote:text-white/90 prose-code:text-white prose-a:text-cyan-300">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              img: ({ src, alt }) => {
+                if (!src || typeof src !== 'string') return null;
+                return (
+                  <button
+                    type="button"
+                    className="my-4 block w-full cursor-zoom-in"
+                    onClick={() => openImageViewer(src)}
+                  >
+                    <img
+                      src={src}
+                      alt={alt || '博客图片'}
+                      className="block w-full rounded-lg border border-white/10 object-top"
+                    />
+                  </button>
+                );
+              },
+            }}
+          >
+            {post.content}
+          </ReactMarkdown>
         </div>
 
         {/* 标签 */}
@@ -305,6 +363,44 @@ export default function BlogDetailPage() {
             ))}
           </div>
         </motion.div>
+      )}
+
+      {activeImageIndex !== null && galleryImages.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+          <button
+            type="button"
+            className="absolute right-4 top-4 rounded-md bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+            onClick={() => setActiveImageIndex(null)}
+          >
+            关闭
+          </button>
+
+          {galleryImages.length > 1 && (
+            <button
+              type="button"
+              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md bg-white/10 px-3 py-2 text-white hover:bg-white/20"
+              onClick={showPrevImage}
+            >
+              上一张
+            </button>
+          )}
+
+          <img
+            src={galleryImages[activeImageIndex]}
+            alt={`图片 ${activeImageIndex + 1}`}
+            className="max-h-[85vh] max-w-[90vw] rounded-lg"
+          />
+
+          {galleryImages.length > 1 && (
+            <button
+              type="button"
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md bg-white/10 px-3 py-2 text-white hover:bg-white/20"
+              onClick={showNextImage}
+            >
+              下一张
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

@@ -152,11 +152,11 @@ export default function ProjectDetailPage() {
 
         {/* 封面图片 */}
         {project.coverImage && (
-          <div className="mb-8 rounded-xl overflow-hidden">
+          <div className="mb-8 rounded-xl overflow-hidden border border-white/10">
             <img 
               src={project.coverImage} 
               alt={project.title} 
-              className="w-full h-auto object-cover"
+              className="block w-full h-auto object-top"
             />
           </div>
         )}
@@ -173,7 +173,7 @@ export default function ProjectDetailPage() {
         {project.content && (
           <div className="mb-12">
             <h2 className="text-2xl font-bold text-white mb-4">项目详情</h2>
-            <div className="prose prose-invert max-w-none">
+            <div className="prose prose-invert max-w-none text-white prose-headings:text-white prose-p:text-white prose-strong:text-white prose-li:text-white prose-blockquote:text-white/90 prose-code:text-white prose-a:text-cyan-300">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{project.content}</ReactMarkdown>
             </div>
           </div>

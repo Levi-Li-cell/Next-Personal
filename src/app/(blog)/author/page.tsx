@@ -24,7 +24,8 @@ import {
     Linkedin,
     ChevronDown,
     Sparkles,
-    Coffee
+    Coffee,
+    Gamepad2
 } from 'lucide-react';
 import SkillRadar from '@/components/SkillRadar';
 import ExperienceTimeline from '@/components/ExperienceTimeline';
@@ -527,6 +528,18 @@ export default function App() {
                                         transition={{ delay: 1 }}
                                         className="flex flex-col gap-4 pt-6"
                                     >
+                                        <MagneticButton>
+                                            <motion.a
+                                                href="/snake3d"
+                                                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border border-cyan-300/30 px-4 py-2 text-sm text-white hover:from-cyan-500/50 hover:to-blue-500/50"
+                                                whileHover={{ scale: 1.06 }}
+                                                whileTap={{ scale: 0.96 }}
+                                            >
+                                                <Gamepad2 className="w-4 h-4" />
+                                                工作辛苦了来玩会儿游戏吧
+                                            </motion.a>
+                                        </MagneticButton>
+
                                         <MagneticButton>
                                             <motion.a
                                                 href="/sponsor"
