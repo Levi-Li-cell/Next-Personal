@@ -35,6 +35,12 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
 
   // 获取评论列表
   useEffect(() => {
+    if (!session?.user?.id) {
+      setComments([]);
+      setLoading(false);
+      return;
+    }
+
     async function fetchComments() {
       try {
         const response = await fetch(`/api/blog/${slug}/comments`);
@@ -57,7 +63,7 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
     }
 
     fetchComments();
-  }, [slug]);
+  }, [slug, session?.user?.id]);
 
   // 提交评论
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -240,10 +246,14 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
       {/* 评论列表 */}
       <div className="space-y-6">
         <h3 className="text-xl font-semibold text-white">评论 ({comments.length})</h3>
-        {comments.length === 0 ? (
-          <p className="text-white/60">暂无评论，快来发表第一条评论吧！</p>
-        ) : (
-          comments.map((comment) => (
+        {!session ? (
+          <p className="text-white/60">仅登录用户可查看和参与评论，请 <a href="/signin" className="text-purple-400 hover:underline">登录</a>。</p>
+        ) : null}
+        {session ? (
+          comments.length === 0 ? (
+            <p className="text-white/60">暂无评论，快来发表第一条评论吧！</p>
+          ) : (
+            comments.map((comment) => (
             <div key={comment.id} className="space-y-4">
               <Card className="bg-white/5 border-white/10">
                 <CardContent className="p-6">
@@ -351,8 +361,9 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
                 </CardContent>
               </Card>
             </div>
-          ))
-        )}
+            ))
+          )
+        ) : null}
       </div>
     </div>
   );

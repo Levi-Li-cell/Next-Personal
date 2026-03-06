@@ -138,7 +138,7 @@ export async function PUT(
         content: nextContent,
         coverImage: body.coverImage,
         imageLinks: nextImageLinks,
-        category: body.category,
+        category: body.category === "公告" ? "公告" : "生活",
         tags: body.tags || [],
         status: body.status,
         publishedAt: body.status === "published" ? new Date() : null,

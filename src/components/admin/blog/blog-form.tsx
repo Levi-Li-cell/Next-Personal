@@ -24,28 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BlogType } from "@/db/schema/blog";
-import { Editor } from "@tinymce/tinymce-react";
-import "tinymce/tinymce";
-import "tinymce/icons/default";
-import "tinymce/themes/silver";
-import "tinymce/models/dom";
-import "tinymce/plugins/advlist";
-import "tinymce/plugins/autolink";
-import "tinymce/plugins/lists";
-import "tinymce/plugins/link";
-import "tinymce/plugins/image";
-import "tinymce/plugins/charmap";
-import "tinymce/plugins/preview";
-import "tinymce/plugins/anchor";
-import "tinymce/plugins/searchreplace";
-import "tinymce/plugins/visualblocks";
-import "tinymce/plugins/code";
-import "tinymce/plugins/fullscreen";
-import "tinymce/plugins/insertdatetime";
-import "tinymce/plugins/media";
-import "tinymce/plugins/table";
-import "tinymce/plugins/help";
-import "tinymce/plugins/wordcount";
+import { RichEditor } from "@/components/admin/common/rich-editor";
 
 const blogFormSchema = z.object({
   title: z.string().min(1, "请输入标题"),
@@ -67,12 +46,8 @@ interface BlogFormProps {
 }
 
 const categories = [
-  "未分类",
-  "技术",
   "生活",
-  "教程",
-  "随笔",
-  "项目",
+  "公告",
 ];
 
 export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
@@ -85,7 +60,7 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
       excerpt: blog?.excerpt || "",
       content: blog?.content || "",
       coverImage: blog?.coverImage || "",
-      category: blog?.category || "未分类",
+      category: blog?.category === "公告" ? "公告" : "生活",
       tags: blog?.tags?.join(", ") || "",
       status: (blog?.status as "draft" | "published") || "draft",
     },
@@ -186,62 +161,11 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
               </div>
               <FormControl>
                 {editorTab === "visual" ? (
-                  <div className="border rounded-md overflow-hidden">
-                    <Editor
-                      licenseKey="gpl"
-                      value={field.value}
-                      onEditorChange={(content) => field.onChange(content)}
-                      init={{
-                        height: 520,
-                        menubar: false,
-                        plugins: [
-                          "advlist",
-                          "autolink",
-                          "lists",
-                          "link",
-                          "image",
-                          "charmap",
-                          "preview",
-                          "anchor",
-                          "searchreplace",
-                          "visualblocks",
-                          "code",
-                          "fullscreen",
-                          "insertdatetime",
-                          "media",
-                          "table",
-                          "help",
-                          "wordcount",
-                        ],
-                        toolbar:
-                          "undo redo | blocks | bold italic underline strikethrough | " +
-                          "h1 h2 h3 | alignleft aligncenter alignright alignjustify | " +
-                          "bullist numlist outdent indent | link image media | " +
-                          "blockquote table | removeformat | code fullscreen preview",
-                        images_upload_handler: async (blobInfo) => {
-                          const file = blobInfo.blob();
-                          const uploadFile = new File([file], blobInfo.filename(), {
-                            type: file.type,
-                          });
-                          const uploadFormData = new FormData();
-                          uploadFormData.append("file", uploadFile);
-                          const response = await fetch(
-                            `/api/upload?filename=${encodeURIComponent(uploadFile.name)}`,
-                            {
-                              method: "POST",
-                              body: uploadFormData,
-                            }
-                          );
-                          const result = await response.json();
-                          if (!result.url) {
-                            throw new Error(result.error || "图片上传失败");
-                          }
-                          return result.url as string;
-                        },
-                        promotion: false,
-                      }}
-                    />
-                  </div>
+                  <RichEditor
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="请输入文章内容..."
+                  />
                 ) : (
                   <Textarea
                     placeholder="请输入文章内容（支持 Markdown）"
@@ -278,7 +202,7 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>分类</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="请选择分类" />
@@ -320,7 +244,7 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>状态</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="请选择状态" />

@@ -36,6 +36,10 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession();
     const userId = session?.user?.id || null;
 
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "请先登录" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 30);
@@ -44,9 +48,7 @@ export async function GET(request: NextRequest) {
     const whereClause = and(
       eq(adminNotification.audience, "public"),
       eq(adminNotification.read, false),
-      userId
-        ? sql`(${adminNotification.targetUserId} IS NULL OR ${adminNotification.targetUserId} = ${userId})`
-        : sql`${adminNotification.targetUserId} IS NULL`
+      sql`(${adminNotification.targetUserId} IS NULL OR ${adminNotification.targetUserId} = ${userId})`
     );
 
     const rows = await db
@@ -85,6 +87,10 @@ export async function PATCH(request: NextRequest) {
     await ensureNotificationTable();
     const session = await getServerSession();
     const userId = session?.user?.id || null;
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "请先登录" }, { status: 401 });
+    }
     const body = await request.json();
     const id = String(body.id || "").trim();
 
@@ -99,9 +105,7 @@ export async function PATCH(request: NextRequest) {
         and(
           eq(adminNotification.id, id),
           eq(adminNotification.audience, "public"),
-          userId
-            ? sql`(${adminNotification.targetUserId} IS NULL OR ${adminNotification.targetUserId} = ${userId})`
-            : sql`${adminNotification.targetUserId} IS NULL`
+          sql`(${adminNotification.targetUserId} IS NULL OR ${adminNotification.targetUserId} = ${userId})`
         )
       );
 

@@ -49,6 +49,13 @@ export default function FrontendNotificationBell() {
   const [hasUnreadPulse, setHasUnreadPulse] = useState(false);
 
   useEffect(() => {
+    if (!session?.user?.id) {
+      setItems([]);
+      setIsLoading(false);
+      setHasUnreadPulse(false);
+      return;
+    }
+
     const fetchList = async () => {
       try {
         const response = await fetch("/api/notifications?page=1&limit=8", { cache: "no-store" });
@@ -73,9 +80,13 @@ export default function FrontendNotificationBell() {
     };
 
     fetchList();
-  }, []);
+  }, [session?.user?.id]);
 
   useEffect(() => {
+    if (!session?.user?.id) {
+      return;
+    }
+
     const subscription = subscribeToAdminNotifications((payload) => {
       const data = payload.new as AdminNotificationRealtimePayload;
       if (data.audience !== "public" || data.read) {
@@ -102,6 +113,10 @@ export default function FrontendNotificationBell() {
       subscription.unsubscribe();
     };
   }, [session?.user?.id]);
+
+  if (!session?.user?.id) {
+    return null;
+  }
 
   useEffect(() => {
     if (open) {

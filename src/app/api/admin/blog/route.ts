@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(blog.status, status));
     }
     if (category) {
-      conditions.push(eq(blog.category, category));
+      const normalizedCategory = category === "公告" ? "公告" : "生活";
+      conditions.push(eq(blog.category, normalizedCategory));
     }
     if (search) {
       conditions.push(
@@ -92,6 +93,7 @@ export async function POST(request: NextRequest) {
     const contentHtml = String(content || "");
     const markdownContent = htmlToMarkdown(contentHtml);
     const imageLinks = [...new Set([...extractImageUrlsFromHtml(contentHtml), coverImage].filter(Boolean))];
+    const normalizedCategory = category === "公告" ? "公告" : "生活";
 
     // 检查 slug 是否已存在
     const [existingBlog] = await db
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
         content: markdownContent,
         coverImage,
         imageLinks,
-        category: category || "未分类",
+        category: normalizedCategory,
         tags: tags || [],
         status: status || "draft",
         authorId,

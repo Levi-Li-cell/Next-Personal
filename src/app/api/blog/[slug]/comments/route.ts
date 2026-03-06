@@ -11,6 +11,11 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
+
     // 获取博客文章
     const { slug } = await params;
     const blogPost = await db.query.blog.findFirst({

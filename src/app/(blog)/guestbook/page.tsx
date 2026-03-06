@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useSession } from "@/lib/auth/client";
 
 interface GuestbookMessage {
   id: string;
@@ -20,6 +21,7 @@ interface GuestbookMessage {
 }
 
 export default function GuestbookPage() {
+  const { data: session, isPending: sessionPending } = useSession();
   const [messages, setMessages] = useState<GuestbookMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -110,7 +112,8 @@ export default function GuestbookPage() {
             <CardTitle className="text-white">发布留言</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {session?.user?.id ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-white">昵称</Label>
                 <Input
@@ -162,7 +165,12 @@ export default function GuestbookPage() {
                   </>
                 )}
               </Button>
-            </form>
+              </form>
+            ) : (
+              <div className="text-white/70 text-sm">
+                {sessionPending ? "正在检查登录状态..." : <>请先 <a href="/signin" className="text-purple-300 underline">登录</a> 后留言</>}
+              </div>
+            )}
           </CardContent>
         </Card>
 

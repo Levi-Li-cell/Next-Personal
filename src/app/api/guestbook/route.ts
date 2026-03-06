@@ -131,6 +131,11 @@ export async function POST(request: NextRequest) {
   try {
     await ensureGuestbookTable();
     const session = await getServerSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "请先登录后再留言" }, { status: 401 });
+    }
+
     const body = await request.json();
     const nameInput = String(body.name || "").trim();
     const content = String(body.content || "").trim();
