@@ -114,10 +114,6 @@ export default function FrontendNotificationBell() {
     };
   }, [session?.user?.id]);
 
-  if (!session?.user?.id) {
-    return null;
-  }
-
   useEffect(() => {
     if (open) {
       setHasUnreadPulse(false);
@@ -140,6 +136,10 @@ export default function FrontendNotificationBell() {
       console.error("mark notification read failed:", error);
     }
   };
+
+  if (!session?.user?.id) {
+    return null;
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
