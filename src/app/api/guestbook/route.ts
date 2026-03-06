@@ -5,6 +5,7 @@ import { and, desc, eq, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { sendAdminNotificationEmail } from "@/lib/admin/email";
 import { getServerSession } from "@/lib/auth/get-session";
+import { createAdminNotification } from "@/lib/notifications/admin-notify";
 
 async function ensureGuestbookTable() {
   await db.execute(sql`
@@ -177,6 +178,15 @@ export async function POST(request: NextRequest) {
         userName: name,
         userEmail: session?.user?.email || contact || "guestbook@anonymous.local",
         content: isRisky ? `风险留言已拦截标记\n${content}` : content,
+      });
+
+      await createAdminNotification({
+        eventType: isRisky ? "guestbook_warning" : "guestbook_message",
+        title: isRisky ? "留言板出现风险留言" : "留言板收到新留言",
+        content,
+        link: "/admin/guestbook",
+        userName: name,
+        userEmail: session?.user?.email || contact || "guestbook@anonymous.local",
       });
 
       await db

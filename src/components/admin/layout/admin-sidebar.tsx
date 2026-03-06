@@ -17,6 +17,7 @@ import {
   UserCircle,
   Megaphone,
   HandCoins,
+  Bot,
 } from "lucide-react";
 import {
   Sidebar,
@@ -95,6 +96,11 @@ const menuItems: MenuItem[] = [
     title: "通知中心",
     url: "/admin/notifications",
     icon: Bell,
+  },
+  {
+    title: "AI客服消息",
+    url: "/admin/chat",
+    icon: Bot,
   },
   {
     title: "赞助记录",

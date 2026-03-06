@@ -5,6 +5,7 @@ import { eq, and, inArray, isNull } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth/get-session";
 import { nanoid } from "nanoid";
 import { sendAdminNotificationEmail } from "@/lib/admin/email";
+import { createAdminNotification } from "@/lib/notifications/admin-notify";
 
 export async function GET(
   request: Request,
@@ -103,6 +104,15 @@ export async function POST(
         userName: session.user.name || "匿名用户",
         userEmail: session.user.email || "comment@anonymous.local",
         content: content.trim(),
+      });
+
+      await createAdminNotification({
+        eventType: parentId ? "comment_reply" : "blog_comment",
+        title: parentId ? "评论区收到新回复" : "评论区收到新评论",
+        content: content.trim(),
+        link: `/blog/${slug}`,
+        userName: session.user.name || "匿名用户",
+        userEmail: session.user.email || "comment@anonymous.local",
       });
     } catch (emailError) {
       console.error("发送评论通知邮件失败:", emailError);

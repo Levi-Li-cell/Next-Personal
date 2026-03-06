@@ -2,7 +2,6 @@ import { nanoid } from "nanoid";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { adminNotification } from "@/db/schema/notification";
-import { createAdminNotification } from "@/lib/notifications/admin-notify";
 
 async function ensureNotificationTable() {
   await db.execute(sql`
@@ -30,12 +29,13 @@ async function ensureNotificationTable() {
   await db.execute(sql`ALTER TABLE admin_notification ALTER COLUMN audience SET DEFAULT 'admin'`);
 }
 
-export async function createPublicNotification(input: {
-  eventType: "announcement" | "blog_published" | "project_published";
+export async function createAdminNotification(input: {
+  eventType: string;
   title: string;
   content?: string;
   link?: string | null;
-  mirrorToAdmin?: boolean;
+  userName?: string;
+  userEmail?: string;
 }) {
   await ensureNotificationTable();
 
@@ -44,24 +44,13 @@ export async function createPublicNotification(input: {
 
   await db.insert(adminNotification).values({
     id: nanoid(),
-    userName: "系统通知",
-    userEmail: "no-reply@local",
-    eventType: input.eventType,
+    userName: String(input.userName || "系统通知").trim() || "系统通知",
+    userEmail: String(input.userEmail || "no-reply@local").trim() || "no-reply@local",
+    eventType: String(input.eventType || "system_event").trim() || "system_event",
     title,
     content: String(input.content || "").trim() || null,
     link: String(input.link || "").trim() || null,
-    audience: "public",
+    audience: "admin",
     read: false,
   });
-
-  if (input.mirrorToAdmin !== false) {
-    await createAdminNotification({
-      eventType: input.eventType,
-      title: input.title,
-      content: input.content,
-      link: input.link,
-      userName: "系统通知",
-      userEmail: "no-reply@local",
-    });
-  }
 }

@@ -11,9 +11,24 @@ async function ensureVisualTables() {
       user_name text NOT NULL,
       user_email text NOT NULL,
       event_type text NOT NULL DEFAULT 'user_signup',
+      title text,
+      content text,
+      link text,
+      target_user_id text,
+      audience text NOT NULL DEFAULT 'admin',
       read boolean NOT NULL DEFAULT false,
       created_at timestamp DEFAULT now() NOT NULL,
       updated_at timestamp DEFAULT now() NOT NULL
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id varchar(255) NOT NULL,
+      role varchar(50) NOT NULL,
+      content text NOT NULL,
+      created_at timestamp DEFAULT now() NOT NULL
     )
   `);
 }
@@ -32,16 +47,18 @@ export async function GET() {
   try {
     await ensureVisualTables();
 
-    const [users, blogs, projects, comments, guestbook, unread, eventDistResult, trendResult, recentResult] = await Promise.all([
+    const [users, blogs, projects, comments, guestbook, unread, chatMessages, eventDistResult, trendResult, recentResult] = await Promise.all([
       safeCount(sql`SELECT COUNT(*)::int AS count FROM "user"`),
       safeCount(sql`SELECT COUNT(*)::int AS count FROM blog`),
       safeCount(sql`SELECT COUNT(*)::int AS count FROM project`),
       safeCount(sql`SELECT COUNT(*)::int AS count FROM blog_comment`),
       safeCount(sql`SELECT COUNT(*)::int AS count FROM guestbook_message`),
-      safeCount(sql`SELECT COUNT(*)::int AS count FROM admin_notification WHERE read = false`),
+      safeCount(sql`SELECT COUNT(*)::int AS count FROM admin_notification WHERE read = false AND audience = 'admin'`),
+      safeCount(sql`SELECT COUNT(*)::int AS count FROM chat_messages`),
       db.execute(sql`
         SELECT event_type, COUNT(*)::int AS count
         FROM admin_notification
+        WHERE audience = 'admin'
         GROUP BY event_type
       `),
       db.execute(sql`
@@ -61,14 +78,15 @@ export async function GET() {
         ORDER BY ds.day
       `),
       db.execute(sql`
-        SELECT id, user_name, user_email, event_type, read, created_at
+        SELECT id, user_name, user_email, event_type, read, created_at, title, content, link
         FROM admin_notification
+        WHERE audience = 'admin'
         ORDER BY created_at DESC
         LIMIT 60
       `),
     ]);
 
-    const summary = { users, blogs, projects, comments, guestbook, unread };
+    const summary = { users, blogs, projects, comments, guestbook, unread, chatMessages };
 
     const eventDistRows = (eventDistResult as unknown as {
       rows?: Array<{ event_type: string; count: number }>;

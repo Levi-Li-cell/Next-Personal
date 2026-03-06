@@ -104,6 +104,10 @@ export default function SignUpForm() {
               userName: data.name,
               userEmail: data.email,
               eventType: "user_signup",
+              title: "新用户注册",
+              content: `${data.name} 已完成注册`,
+              link: "/admin/users",
+              audience: "admin",
             }),
           });
         } catch (error) {
