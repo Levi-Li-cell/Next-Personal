@@ -5,6 +5,7 @@ import { chatMessages } from "@/db/schema/chat";
 import { getSystemPrompt } from "@/lib/knowledge";
 import { desc, eq } from "drizzle-orm";
 import { v4 as uuidv4 } from 'uuid';
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 const DISABLE_CHAT_DB = process.env.CHAT_DISABLE_DB === "1";
 
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
         const systemPrompt = getSystemPrompt();
 
         // Construct messages array for OpenAI
-        const messages = [
+        const messages: ChatCompletionMessageParam[] = [
             { role: "system", content: systemPrompt },
             ...historyMessages,
             // Replicating original behavior: add current message again explicitly at the end
@@ -116,20 +117,29 @@ export async function POST(req: NextRequest) {
         const modelCandidates = Array.from(new Set([primaryModel, ...fallbackModels]));
 
         let completion: Awaited<ReturnType<typeof openai.chat.completions.create>> | null = null;
-        let lastModelError: any = null;
+        let lastModelError: Error | null = null;
 
         for (const model of modelCandidates) {
             try {
                 completion = await openai.chat.completions.create({
                     model,
-                    messages: messages as any,
+                    messages,
                     temperature: 0.7,
                     max_tokens: 2048,
                 });
                 break;
-            } catch (modelError: any) {
-                lastModelError = modelError;
-                const canRetry = modelError?.status === 503 || modelError?.code === "model_not_found";
+            } catch (modelError: unknown) {
+                const status =
+                    typeof modelError === "object" && modelError !== null && "status" in modelError
+                        ? Number((modelError as { status?: number }).status)
+                        : undefined;
+                const code =
+                    typeof modelError === "object" && modelError !== null && "code" in modelError
+                        ? String((modelError as { code?: string }).code)
+                        : undefined;
+
+                lastModelError = modelError instanceof Error ? modelError : new Error("Model invocation failed");
+                const canRetry = status === 503 || code === "model_not_found";
                 if (!canRetry) {
                     throw modelError;
                 }
@@ -160,7 +170,7 @@ export async function POST(req: NextRequest) {
             sessionId: sessionId
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Chat Error:", error);
         return NextResponse.json({
             success: false,

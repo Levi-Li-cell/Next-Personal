@@ -21,27 +21,29 @@ export default function TypewriterText({
 }: TypewriterTextProps) {
     const [displayedText, setDisplayedText] = useState('');
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [isComplete, setIsComplete] = useState(false);
+    const isComplete = currentIndex >= text.length;
 
     useEffect(() => {
-        // 重置状态当文本改变时
-        setDisplayedText('');
+        setDisplayedText(text.slice(0, currentIndex));
+    }, [text, currentIndex]);
+
+    useEffect(() => {
         setCurrentIndex(0);
-        setIsComplete(false);
     }, [text]);
 
     useEffect(() => {
-        if (currentIndex < text.length) {
-            const timer = setTimeout(() => {
-                setDisplayedText(prev => prev + text[currentIndex]);
-                setCurrentIndex(prev => prev + 1);
-            }, speed);
-            return () => clearTimeout(timer);
-        } else if (!isComplete && text.length > 0) {
-            setIsComplete(true);
-            onComplete?.();
+        if (isComplete) {
+            if (text.length > 0) {
+                onComplete?.();
+            }
+            return;
         }
-    }, [currentIndex, text, speed, isComplete, onComplete]);
+
+        const timer = setTimeout(() => {
+            setCurrentIndex((prev) => prev + 1);
+        }, speed);
+        return () => clearTimeout(timer);
+    }, [currentIndex, text.length, speed, isComplete, onComplete, text]);
 
     return (
         <span className={className} style={style}>

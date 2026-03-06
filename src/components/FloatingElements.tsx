@@ -1,25 +1,26 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Code, Terminal, Cpu, Zap, Box, Layers } from 'lucide-react';
 
 const icons = [Code, Terminal, Cpu, Zap, Box, Layers];
 
 export default function FloatingElements() {
-  const [dots, setDots] = useState<Array<{ id: number; left: number; top: number; moveY: number; moveX: number; duration: number; delay: number }>>([]);
+  const dots = useMemo(
+    () =>
+      Array.from({ length: 20 }, (_, i) => {
+        const left = (i * 13) % 100;
+        const top = (i * 17) % 100;
+        const moveY = ((i % 7) - 3) * 12;
+        const moveX = ((i % 5) - 2) * 10;
+        const duration = 6 + (i % 6);
+        const delay = (i % 4) * 0.4;
 
-  useEffect(() => {
-    setDots([...Array(20)].map((_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      top: Math.random() * 100,
-      moveY: Math.random() * 100 - 50,
-      moveX: Math.random() * 100 - 50,
-      duration: 5 + Math.random() * 5,
-      delay: Math.random() * 2,
-    })));
-  }, []);
+        return { id: i, left, top, moveY, moveX, duration, delay };
+      }),
+    []
+  );
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden">
