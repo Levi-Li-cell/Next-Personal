@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,19 @@ export function BlogForm({ blog, onSubmit, isLoading }: BlogFormProps) {
       status: (blog?.status as "draft" | "published") || "draft",
     },
   });
+
+  useEffect(() => {
+    form.reset({
+      title: blog?.title || "",
+      slug: blog?.slug || "",
+      excerpt: blog?.excerpt || "",
+      content: blog?.content || "",
+      coverImage: blog?.coverImage || "",
+      category: blog?.category === "公告" ? "公告" : "生活",
+      tags: blog?.tags?.join(", ") || "",
+      status: (blog?.status as "draft" | "published") || "draft",
+    });
+  }, [blog, form]);
 
   // 自动生成 slug
   const generateSlug = () => {

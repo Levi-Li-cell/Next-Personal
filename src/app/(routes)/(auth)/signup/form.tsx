@@ -9,6 +9,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useTransition } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUp } from "@/lib/auth/client";
@@ -22,9 +23,12 @@ import InputPasswordContainer from "../components/input-password";
 import { cn } from "@/lib/utils";
 import { AtSign, MailIcon, UserIcon } from "lucide-react";
 import { GenderRadioGroup } from "../components/gender-radio-group";
+import { TurnstileWidget } from "../components/turnstile-widget";
 
 export default function SignUpForm() {
   const [isPending, startTransition] = useTransition();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileSiteKey = useMemo(() => String(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "").trim(), []);
   const form = useForm<SignUpValues>({
     resolver: zodResolver(SignUpSchema),
     defaultValues: {
@@ -58,6 +62,28 @@ export default function SignUpForm() {
         return;
       }
 
+      if (!turnstileSiteKey) {
+        toast.error("验证码服务未配置，请联系管理员");
+        return;
+      }
+
+      if (!captchaToken) {
+        toast.error("请先完成验证码验证");
+        return;
+      }
+
+      const captchaResponse = await fetch("/api/auth/captcha/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: captchaToken }),
+      });
+      const captchaResult = await captchaResponse.json();
+      if (!captchaResult?.success) {
+        toast.error(captchaResult?.error || "验证码校验失败，请重试");
+        setCaptchaToken(null);
+        return;
+      }
+
       const response = await signUp.email(data);
 
       if (response.error) {
@@ -83,6 +109,8 @@ export default function SignUpForm() {
         } catch (error) {
           console.error("Create signup notification failed:", error);
         }
+
+        setCaptchaToken(null);
         redirect("/");
       }
     });
@@ -214,6 +242,14 @@ export default function SignUpForm() {
             </FormItem>
           )}
         />
+
+        {turnstileSiteKey ? (
+          <div className="rounded-md border border-white/10 p-2">
+            <TurnstileWidget siteKey={turnstileSiteKey} onTokenChange={setCaptchaToken} />
+          </div>
+        ) : (
+          <div className="text-xs text-destructive">验证码服务未配置，无法完成注册。</div>
+        )}
 
         <Button type="submit" disabled={isPending} className="mt-5 w-full">
           Sign Up
