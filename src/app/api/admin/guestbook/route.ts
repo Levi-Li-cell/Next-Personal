@@ -3,18 +3,34 @@ import { db } from "@/db";
 import { guestbookMessage } from "@/db/schema/guestbook";
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 
+async function ensureGuestbookNotifyColumns() {
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_status text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_type text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_to text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_subject text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_content text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_message_id text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_error text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_at timestamp`);
+}
+
 export async function GET(request: NextRequest) {
   try {
+    await ensureGuestbookNotifyColumns();
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
+    const notifyStatus = searchParams.get("notifyStatus") || "all";
     const offset = (page - 1) * limit;
 
     const conditions = [];
     if (status !== "all") {
       conditions.push(eq(guestbookMessage.status, status));
+    }
+    if (notifyStatus !== "all") {
+      conditions.push(eq(guestbookMessage.notifyEmailStatus, notifyStatus));
     }
     if (search) {
       conditions.push(
@@ -25,7 +41,11 @@ export async function GET(request: NextRequest) {
           like(guestbookMessage.userName, `%${search}%`),
           like(guestbookMessage.userEmail, `%${search}%`),
           like(guestbookMessage.userId, `%${search}%`),
-          like(guestbookMessage.ipAddress, `%${search}%`)
+          like(guestbookMessage.ipAddress, `%${search}%`),
+          like(guestbookMessage.notifyEmailTo, `%${search}%`),
+          like(guestbookMessage.notifyEmailSubject, `%${search}%`),
+          like(guestbookMessage.notifyEmailContent, `%${search}%`),
+          like(guestbookMessage.notifyEmailError, `%${search}%`)
         )
       );
     }

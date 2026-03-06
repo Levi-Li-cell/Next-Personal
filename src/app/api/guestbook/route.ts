@@ -20,6 +20,14 @@ async function ensureGuestbookTable() {
       content text NOT NULL,
       contact text,
       status text NOT NULL DEFAULT 'approved',
+      notify_email_status text,
+      notify_email_type text,
+      notify_email_to text,
+      notify_email_subject text,
+      notify_email_content text,
+      notify_email_message_id text,
+      notify_email_error text,
+      notify_email_at timestamp,
       created_at timestamp DEFAULT now() NOT NULL,
       updated_at timestamp DEFAULT now() NOT NULL
     )
@@ -31,6 +39,14 @@ async function ensureGuestbookTable() {
   await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS user_image text`);
   await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS ip_address text`);
   await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS user_agent text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_status text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_type text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_to text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_subject text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_content text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_message_id text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_error text`);
+  await db.execute(sql`ALTER TABLE guestbook_message ADD COLUMN IF NOT EXISTS notify_email_at timestamp`);
 
   await db.execute(sql`
     DO $$
@@ -151,14 +167,51 @@ export async function POST(request: NextRequest) {
       .returning();
 
     try {
-      await sendAdminNotificationEmail({
+      const notifyResult = await sendAdminNotificationEmail({
         eventType: isRisky ? "guestbook_warning" : "guestbook_message",
         userName: name,
         userEmail: session?.user?.email || contact || "guestbook@anonymous.local",
         content: isRisky ? `风险留言已拦截标记\n${content}` : content,
       });
+
+      await db
+        .update(guestbookMessage)
+        .set({
+          notifyEmailStatus: notifyResult?.status || "skipped",
+          notifyEmailType: notifyResult?.eventType || null,
+          notifyEmailTo: notifyResult?.recipients?.join(",") || null,
+          notifyEmailSubject: notifyResult?.subject || null,
+          notifyEmailContent: notifyResult?.textContent || null,
+          notifyEmailMessageId: notifyResult?.messageId || null,
+          notifyEmailError: notifyResult?.error || null,
+          notifyEmailAt: new Date(),
+        })
+        .where(eq(guestbookMessage.id, message.id));
+
+      message.notifyEmailStatus = notifyResult?.status || "skipped";
+      message.notifyEmailType = notifyResult?.eventType || null;
+      message.notifyEmailTo = notifyResult?.recipients?.join(",") || null;
+      message.notifyEmailSubject = notifyResult?.subject || null;
+      message.notifyEmailContent = notifyResult?.textContent || null;
+      message.notifyEmailMessageId = notifyResult?.messageId || null;
+      message.notifyEmailError = notifyResult?.error || null;
+      message.notifyEmailAt = new Date();
     } catch (emailError) {
       console.error("发送留言通知邮件失败:", emailError);
+
+      await db
+        .update(guestbookMessage)
+        .set({
+          notifyEmailStatus: "failed",
+          notifyEmailType: isRisky ? "guestbook_warning" : "guestbook_message",
+          notifyEmailTo: null,
+          notifyEmailSubject: null,
+          notifyEmailContent: null,
+          notifyEmailMessageId: null,
+          notifyEmailError: emailError instanceof Error ? emailError.message : "邮件发送失败",
+          notifyEmailAt: new Date(),
+        })
+        .where(eq(guestbookMessage.id, message.id));
     }
 
     return NextResponse.json({ success: true, data: message }, { status: 201 });

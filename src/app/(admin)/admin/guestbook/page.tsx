@@ -11,6 +11,7 @@ export default function GuestbookManagePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [notifyStatusFilter, setNotifyStatusFilter] = useState("all");
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -31,6 +32,7 @@ export default function GuestbookManagePage() {
         page: (pagination.pageIndex + 1).toString(),
         limit: pagination.pageSize.toString(),
         status: statusFilter,
+        notifyStatus: notifyStatusFilter,
       });
       if (search) params.append("search", search);
 
@@ -53,7 +55,7 @@ export default function GuestbookManagePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.pageIndex, pagination.pageSize, search, statusFilter]);
+  }, [pagination.pageIndex, pagination.pageSize, search, statusFilter, notifyStatusFilter]);
 
   useEffect(() => {
     fetchMessages();
@@ -68,7 +70,17 @@ export default function GuestbookManagePage() {
       });
       const data = await response.json();
       if (data.success) {
+        const notifyStatus = data.data?.notifyEmailStatus;
+        const notifyError = data.data?.notifyEmailError;
+        const notifyText =
+          notifyStatus === "sent"
+            ? "邮件已发送"
+            : notifyStatus === "failed"
+              ? `邮件发送失败${notifyError ? `：${notifyError}` : ""}`
+              : "邮件未发送（配置缺失或无需发送）";
+
         toast.success("状态已更新");
+        toast.message(`通知状态：${notifyText}`);
         fetchMessages();
       } else {
         toast.error(data.error || "更新失败");
@@ -177,6 +189,20 @@ export default function GuestbookManagePage() {
             ],
             onChange: (value) => {
               setStatusFilter(value);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            },
+          },
+          {
+            name: "邮件",
+            value: notifyStatusFilter,
+            options: [
+              { label: "全部邮件状态", value: "all" },
+              { label: "已发送", value: "sent" },
+              { label: "未发送", value: "skipped" },
+              { label: "发送失败", value: "failed" },
+            ],
+            onChange: (value) => {
+              setNotifyStatusFilter(value);
               setPagination((prev) => ({ ...prev, pageIndex: 0 }));
             },
           },

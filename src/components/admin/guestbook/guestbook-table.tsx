@@ -22,6 +22,14 @@ export interface GuestbookMessage {
   content: string;
   contact: string | null;
   status: string;
+  notifyEmailStatus: string | null;
+  notifyEmailType: string | null;
+  notifyEmailTo: string | null;
+  notifyEmailSubject: string | null;
+  notifyEmailContent: string | null;
+  notifyEmailMessageId: string | null;
+  notifyEmailError: string | null;
+  notifyEmailAt: Date | string | null;
   createdAt: Date | string;
 }
 
@@ -83,6 +91,43 @@ export function getGuestbookColumns({
           flagged: { label: "风险提醒", className: "bg-orange-100 text-orange-800" },
         };
         return <StatusBadge status={message.status} labels={statusLabels} />;
+      },
+    },
+    {
+      key: "notifyEmailStatus",
+      header: "邮件通知",
+      cell: (message: GuestbookMessage) => {
+        const statusLabels: Record<string, { label: string; className: string }> = {
+          sent: { label: "已发送", className: "bg-green-100 text-green-800" },
+          skipped: { label: "未发送", className: "bg-gray-100 text-gray-800" },
+          failed: { label: "发送失败", className: "bg-red-100 text-red-800" },
+        };
+        return (
+          <div className="space-y-1">
+            <StatusBadge status={message.notifyEmailStatus || "skipped"} labels={statusLabels} />
+            {message.notifyEmailType ? (
+              <div className="text-xs text-muted-foreground">类型: {message.notifyEmailType}</div>
+            ) : null}
+            {message.notifyEmailTo ? (
+              <div className="text-xs text-muted-foreground truncate max-w-[260px]" title={message.notifyEmailTo}>
+                收件人: {message.notifyEmailTo}
+              </div>
+            ) : null}
+            {message.notifyEmailSubject ? (
+              <div className="text-xs text-muted-foreground truncate max-w-[260px]" title={message.notifyEmailSubject}>
+                主题: {message.notifyEmailSubject}
+              </div>
+            ) : null}
+            {message.notifyEmailError ? (
+              <div className="text-xs text-red-600 truncate max-w-[260px]" title={message.notifyEmailError}>
+                错误: {message.notifyEmailError}
+              </div>
+            ) : null}
+            {message.notifyEmailAt ? (
+              <div className="text-xs text-muted-foreground">{formatDate(message.notifyEmailAt)}</div>
+            ) : null}
+          </div>
+        );
       },
     },
     {

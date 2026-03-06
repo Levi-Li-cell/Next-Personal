@@ -38,9 +38,30 @@ export async function sendAdminNotificationEmail(input: {
   content?: string;
   at?: Date;
 }) {
+  const titleMap: Record<string, string> = {
+    user_signup: "新用户注册通知",
+    guestbook_message: "留言板新留言通知",
+    guestbook_warning: "留言板风险留言警告",
+    blog_comment: "评论区新评论通知",
+    comment_reply: "评论区新回复通知",
+    guestbook_reply: "留言板回复通知",
+  };
+
+  const title = titleMap[input.eventType] || "后台新消息通知";
+  const atText = (input.at || new Date()).toLocaleString("zh-CN", { hour12: false });
+  const contentText = input.content ? `\n内容: ${input.content}` : "";
+
   if (!SMTP_USER || !SMTP_PASS) {
     console.warn("[NotifyEmail] SMTP 未配置，跳过发送");
-    return;
+    return {
+      sent: false,
+      status: "skipped",
+      eventType: input.eventType,
+      recipients: [],
+      subject: `${title} - ${input.userName}`,
+      textContent: `${title}\n\n触发用户: ${input.userName}\n邮箱: ${input.userEmail}${contentText}\n时间: ${atText}\n\n请前往后台查看详情。`,
+      error: "SMTP 未配置",
+    };
   }
 
   let dbReceivers: string[] = [];
@@ -58,50 +79,73 @@ export async function sendAdminNotificationEmail(input: {
 
   if (receivers.length === 0) {
     console.warn("[NotifyEmail] 未找到可用收件人，跳过发送");
-    return;
+    return {
+      sent: false,
+      status: "skipped",
+      eventType: input.eventType,
+      recipients: [],
+      subject: `${title} - ${input.userName}`,
+      textContent: `${title}\n\n触发用户: ${input.userName}\n邮箱: ${input.userEmail}${contentText}\n时间: ${atText}\n\n请前往后台查看详情。`,
+      error: "未找到可用收件人",
+    };
   }
-
-  const titleMap: Record<string, string> = {
-    user_signup: "新用户注册通知",
-    guestbook_message: "留言板新留言通知",
-    guestbook_warning: "留言板风险留言警告",
-    blog_comment: "评论区新评论通知",
-    comment_reply: "评论区新回复通知",
-    guestbook_reply: "留言板回复通知",
-  };
 
   const transporter = createSmtpTransport();
 
-  const title = titleMap[input.eventType] || "后台新消息通知";
-  const atText = (input.at || new Date()).toLocaleString("zh-CN", { hour12: false });
-
-  const contentText = input.content ? `\n内容: ${input.content}` : "";
   const contentHtml = input.content
     ? `<p><strong>内容:</strong> ${escapeHtml(input.content)}</p>`
     : "";
 
-  const result = await transporter.sendMail({
-    from: `"后台通知" <${SMTP_USER}>`,
-    to: receivers.join(","),
-    subject: `${title} - ${input.userName}`,
-    text: `${title}\n\n触发用户: ${input.userName}\n邮箱: ${input.userEmail}${contentText}\n时间: ${atText}\n\n请前往后台查看详情。`,
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height:1.6; color:#222;">
-        <h3 style="margin:0 0 12px;">${title}</h3>
-        <p><strong>触发用户:</strong> ${input.userName}</p>
-        <p><strong>邮箱:</strong> ${input.userEmail}</p>
-        ${contentHtml}
-        <p><strong>时间:</strong> ${atText}</p>
-        <p style="margin-top:16px;">请前往后台通知中心查看详情。</p>
-      </div>
-    `,
-  });
+  const subject = `${title} - ${input.userName}`;
+  const textContent = `${title}\n\n触发用户: ${input.userName}\n邮箱: ${input.userEmail}${contentText}\n时间: ${atText}\n\n请前往后台查看详情。`;
 
-  console.info("[NotifyEmail] 邮件发送成功", {
-    eventType: input.eventType,
-    to: receivers,
-    messageId: result.messageId,
-  });
+  try {
+    const result = await transporter.sendMail({
+      from: `"后台通知" <${SMTP_USER}>`,
+      to: receivers.join(","),
+      subject,
+      text: textContent,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height:1.6; color:#222;">
+          <h3 style="margin:0 0 12px;">${title}</h3>
+          <p><strong>触发用户:</strong> ${input.userName}</p>
+          <p><strong>邮箱:</strong> ${input.userEmail}</p>
+          ${contentHtml}
+          <p><strong>时间:</strong> ${atText}</p>
+          <p style="margin-top:16px;">请前往后台通知中心查看详情。</p>
+        </div>
+      `,
+    });
+
+    console.info("[NotifyEmail] 邮件发送成功", {
+      eventType: input.eventType,
+      to: receivers,
+      messageId: result.messageId,
+    });
+
+    return {
+      sent: true,
+      status: "sent",
+      eventType: input.eventType,
+      recipients: receivers,
+      subject,
+      textContent,
+      messageId: result.messageId,
+      error: null,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "邮件发送失败";
+    console.error("[NotifyEmail] 邮件发送失败", { eventType: input.eventType, message });
+    return {
+      sent: false,
+      status: "failed",
+      eventType: input.eventType,
+      recipients: receivers,
+      subject,
+      textContent,
+      error: message,
+    };
+  }
 }
 
 export async function sendTestEmailToAdmin(input: {
