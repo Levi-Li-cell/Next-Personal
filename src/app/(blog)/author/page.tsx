@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'motion/react';
+import { useRouter } from 'next/navigation';
 import {
     Mail,
     Phone,
@@ -39,6 +40,8 @@ import MagneticButton from '@/components/MagneticButton';
 import FloatingElements from '@/components/FloatingElements';
 import ChatAssistant from '@/components/ChatAssistant';
 import SidebarNav from '@/components/SidebarNav';
+import { useSession } from '@/lib/auth/client';
+import { toast } from 'sonner';
 
 const skillColorByCategory: Record<string, string> = {
     '前端基础': 'from-purple-500 to-pink-500',
@@ -72,6 +75,8 @@ const initialImages: string[] = [
 ];
 
 export default function App() {
+    const router = useRouter();
+    const { data: session } = useSession();
     const [imagesState, setImagesState] = useState<string[]>(initialImages);
     const [isMobile, setIsMobile] = useState(false);
     const [mobileSection, setMobileSection] = useState<'about' | 'skills' | 'experience' | 'education' | 'honors' | 'contact'>('about');
@@ -275,6 +280,15 @@ export default function App() {
     const gotoNextMobileSection = () => {
         const nextIndex = (mobileSectionIndex + 1) % mobileSections.length;
         setMobileSection(mobileSections[nextIndex].key);
+    };
+
+    const goSnakeGame = () => {
+        if (!session?.user?.id) {
+            toast.error('小游戏仅登录用户可访问');
+            router.push('/signin?redirect=/snake3d');
+            return;
+        }
+        router.push('/snake3d');
     };
 
     return (
@@ -529,15 +543,16 @@ export default function App() {
                                         className="flex flex-col gap-4 pt-6"
                                     >
                                         <MagneticButton>
-                                            <motion.a
-                                                href="/snake3d"
+                                            <motion.button
+                                                type="button"
+                                                onClick={goSnakeGame}
                                                 className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border border-cyan-300/30 px-4 py-2 text-sm text-white hover:from-cyan-500/50 hover:to-blue-500/50"
                                                 whileHover={{ scale: 1.06 }}
                                                 whileTap={{ scale: 0.96 }}
                                             >
                                                 <Gamepad2 className="w-4 h-4" />
                                                 工作辛苦了来玩会儿游戏吧
-                                            </motion.a>
+                                            </motion.button>
                                         </MagneticButton>
 
                                         <MagneticButton>

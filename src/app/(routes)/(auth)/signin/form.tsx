@@ -36,6 +36,9 @@ export default function SignInForm() {
   function onSubmit(data: SignInValues) {
     startTransition(async () => {
       try {
+        const redirectTo = new URLSearchParams(window.location.search).get("redirect");
+        const safeRedirect = redirectTo && redirectTo.startsWith("/") ? redirectTo : null;
+
         // 判断输入是邮箱还是用户名
         const isEmail = data.username.includes("@");
 
@@ -77,6 +80,11 @@ export default function SignInForm() {
             });
             const checkData = await checkRes.json();
 
+            if (safeRedirect) {
+              router.push(safeRedirect);
+              return;
+            }
+
             if (checkData.isAdmin) {
               router.push("/admin");
             } else {
@@ -84,7 +92,7 @@ export default function SignInForm() {
             }
           } catch (e) {
             console.error("Check admin error:", e);
-            router.push("/author");
+            router.push(safeRedirect || "/author");
           }
         }
       } catch (error) {
