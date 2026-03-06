@@ -136,7 +136,7 @@ export default function App() {
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const media = window.matchMedia('(max-width: 767px)');
+            const media = window.matchMedia('(max-width: 767px), (hover: none), (pointer: coarse)');
             const update = () => setIsMobile(media.matches);
             update();
             media.addEventListener('change', update);

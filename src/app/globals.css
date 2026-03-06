@@ -190,3 +190,14 @@
 html {
   font-size: var(--font-size);
 }
+
+@media (hover: none), (pointer: coarse) {
+  button,
+  a,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    cursor: auto !important;
+  }
+}
