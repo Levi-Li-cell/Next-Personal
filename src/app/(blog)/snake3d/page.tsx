@@ -6,6 +6,87 @@ import { ArrowLeft, RotateCcw } from "lucide-react";
 import * as THREE from "three";
 
 type Cell = { x: number; z: number };
+type ThemeName = "forest" | "desert";
+
+const THEMES: Record<ThemeName, {
+  label: string;
+  background: string;
+  fogColor: string;
+  fogNear: number;
+  fogFar: number;
+  hemiSky: string;
+  hemiGround: string;
+  hemiIntensity: number;
+  sunColor: string;
+  sunIntensity: number;
+  fillColor: string;
+  fillIntensity: number;
+  worldColor: string;
+  arenaColor: string;
+  gridMajor: number;
+  gridMinor: number;
+  borderColor: string;
+  trunkColor: string;
+  treeColor: string;
+  rockColor: string;
+  snakeColor: string;
+  headColor: string;
+  foodColor: string;
+  starsColor: string;
+}> = {
+  forest: {
+    label: "森林绿洲",
+    background: "#7ecf93",
+    fogColor: "#8bd5a0",
+    fogNear: 10,
+    fogFar: 56,
+    hemiSky: "#c8f5ff",
+    hemiGround: "#416f4c",
+    hemiIntensity: 1.15,
+    sunColor: "#fff0cf",
+    sunIntensity: 1.28,
+    fillColor: "#bbf7d0",
+    fillIntensity: 0.52,
+    worldColor: "#56c271",
+    arenaColor: "#8add98",
+    gridMajor: 0xe2fbe8,
+    gridMinor: 0xc8f2d2,
+    borderColor: "#3ca95a",
+    trunkColor: "#8b5a2b",
+    treeColor: "#1f9d4f",
+    rockColor: "#dbe5dd",
+    snakeColor: "#0b8f4b",
+    headColor: "#14b85e",
+    foodColor: "#ff8a33",
+    starsColor: "#ffffff",
+  },
+  desert: {
+    label: "荒漠橙色",
+    background: "#e8b67a",
+    fogColor: "#f1c58a",
+    fogNear: 9,
+    fogFar: 52,
+    hemiSky: "#ffe0b0",
+    hemiGround: "#8b5f33",
+    hemiIntensity: 1.12,
+    sunColor: "#ffe7c2",
+    sunIntensity: 1.34,
+    fillColor: "#ffbb73",
+    fillIntensity: 0.46,
+    worldColor: "#d6934d",
+    arenaColor: "#efb06b",
+    gridMajor: 0xf9e1bf,
+    gridMinor: 0xecc694,
+    borderColor: "#b87232",
+    trunkColor: "#84532f",
+    treeColor: "#c67c3d",
+    rockColor: "#d7b48c",
+    snakeColor: "#7d4f27",
+    headColor: "#9a6430",
+    foodColor: "#ff5d2e",
+    starsColor: "#fff4dc",
+  },
+};
 
 const GRID_SIZE = 14;
 
@@ -42,6 +123,7 @@ export default function Snake3DPage() {
 
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [theme, setTheme] = useState<ThemeName>("forest");
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -50,38 +132,129 @@ export default function Snake3DPage() {
     const width = mount.clientWidth;
     const height = mount.clientHeight;
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#0b0b16");
+    const activeTheme = THEMES[theme];
 
-    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(activeTheme.background);
+    scene.fog = new THREE.Fog(activeTheme.fogColor, activeTheme.fogNear, activeTheme.fogFar);
+
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 120);
     camera.position.set(GRID_SIZE * 0.55, GRID_SIZE * 1.2, GRID_SIZE * 1.2);
     camera.lookAt(new THREE.Vector3(GRID_SIZE / 2, 0, GRID_SIZE / 2));
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.06;
     mount.appendChild(renderer.domElement);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-    const dir = new THREE.DirectionalLight(0xffffff, 1.2);
-    dir.position.set(10, 20, 8);
-    scene.add(ambient, dir);
+    const hemi = new THREE.HemisphereLight(activeTheme.hemiSky, activeTheme.hemiGround, activeTheme.hemiIntensity);
+    const sun = new THREE.DirectionalLight(activeTheme.sunColor, activeTheme.sunIntensity);
+    sun.position.set(14, 24, 10);
+    const fill = new THREE.DirectionalLight(activeTheme.fillColor, activeTheme.fillIntensity);
+    fill.position.set(-12, 8, -10);
+    scene.add(hemi, sun, fill);
 
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE),
-      new THREE.MeshStandardMaterial({ color: "#1d2233", roughness: 0.85 })
+    const boardCenter = new THREE.Vector3((GRID_SIZE - 1) / 2, 0, (GRID_SIZE - 1) / 2);
+
+    const worldPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(GRID_SIZE * 9, GRID_SIZE * 9),
+      new THREE.MeshStandardMaterial({ color: activeTheme.worldColor, roughness: 0.97, metalness: 0.02 })
     );
-    plane.rotation.x = -Math.PI / 2;
-    plane.position.set((GRID_SIZE - 1) / 2, -0.55, (GRID_SIZE - 1) / 2);
-    scene.add(plane);
+    worldPlane.rotation.x = -Math.PI / 2;
+    worldPlane.position.set(boardCenter.x, -0.58, boardCenter.z);
+    scene.add(worldPlane);
 
-    const grid = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x4f5d75, 0x374151);
-    grid.position.set((GRID_SIZE - 1) / 2, -0.5, (GRID_SIZE - 1) / 2);
+    const arenaPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(GRID_SIZE + 0.7, GRID_SIZE + 0.7),
+      new THREE.MeshStandardMaterial({ color: activeTheme.arenaColor, roughness: 0.78, metalness: 0.05 })
+    );
+    arenaPlane.rotation.x = -Math.PI / 2;
+    arenaPlane.position.set(boardCenter.x, -0.545, boardCenter.z);
+    scene.add(arenaPlane);
+
+    const grid = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, activeTheme.gridMajor, activeTheme.gridMinor);
+    (grid.material as THREE.Material).transparent = true;
+    (grid.material as THREE.Material).opacity = 0.58;
+    grid.position.set(boardCenter.x, -0.5, boardCenter.z);
     scene.add(grid);
 
-    const snakeMaterial = new THREE.MeshStandardMaterial({ color: "#22d3ee", roughness: 0.35 });
-    const headMaterial = new THREE.MeshStandardMaterial({ color: "#38bdf8", roughness: 0.25 });
-    const foodMaterial = new THREE.MeshStandardMaterial({ color: "#f97316", roughness: 0.2 });
+    const border = new THREE.Mesh(
+      new THREE.BoxGeometry(GRID_SIZE + 0.25, 0.45, GRID_SIZE + 0.25),
+      new THREE.MeshStandardMaterial({ color: activeTheme.borderColor, roughness: 0.86, metalness: 0.02 })
+    );
+    border.position.set(boardCenter.x, -0.76, boardCenter.z);
+    scene.add(border);
+
+    const createTree = () => {
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.14, 0.2, 0.8, 8),
+        new THREE.MeshStandardMaterial({ color: activeTheme.trunkColor, roughness: 0.9 })
+      );
+      trunk.position.y = 0.04;
+      const crown1 = new THREE.Mesh(
+        new THREE.ConeGeometry(0.68, 1.15, 10),
+        new THREE.MeshStandardMaterial({ color: activeTheme.treeColor, roughness: 0.86 })
+      );
+      crown1.position.y = 0.85;
+      const crown2 = crown1.clone();
+      crown2.scale.setScalar(0.78);
+      crown2.position.y = 1.28;
+      tree.add(trunk, crown1, crown2);
+      return tree;
+    };
+
+    const createRock = () => {
+      return new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.35, 0),
+        new THREE.MeshStandardMaterial({ color: activeTheme.rockColor, roughness: 0.95, metalness: 0 })
+      );
+    };
+
+    const decoGroup = new THREE.Group();
+    const decoCount = 40;
+    for (let i = 0; i < decoCount; i += 1) {
+      const angle = (i / decoCount) * Math.PI * 2 + Math.random() * 0.3;
+      const radius = GRID_SIZE * 0.72 + Math.random() * GRID_SIZE * 1.55;
+      const x = boardCenter.x + Math.cos(angle) * radius;
+      const z = boardCenter.z + Math.sin(angle) * radius;
+
+      if (Math.random() > 0.33) {
+        const tree = createTree();
+        const scale = 0.75 + Math.random() * 0.8;
+        tree.position.set(x, -0.5, z);
+        tree.scale.setScalar(scale);
+        tree.rotation.y = Math.random() * Math.PI;
+        decoGroup.add(tree);
+      } else {
+        const rock = createRock();
+        rock.position.set(x, -0.4, z);
+        rock.rotation.set(Math.random(), Math.random() * Math.PI, Math.random());
+        decoGroup.add(rock);
+      }
+    }
+    scene.add(decoGroup);
+
+    const starsGeo = new THREE.BufferGeometry();
+    const starCount = 130;
+    const starPos = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i += 1) {
+      starPos[i * 3] = boardCenter.x + (Math.random() - 0.5) * GRID_SIZE * 9;
+      starPos[i * 3 + 1] = 8 + Math.random() * 13;
+      starPos[i * 3 + 2] = boardCenter.z + (Math.random() - 0.5) * GRID_SIZE * 9;
+    }
+    starsGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
+    const stars = new THREE.Points(
+      starsGeo,
+      new THREE.PointsMaterial({ color: activeTheme.starsColor, size: 0.08, transparent: true, opacity: 0.62 })
+    );
+    scene.add(stars);
+
+    const snakeMaterial = new THREE.MeshStandardMaterial({ color: activeTheme.snakeColor, roughness: 0.34, metalness: 0.07 });
+    const headMaterial = new THREE.MeshStandardMaterial({ color: activeTheme.headColor, roughness: 0.28, metalness: 0.08 });
+    const foodMaterial = new THREE.MeshStandardMaterial({ color: activeTheme.foodColor, roughness: 0.22, metalness: 0.06 });
 
     const cube = new THREE.BoxGeometry(0.9, 0.9, 0.9);
     const foodGeo = new THREE.SphereGeometry(0.35, 24, 24);
@@ -148,6 +321,7 @@ export default function Snake3DPage() {
         syncMeshes();
       }
 
+      stars.rotation.y += 0.00055;
       foodMesh.rotation.y += 0.04;
       renderer.render(scene, camera);
     };
@@ -187,7 +361,7 @@ export default function Snake3DPage() {
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [theme]);
 
   const restart = () => {
     stateRef.current = {
@@ -213,9 +387,18 @@ export default function Snake3DPage() {
   return (
     <div className="container mx-auto px-6 py-10">
       <div className="mb-4 flex items-center justify-between">
-        <Link href="/author" className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20">
-          <ArrowLeft className="h-4 w-4" /> 返回作者页
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/author" className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20">
+            <ArrowLeft className="h-4 w-4" /> 返回作者页
+          </Link>
+          <button
+            type="button"
+            onClick={() => setTheme((prev) => (prev === "forest" ? "desert" : "forest"))}
+            className="inline-flex items-center gap-2 rounded-lg bg-orange-500/20 px-3 py-2 text-sm text-orange-100 hover:bg-orange-500/30"
+          >
+            切换主题: {THEMES[theme].label}
+          </button>
+        </div>
         <div className="flex items-center gap-3 text-white">
           <span className="rounded-md bg-cyan-500/20 px-3 py-1 text-sm">得分: {score}</span>
           {gameOver ? <span className="rounded-md bg-red-500/20 px-3 py-1 text-sm text-red-300">游戏结束</span> : null}
