@@ -140,10 +140,44 @@ function createInitialState() {
 export default function Snake3DPage() {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef(createInitialState());
+  const timingRef = useRef({ lastMove: performance.now() });
+  const controlRef = useRef({ started: false, paused: false, gameOver: false });
 
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const [lastScore, setLastScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [theme, setTheme] = useState<ThemeName>("forest");
+  const [started, setStarted] = useState(false);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("snake3d-theme");
+    if (savedTheme === "forest" || savedTheme === "desert") {
+      setTheme(savedTheme);
+    }
+
+    const savedHighScore = Number(window.localStorage.getItem("snake3d-high-score") || "0");
+    if (Number.isFinite(savedHighScore) && savedHighScore > 0) {
+      setHighScore(savedHighScore);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("snake3d-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    controlRef.current.started = started;
+  }, [started]);
+
+  useEffect(() => {
+    controlRef.current.paused = paused;
+  }, [paused]);
+
+  useEffect(() => {
+    controlRef.current.gameOver = gameOver;
+  }, [gameOver]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -323,17 +357,19 @@ export default function Snake3DPage() {
     }
 
     let raf = 0;
-    let lastMove = performance.now();
-    const moveMs = 170;
+    timingRef.current.lastMove = performance.now();
 
     const tick = () => {
       raf = requestAnimationFrame(tick);
       const now = performance.now();
 
-      if (!stateRef.current.gameOver && now - lastMove >= moveMs) {
-        lastMove = now;
+      const state = stateRef.current;
+      const speedStep = Math.floor(state.score / 5);
+      const moveMs = Math.max(95, 170 - speedStep * 12);
 
-        const state = stateRef.current;
+      if (controlRef.current.started && !controlRef.current.paused && !state.gameOver && now - timingRef.current.lastMove >= moveMs) {
+        timingRef.current.lastMove = now;
+
         state.direction = state.nextDirection;
 
         const nextHead = {
@@ -347,7 +383,20 @@ export default function Snake3DPage() {
 
         if (hitBoundary || hitSelf || hitObstacle) {
           state.gameOver = true;
+          controlRef.current.paused = false;
+          controlRef.current.started = false;
+          controlRef.current.gameOver = true;
+          setPaused(false);
+          setStarted(false);
+          setLastScore(state.score);
           setGameOver(true);
+          setHighScore((prev) => {
+            const next = Math.max(prev, state.score);
+            if (next !== prev) {
+              window.localStorage.setItem("snake3d-high-score", String(next));
+            }
+            return next;
+          });
         } else {
           state.snake = [nextHead, ...state.snake];
           if (sameCell(nextHead, state.food)) {
@@ -368,6 +417,29 @@ export default function Snake3DPage() {
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        if (controlRef.current.gameOver) {
+          return;
+        }
+        if (!controlRef.current.started) {
+          timingRef.current.lastMove = performance.now();
+          controlRef.current.started = true;
+          controlRef.current.paused = false;
+          setStarted(true);
+          setPaused(false);
+          return;
+        }
+        controlRef.current.paused = !controlRef.current.paused;
+        setPaused((prev) => !prev);
+        timingRef.current.lastMove = performance.now();
+        return;
+      }
+
+      if (!controlRef.current.started || controlRef.current.paused || controlRef.current.gameOver) {
+        return;
+      }
+
       const state = stateRef.current;
       const { x, z } = state.direction;
 
@@ -406,9 +478,36 @@ export default function Snake3DPage() {
 
   const restart = () => {
     stateRef.current = createInitialState();
+    timingRef.current.lastMove = performance.now();
+    controlRef.current.started = true;
+    controlRef.current.paused = false;
+    controlRef.current.gameOver = false;
     setScore(0);
+    setLastScore(0);
     setGameOver(false);
+    setPaused(false);
+    setStarted(true);
   };
+
+  const startGame = () => {
+    timingRef.current.lastMove = performance.now();
+    controlRef.current.started = true;
+    controlRef.current.paused = false;
+    controlRef.current.gameOver = false;
+    setStarted(true);
+    setPaused(false);
+  };
+
+  const togglePause = () => {
+    if (!controlRef.current.started || controlRef.current.gameOver) {
+      return;
+    }
+    timingRef.current.lastMove = performance.now();
+    controlRef.current.paused = !controlRef.current.paused;
+    setPaused((prev) => !prev);
+  };
+
+  const speedLevel = Math.floor(score / 5) + 1;
 
   return (
     <div className="container mx-auto px-6 py-10">
@@ -427,6 +526,17 @@ export default function Snake3DPage() {
         </div>
         <div className="flex items-center gap-3 text-white">
           <span className="rounded-md bg-cyan-500/20 px-3 py-1 text-sm">得分: {score}</span>
+          <span className="rounded-md bg-amber-500/20 px-3 py-1 text-sm text-amber-200">最高: {highScore}</span>
+          <span className="rounded-md bg-violet-500/20 px-3 py-1 text-sm text-violet-200">速度 Lv.{speedLevel}</span>
+          {started && !gameOver ? (
+            <button
+              type="button"
+              onClick={togglePause}
+              className="inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20"
+            >
+              {paused ? "继续" : "暂停"}
+            </button>
+          ) : null}
           {gameOver ? <span className="rounded-md bg-red-500/20 px-3 py-1 text-sm text-red-300">游戏结束</span> : null}
           <button
             type="button"
@@ -438,11 +548,51 @@ export default function Snake3DPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-black/40 p-3">
+      <div className="relative rounded-2xl border border-white/10 bg-black/40 p-3">
         <div ref={mountRef} className="h-[70vh] min-h-[420px] w-full rounded-xl overflow-hidden" />
+
+        {!started && !gameOver ? (
+          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-black/55 backdrop-blur-sm">
+            <div className="max-w-md rounded-2xl border border-white/20 bg-black/50 p-6 text-white">
+              <p className="text-xl font-semibold">Snake 3D 挑战开始</p>
+              <p className="mt-3 text-sm text-white/80">目标：吃到更多食物并持续生存。每 5 分会提速，撞到边界、路障或自身都会结束。</p>
+              <p className="mt-2 text-sm text-white/70">操作：方向键 / WASD。空格键可暂停与继续。</p>
+              <button
+                type="button"
+                onClick={startGame}
+                className="mt-4 rounded-lg bg-emerald-500/80 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
+              >
+                开始游戏
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {started && paused && !gameOver ? (
+          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-black/45">
+            <div className="rounded-xl border border-white/20 bg-black/60 px-5 py-3 text-white">已暂停，按空格或按钮继续</div>
+          </div>
+        ) : null}
+
+        {gameOver ? (
+          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-black/55 backdrop-blur-sm">
+            <div className="max-w-sm rounded-2xl border border-red-300/30 bg-black/60 p-6 text-white">
+              <p className="text-xl font-semibold text-red-300">游戏结束</p>
+              <p className="mt-3 text-sm text-white/85">本局得分: {lastScore}</p>
+              <p className="mt-1 text-sm text-white/70">历史最高: {highScore}</p>
+              <button
+                type="button"
+                onClick={restart}
+                className="mt-4 rounded-lg bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
+              >
+                再来一局
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <p className="mt-3 text-sm text-white/70">操作方式：键盘方向键 / WASD。新增路障与边界死亡机制，撞到自身、路障或边界都会结束游戏。</p>
+      <p className="mt-3 text-sm text-white/70">操作方式：键盘方向键 / WASD，空格暂停。每 5 分会自动提速，撞到自身、路障或边界都会结束游戏。</p>
     </div>
   );
 }
