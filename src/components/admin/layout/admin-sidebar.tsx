@@ -8,9 +8,14 @@ import {
   FileText,
   FolderKanban,
   MessageSquare,
+  NotebookPen,
+  Bell,
+  Monitor,
   Settings,
   ChevronUp,
+  ChevronRight,
   UserCircle,
+  Megaphone,
 } from "lucide-react";
 import {
   Sidebar,
@@ -23,6 +28,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
@@ -34,7 +42,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 
-const menuItems = [
+type MenuItem = {
+  title: string;
+  url?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children?: Array<{ title: string; url: string }>;
+};
+
+const menuItems: MenuItem[] = [
   {
     title: "仪表盘",
     url: "/admin",
@@ -56,6 +71,11 @@ const menuItems = [
     icon: FileText,
   },
   {
+    title: "公告管理",
+    url: "/admin/announcements",
+    icon: Megaphone,
+  },
+  {
     title: "项目管理",
     url: "/admin/projects",
     icon: FolderKanban,
@@ -66,22 +86,49 @@ const menuItems = [
     icon: MessageSquare,
   },
   {
+    title: "留言板管理",
+    url: "/admin/guestbook",
+    icon: NotebookPen,
+  },
+  {
+    title: "通知中心",
+    url: "/admin/notifications",
+    icon: Bell,
+  },
+  {
+    title: "可视化大屏",
+    url: "/admin/visual",
+    icon: Monitor,
+  },
+  {
     title: "系统设置",
-    url: "/admin/settings",
     icon: Settings,
+    children: [
+      { title: "基础设置", url: "/admin/settings" },
+      { title: "通知邮箱", url: "/admin/settings/notify" },
+      { title: "个人资料", url: "/admin/settings/profile" },
+    ],
   },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const [user, setUser] = useState<{ name?: string; email?: string; image?: string } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
       setUser(JSON.parse(userStr));
     }
-  }, []);
+
+    if (
+      pathname === "/admin/settings" ||
+      pathname.startsWith("/admin/settings/")
+    ) {
+      setSettingsOpen(true);
+    }
+  }, [pathname]);
 
   return (
     <Sidebar collapsible="icon">
@@ -109,17 +156,47 @@ export function AdminSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
-                    tooltip={item.title}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="size-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
+                <SidebarMenuItem key={item.title}>
+                  {item.children && item.children.length > 0 ? (
+                    <>
+                      <SidebarMenuButton
+                        isActive={item.children.some((child) => pathname === child.url || pathname.startsWith(child.url + "/"))}
+                        tooltip={item.title}
+                        onClick={() => setSettingsOpen((v) => !v)}
+                      >
+                        <item.icon className="size-4" />
+                        <span>{item.title}</span>
+                        <ChevronRight className={`ml-auto size-4 transition-transform ${settingsOpen ? "rotate-90" : ""}`} />
+                      </SidebarMenuButton>
+                      {settingsOpen ? (
+                        <SidebarMenuSub>
+                          {item.children.map((child) => (
+                            <SidebarMenuSubItem key={child.url}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={pathname === child.url || pathname.startsWith(child.url + "/")}
+                              >
+                                <Link href={child.url}>
+                                  <span>{child.title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      ) : null}
+                    </>
+                  ) : item.url ? (
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                      tooltip={item.title}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="size-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  ) : null}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

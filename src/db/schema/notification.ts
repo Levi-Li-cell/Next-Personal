@@ -8,6 +8,7 @@ export const adminNotification = pgTable("admin_notification", {
   title: text("title"),
   content: text("content"),
   link: text("link"),
+  targetUserId: text("target_user_id"),
   audience: text("audience").notNull().default("admin"),
   read: boolean("read").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -15,6 +15,7 @@ async function ensureNotificationTable() {
       title text,
       content text,
       link text,
+      target_user_id text,
       audience text NOT NULL DEFAULT 'admin',
       read boolean NOT NULL DEFAULT false,
       created_at timestamp DEFAULT now() NOT NULL,
@@ -25,6 +26,7 @@ async function ensureNotificationTable() {
   await db.execute(sql`ALTER TABLE admin_notification ADD COLUMN IF NOT EXISTS title text`);
   await db.execute(sql`ALTER TABLE admin_notification ADD COLUMN IF NOT EXISTS content text`);
   await db.execute(sql`ALTER TABLE admin_notification ADD COLUMN IF NOT EXISTS link text`);
+  await db.execute(sql`ALTER TABLE admin_notification ADD COLUMN IF NOT EXISTS target_user_id text`);
   await db.execute(sql`ALTER TABLE admin_notification ADD COLUMN IF NOT EXISTS audience text`);
   await db.execute(sql`ALTER TABLE admin_notification ALTER COLUMN audience SET DEFAULT 'admin'`);
 }
@@ -155,6 +157,7 @@ export async function POST(request: NextRequest) {
     const title = String(body.title || "").trim();
     const content = String(body.content || "").trim();
     const link = String(body.link || "").trim();
+    const targetUserId = String(body.targetUserId || "").trim();
     const audience = String(body.audience || "admin").trim() || "admin";
 
     if (!userName || !userEmail) {
@@ -171,6 +174,7 @@ export async function POST(request: NextRequest) {
         title: title || null,
         content: content || null,
         link: link || null,
+        targetUserId: targetUserId || null,
         audience,
         read: false,
       })

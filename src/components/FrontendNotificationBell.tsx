@@ -6,6 +6,7 @@ import { Bell, BellRing, Megaphone } from "lucide-react";
 import { motion } from "motion/react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { subscribeToAdminNotifications, type AdminNotificationRealtimePayload } from "@/lib/supabase/client";
+import { useSession } from "@/lib/auth/client";
 
 interface FrontNotification {
   id: string;
@@ -41,6 +42,7 @@ function toFrontNotification(item: {
 }
 
 export default function FrontendNotificationBell() {
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<FrontNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +81,9 @@ export default function FrontendNotificationBell() {
       if (data.audience !== "public" || data.read) {
         return;
       }
+      if (data.target_user_id && data.target_user_id !== session?.user?.id) {
+        return;
+      }
 
       const nextItem = toFrontNotification({
         id: data.id,
@@ -96,7 +101,7 @@ export default function FrontendNotificationBell() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (open) {
@@ -107,6 +112,19 @@ export default function FrontendNotificationBell() {
   const sortedItems = useMemo(() => {
     return [...items].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   }, [items]);
+
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("mark notification read failed:", error);
+    }
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -157,11 +175,21 @@ export default function FrontendNotificationBell() {
                       <Link
                         href={item.link}
                         className="text-xs text-cyan-300 hover:text-cyan-200"
-                        onClick={() => setOpen(false)}
+                        onClick={() => {
+                          markAsRead(item.id);
+                          setOpen(false);
+                        }}
                       >
                         查看详情
                       </Link>
-                    ) : null}
+                    ) : (
+                      <button
+                        className="text-xs text-cyan-300 hover:text-cyan-200"
+                        onClick={() => markAsRead(item.id)}
+                      >
+                        设为已读
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

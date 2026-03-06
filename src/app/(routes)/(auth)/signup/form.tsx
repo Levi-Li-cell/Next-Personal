@@ -40,12 +40,49 @@ export default function SignUpForm() {
   function onSubmit(data: SignUpValues) {
     startTransition(async () => {
       console.log("submit data:", data);
+
+      const guardResponse = await fetch("/api/auth/register-guard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email }),
+      });
+      const guardResult = await guardResponse.json();
+
+      if (!guardResult?.success) {
+        toast.error(guardResult?.message || guardResult?.reason || "注册请求受限，请稍后再试");
+        return;
+      }
+
+      if (guardResult?.blocked) {
+        toast.error(guardResult?.message || guardResult?.reason || "注册请求受限，请稍后再试");
+        return;
+      }
+
       const response = await signUp.email(data);
 
       if (response.error) {
         console.log("SIGN_UP:", response.error.status);
         toast.error(response.error.message);
       } else {
+        try {
+          await fetch("/api/auth/register-guard", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: data.email }),
+          });
+
+          await fetch("/api/admin/notifications", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userName: data.name,
+              userEmail: data.email,
+              eventType: "user_signup",
+            }),
+          });
+        } catch (error) {
+          console.error("Create signup notification failed:", error);
+        }
         redirect("/");
       }
     });

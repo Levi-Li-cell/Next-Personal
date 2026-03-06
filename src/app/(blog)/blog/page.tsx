@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'motion/react';
-import { BookOpen, Calendar, ArrowRight, Loader2, ArrowLeft, ChevronDown, Search, Tag } from 'lucide-react';
+import { BookOpen, Calendar, ArrowRight, Loader2, ArrowLeft, ChevronDown, Search, Tag, Info, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,7 @@ export default function BlogPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [showMask, setShowMask] = useState(true);
 
   useEffect(() => {
     async function fetchBlogPosts() {
@@ -130,6 +131,60 @@ export default function BlogPage() {
 
   return (
     <div className="container mx-auto px-6 py-12">
+      {/* 科学上网提示蒙版 */}
+      {showMask && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-lg"
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 100 }}
+            className="max-w-2xl mx-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-8 shadow-2xl"
+          >
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-purple-500/20 rounded-full">
+                  <Info className="w-6 h-6 text-purple-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">网络访问提示</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowMask(false)}
+                className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <p className="text-white/80 mb-6 leading-relaxed">
+              由于这是一次 Supabase 免费搭建的尝试，本页面的部分接口需要科学上网才能正常访问。
+              如果你遇到网络错误或加载失败的情况，请确保你的网络环境能够访问国际网络，
+              或者稍后再尝试刷新页面。
+            </p>
+            <div className="flex items-center justify-end gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => setShowMask(false)}
+                className="text-white/80 hover:text-white hover:bg-white/10"
+              >
+                我知道了
+              </Button>
+              <Button
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                onClick={() => setShowMask(false)}
+              >
+                继续浏览
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -220,16 +275,25 @@ export default function BlogPage() {
           <p className="text-white/60">{search || selectedCategory ? '没有找到匹配的文章' : '暂无博客文章'}</p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="columns-1 md:columns-2 lg:columns-3 gap-6 [column-fill:_balance]">
           {blogPosts.map((post, index) => (
-            <Link key={post.id} href={`/blog/${post.slug}`}>
+            <Link key={post.id} href={`/blog/${post.slug}`} className="mb-6 block break-inside-avoid">
               <motion.article
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer h-full"
+                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer"
                 whileHover={{ y: -5 }}
               >
+                {post.coverImage && (
+                  <div className="mb-4 rounded-lg overflow-hidden border border-white/10">
+                    <img
+                      src={post.coverImage}
+                      alt={post.title}
+                      className="w-full h-40 object-cover"
+                    />
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-purple-400 text-sm mb-3">
                   <BookOpen className="w-4 h-4" />
                   <span>{post.category}</span>

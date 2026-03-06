@@ -3,9 +3,16 @@ import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { eq, desc, like, and, sql, or } from "drizzle-orm";
 
+async function ensureUserRegisterColumns() {
+  await db.execute(sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "register_ip" text`);
+  await db.execute(sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "register_user_agent" text`);
+  await db.execute(sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "register_risk_level" text`);
+}
+
 // GET /api/admin/users - 获取用户列表
 export async function GET(request: NextRequest) {
   try {
+    await ensureUserRegisterColumns();
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -40,6 +47,9 @@ export async function GET(request: NextRequest) {
         email: user.email,
         image: user.image,
         role: user.role,
+        registerIp: user.registerIp,
+        registerUserAgent: user.registerUserAgent,
+        registerRiskLevel: user.registerRiskLevel,
         emailVerified: user.emailVerified,
         createdAt: user.createdAt,
       })
@@ -61,7 +71,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: users,
       pagination: {
-        page: page - 1, // 前端使用 0-based 索引
+        page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),

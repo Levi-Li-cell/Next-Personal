@@ -35,6 +35,7 @@ export type AdminNotificationRealtimePayload = {
   title: string | null;
   content: string | null;
   link: string | null;
+  target_user_id: string | null;
   audience: string;
   read: boolean;
   created_at: string;

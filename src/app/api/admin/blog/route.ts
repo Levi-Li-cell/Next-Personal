@@ -126,10 +126,11 @@ export async function POST(request: NextRequest) {
       .returning();
 
     if (newBlog.status === "published") {
+      const isAnnouncement = newBlog.category === "公告";
       await createPublicNotification({
-        eventType: "blog_published",
-        title: `新博客上线：${newBlog.title}`,
-        content: newBlog.excerpt || "点击查看最新博客内容",
+        eventType: isAnnouncement ? "announcement" : "blog_published",
+        title: isAnnouncement ? `站点公告：${newBlog.title}` : `新博客上线：${newBlog.title}`,
+        content: newBlog.excerpt || (isAnnouncement ? "点击查看公告详情" : "点击查看最新博客内容"),
         link: `/blog/${newBlog.slug}`,
       });
     }

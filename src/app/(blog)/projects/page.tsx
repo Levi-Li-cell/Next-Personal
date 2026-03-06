@@ -93,38 +93,58 @@ export default function ProjectsPage() {
           <p className="text-white/60">暂无项目</p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="columns-1 md:columns-2 lg:columns-3 gap-6 [column-fill:_balance]">
           {projects.map((project, index) => (
-            <Link key={project.id} href={`/projects/${project.id}`}>
+            <Link key={project.id} href={`/projects/${project.id}`} className="mb-6 block break-inside-avoid">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all h-full"
+                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all"
                 whileHover={{ y: -5 }}
               >
+                {project.coverImage && (
+                  <div className="mb-4 rounded-lg overflow-hidden border border-white/10">
+                    <img
+                      src={project.coverImage}
+                      alt={project.title}
+                      className="w-full h-40 object-cover"
+                    />
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                    <Folder className="w-6 h-6 text-white" />
+                  <div className={`flex items-center gap-4 ${!project.coverImage ? 'w-full' : ''}`}>
+                    {!project.coverImage && (
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Folder className="w-6 h-6 text-white" />
+                      </div>
+                    )}
+                    {!project.coverImage && (
+                      <h2 className="text-xl font-semibold text-white group-hover:text-purple-300 transition-colors flex-grow">
+                        {project.title}
+                      </h2>
+                    )}
                   </div>
                   <div className="flex gap-3">
                     {project.githubUrl && (
-                      <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
+                      <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-white hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
                         <Github className="w-5 h-5" />
                       </a>
                     )}
                     {project.demoUrl && (
-                      <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
+                      <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="text-white hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
                         <ExternalLink className="w-5 h-5" />
                       </a>
                     )}
                     <ArrowRight className="w-5 h-5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
-                <h2 className="text-xl font-semibold text-white mb-3 group-hover:text-purple-300 transition-colors">
-                  {project.title}
-                </h2>
-                <p className="text-white/60 text-sm mb-4">
+                {project.coverImage && (
+                  <h2 className="text-xl font-semibold text-white mb-3 group-hover:text-purple-300 transition-colors">
+                    {project.title}
+                  </h2>
+                )}
+                <p className="text-white text-sm mb-4">
                   {project.description}
                 </p>
                 <div className="flex flex-wrap gap-2">

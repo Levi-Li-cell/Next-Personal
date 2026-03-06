@@ -52,6 +52,25 @@ export function getUserColumns({ onEdit, onDelete }: UserTableProps): Column<Use
       },
     },
     {
+      key: "registerRiskLevel",
+      header: "注册风控",
+      cell: (user: UserType) => {
+        const riskLabels: Record<string, { label: string; className: string }> = {
+          high: { label: "高风险", className: "bg-red-100 text-red-800" },
+          medium: { label: "中风险", className: "bg-yellow-100 text-yellow-800" },
+          low: { label: "低风险", className: "bg-green-100 text-green-800" },
+        };
+        return (
+          <div className="space-y-1">
+            <StatusBadge status={(user as UserType & { registerRiskLevel?: string | null }).registerRiskLevel || "low"} labels={riskLabels} />
+            {(user as UserType & { registerIp?: string | null }).registerIp ? (
+              <div className="text-xs text-muted-foreground">IP: {(user as UserType & { registerIp?: string | null }).registerIp}</div>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
       key: "emailVerified",
       header: "邮箱验证",
       cell: (user: UserType) =>
