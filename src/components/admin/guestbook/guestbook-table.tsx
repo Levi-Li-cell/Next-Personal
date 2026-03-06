@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Check, X, Trash2 } from "lucide-react";
+import { MoreHorizontal, Check, X, Trash2, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,12 +28,14 @@ export interface GuestbookMessage {
 interface GuestbookTableProps {
   onApprove: (message: GuestbookMessage) => void;
   onReject: (message: GuestbookMessage) => void;
+  onFlag: (message: GuestbookMessage) => void;
   onDelete: (message: GuestbookMessage) => void;
 }
 
 export function getGuestbookColumns({
   onApprove,
   onReject,
+  onFlag,
   onDelete,
 }: GuestbookTableProps): Column<GuestbookMessage>[] {
   return [
@@ -78,6 +80,7 @@ export function getGuestbookColumns({
           approved: { label: "已展示", className: "bg-green-100 text-green-800" },
           pending: { label: "待审核", className: "bg-yellow-100 text-yellow-800" },
           rejected: { label: "已拒绝", className: "bg-red-100 text-red-800" },
+          flagged: { label: "风险提醒", className: "bg-orange-100 text-orange-800" },
         };
         return <StatusBadge status={message.status} labels={statusLabels} />;
       },
@@ -106,6 +109,10 @@ export function getGuestbookColumns({
             <DropdownMenuItem onClick={() => onReject(message)}>
               <X className="mr-2 h-4 w-4 text-yellow-600" />
               拒绝
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onFlag(message)}>
+              <AlertTriangle className="mr-2 h-4 w-4 text-orange-600" />
+              标记风险
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onDelete(message)} className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />

@@ -64,6 +64,7 @@ export async function sendAdminNotificationEmail(input: {
   const titleMap: Record<string, string> = {
     user_signup: "新用户注册通知",
     guestbook_message: "留言板新留言通知",
+    guestbook_warning: "留言板风险留言警告",
     blog_comment: "评论区新评论通知",
     comment_reply: "评论区新回复通知",
     guestbook_reply: "留言板回复通知",
@@ -154,6 +155,8 @@ export async function sendGuestbookReplyEmail(input: {
       ? "已通过"
       : input.status === "rejected"
         ? "未通过"
+        : input.status === "flagged"
+          ? "风险警告"
         : "已更新";
 
   const replyText = input.replyContent ? `\n\n回复内容:\n${input.replyContent}` : "";

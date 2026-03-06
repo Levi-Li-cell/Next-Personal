@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { guestbookMessage } from "@/db/schema/guestbook";
-import { and, desc, eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { sendAdminNotificationEmail } from "@/lib/admin/email";
 import { getServerSession } from "@/lib/auth/get-session";
@@ -45,26 +44,67 @@ async function ensureGuestbookTable() {
   `);
 }
 
+function detectRiskyMessage(content: string, contact: string) {
+  const normalized = `${content} ${contact}`.replace(/\s+/g, "").toLowerCase();
+  const riskyPatterns = [
+    /缅甸|东南亚|高薪|出国|盘口|代充|刷单|返利|博彩|赌博|贷款|办卡/i,
+    /联系方式[:：]?\d{6,}/i,
+    /\b1\d{10}\b/,
+  ];
+
+  const repeatedChunkPattern = /(.{8,})\1+/;
+  const isRisky = riskyPatterns.some((pattern) => pattern.test(normalized)) || repeatedChunkPattern.test(normalized);
+
+  return isRisky;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await ensureGuestbookTable();
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status") || "approved";
+    const status = searchParams.get("status") || "public";
+    const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
     const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+    const offset = (page - 1) * limit;
 
     const conditions = [];
-    if (status !== "all") {
+    if (status === "public") {
+      conditions.push(or(eq(guestbookMessage.status, "approved"), eq(guestbookMessage.status, "flagged")));
+    } else if (status !== "all") {
       conditions.push(eq(guestbookMessage.status, status));
     }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const messages = await db
       .select()
       .from(guestbookMessage)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(whereClause)
       .orderBy(desc(guestbookMessage.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
 
-    return NextResponse.json({ success: true, data: messages });
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(guestbookMessage)
+      .where(whereClause);
+
+    const total = Number(countResult[0]?.count || 0);
+
+    const safeData = status === "public"
+      ? messages.map((item) => ({ ...item, contact: null }))
+      : messages;
+
+    return NextResponse.json({
+      success: true,
+      data: safeData,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error("获取留言列表失败:", error);
     return NextResponse.json({ success: false, error: "获取留言列表失败" }, { status: 500 });
@@ -79,6 +119,7 @@ export async function POST(request: NextRequest) {
     const nameInput = String(body.name || "").trim();
     const content = String(body.content || "").trim();
     const contact = String(body.contact || "").trim();
+    const isRisky = detectRiskyMessage(content, contact);
 
     const name = nameInput || String(session?.user?.name || "").trim();
     const userAgent = String(request.headers.get("user-agent") || "").trim() || null;
@@ -105,16 +146,16 @@ export async function POST(request: NextRequest) {
         name,
         content,
         contact: contact || null,
-        status: "approved",
+        status: isRisky ? "flagged" : "approved",
       })
       .returning();
 
     try {
       await sendAdminNotificationEmail({
-        eventType: "guestbook_message",
+        eventType: isRisky ? "guestbook_warning" : "guestbook_message",
         userName: name,
         userEmail: session?.user?.email || contact || "guestbook@anonymous.local",
-        content,
+        content: isRisky ? `风险留言已拦截标记\n${content}` : content,
       });
     } catch (emailError) {
       console.error("发送留言通知邮件失败:", emailError);

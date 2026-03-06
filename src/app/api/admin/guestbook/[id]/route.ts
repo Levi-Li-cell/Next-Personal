@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { guestbookMessage } from "@/db/schema/guestbook";
 import { eq } from "drizzle-orm";
-import { sendGuestbookReplyEmail } from "@/lib/admin/email";
+import { sendAdminNotificationEmail, sendGuestbookReplyEmail } from "@/lib/admin/email";
 
 export async function PATCH(
   request: NextRequest,
@@ -12,7 +12,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const status = String(body.status || "");
-    const validStatuses = ["pending", "approved", "rejected"];
+    const validStatuses = ["pending", "approved", "rejected", "flagged"];
 
     if (!validStatuses.includes(status)) {
       return NextResponse.json({ success: false, error: "无效状态" }, { status: 400 });
@@ -36,7 +36,21 @@ export async function PATCH(
           to: contact,
           guestName: existing.name,
           status,
-          replyContent: status === "approved" ? "您的留言已通过审核并展示在留言板。" : "很抱歉，您的留言暂未通过审核。",
+          replyContent:
+            status === "approved"
+              ? "您的留言已通过审核并展示在留言板。"
+              : status === "flagged"
+                ? "您的留言被标记为风险内容，页面会附带风险提醒。"
+                : "很抱歉，您的留言暂未通过审核。",
+        });
+      }
+
+      if (status === "flagged") {
+        await sendAdminNotificationEmail({
+          eventType: "guestbook_warning",
+          userName: existing.name,
+          userEmail: existing.userEmail || existing.contact || "guestbook@anonymous.local",
+          content: `管理员将留言标记为风险内容\n${existing.content}`,
         });
       }
     } catch (emailError) {
