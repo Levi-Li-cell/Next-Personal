@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { authorProfile } from "@/db/schema/author";
 import { eq, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { DEFAULT_AUTHOR_PHOTOS } from "@/lib/author-defaults";
 
 // GET /api/admin/author - 获取作者信息
 export async function GET() {
@@ -34,7 +35,7 @@ export async function GET() {
           linkedinUrl: "",
           email: "",
           hobbies: ["台球", "乒乓球", "羽毛球", "篮球", "骑行", "平面设计", "绘画"],
-          photos: [],
+          photos: DEFAULT_AUTHOR_PHOTOS,
         },
       });
     }

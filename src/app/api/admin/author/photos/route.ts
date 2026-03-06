@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { authorProfile } from "@/db/schema/author";
 import { desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { DEFAULT_AUTHOR_PHOTOS } from "@/lib/author-defaults";
 
 async function getLatestProfile() {
   const rows = await db
@@ -24,7 +25,7 @@ async function ensureProfile() {
       id: nanoid(),
       name: "李伟",
       title: "前端开发师",
-      photos: [],
+      photos: DEFAULT_AUTHOR_PHOTOS,
     })
     .returning();
 
@@ -34,9 +35,27 @@ async function ensureProfile() {
 export async function GET() {
   try {
     const profile = await getLatestProfile();
+    const photos = Array.isArray(profile?.photos) ? profile.photos : [];
+
+    if (!profile || photos.length === 0) {
+      const ensured = await ensureProfile();
+      const ensuredPhotos = Array.isArray(ensured.photos) ? ensured.photos : [];
+      if (ensuredPhotos.length > 0) {
+        return NextResponse.json({ success: true, data: ensuredPhotos });
+      }
+
+      const [updated] = await db
+        .update(authorProfile)
+        .set({ photos: DEFAULT_AUTHOR_PHOTOS, updatedAt: new Date() })
+        .where(eq(authorProfile.id, ensured.id))
+        .returning();
+
+      return NextResponse.json({ success: true, data: updated?.photos || DEFAULT_AUTHOR_PHOTOS });
+    }
+
     return NextResponse.json({
       success: true,
-      data: profile?.photos || [],
+      data: photos,
     });
   } catch (error) {
     console.error("获取作者图片失败:", error);

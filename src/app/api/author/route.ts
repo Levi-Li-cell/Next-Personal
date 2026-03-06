@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { authorProfile, authorSkill, authorExperience, authorEducation, authorHonor } from "@/db/schema/author";
 import { asc, desc } from "drizzle-orm";
+import { DEFAULT_AUTHOR_PHOTOS } from "@/lib/author-defaults";
 
 // GET /api/author - 获取所有作者信息（公开API）
 export async function GET() {
@@ -21,7 +22,7 @@ export async function GET() {
     linkedinUrl: "",
     email: "",
     hobbies: ["台球", "乒乓球", "羽毛球", "篮球", "骑行", "平面设计", "绘画"],
-    photos: [],
+    photos: DEFAULT_AUTHOR_PHOTOS,
   };
 
   const fallbackSkills = [

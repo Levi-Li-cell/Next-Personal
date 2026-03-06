@@ -16,6 +16,7 @@ import {
   ChevronRight,
   UserCircle,
   Megaphone,
+  HandCoins,
 } from "lucide-react";
 import {
   Sidebar,
@@ -94,6 +95,11 @@ const menuItems: MenuItem[] = [
     title: "通知中心",
     url: "/admin/notifications",
     icon: Bell,
+  },
+  {
+    title: "赞助记录",
+    url: "/admin/sponsors",
+    icon: HandCoins,
   },
   {
     title: "可视化大屏",
