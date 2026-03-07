@@ -15,10 +15,21 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Nextjs Better Auth",
+  title: "李伟个人博客",
   description: "Next.js app with Better Auth",
   icons: {
-    icon: "/assets/Gemini_Generated_Image_gfqficgfqficgfqf.png",
+    icon: [
+      {
+        url: "/assets/Gemini_Generated_Image_gfqficgfqficgfqf.png",
+        type: "image/png",
+        sizes: "32x32",
+      },
+      {
+        url: "/assets/Gemini_Generated_Image_gfqficgfqficgfqf.png",
+        type: "image/png",
+        sizes: "192x192",
+      },
+    ],
     shortcut: "/assets/Gemini_Generated_Image_gfqficgfqficgfqf.png",
     apple: "/assets/Gemini_Generated_Image_gfqficgfqficgfqf.png",
   },
