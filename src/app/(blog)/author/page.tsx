@@ -26,7 +26,13 @@ import {
     ChevronDown,
     Sparkles,
     Coffee,
-    Gamepad2
+    Gamepad2,
+    Sun,
+    Cloud,
+    CloudRain,
+    CloudFog,
+    CloudSnow,
+    CloudLightning
 } from 'lucide-react';
 import SkillRadar from '@/components/SkillRadar';
 import ExperienceTimeline from '@/components/ExperienceTimeline';
@@ -74,12 +80,52 @@ const initialImages: string[] = [
     'https://eypphxaje0isjpo6.public.blob.vercel-storage.com/photos/stylized-1768829842681.png'
 ];
 
+const weatherCodeMeta: Record<number, { label: string; icon: typeof Sun }> = {
+    0: { label: '晴朗', icon: Sun },
+    1: { label: '大部晴朗', icon: Sun },
+    2: { label: '局部多云', icon: Cloud },
+    3: { label: '阴天', icon: Cloud },
+    45: { label: '有雾', icon: CloudFog },
+    48: { label: '冻雾', icon: CloudFog },
+    51: { label: '毛毛雨', icon: CloudRain },
+    53: { label: '小雨', icon: CloudRain },
+    55: { label: '中雨', icon: CloudRain },
+    56: { label: '冻雨', icon: CloudRain },
+    57: { label: '强冻雨', icon: CloudRain },
+    61: { label: '小雨', icon: CloudRain },
+    63: { label: '中雨', icon: CloudRain },
+    65: { label: '大雨', icon: CloudRain },
+    66: { label: '冻雨', icon: CloudRain },
+    67: { label: '强冻雨', icon: CloudRain },
+    71: { label: '小雪', icon: CloudSnow },
+    73: { label: '中雪', icon: CloudSnow },
+    75: { label: '大雪', icon: CloudSnow },
+    77: { label: '阵雪', icon: CloudSnow },
+    80: { label: '阵雨', icon: CloudRain },
+    81: { label: '强阵雨', icon: CloudRain },
+    82: { label: '暴雨阵雨', icon: CloudRain },
+    85: { label: '阵雪', icon: CloudSnow },
+    86: { label: '强阵雪', icon: CloudSnow },
+    95: { label: '雷暴', icon: CloudLightning },
+    96: { label: '雷暴冰雹', icon: CloudLightning },
+    99: { label: '强雷暴冰雹', icon: CloudLightning },
+};
+
 export default function App() {
     const router = useRouter();
     const { data: session } = useSession();
     const [imagesState, setImagesState] = useState<string[]>(initialImages);
     const [isMobile, setIsMobile] = useState(false);
+    const [now, setNow] = useState(new Date());
     const [mobileSection, setMobileSection] = useState<'about' | 'skills' | 'experience' | 'education' | 'honors' | 'contact'>('about');
+    const [weatherData, setWeatherData] = useState<{
+        temperature: number;
+        weatherCode: number;
+        windSpeed: number;
+        city: string;
+        fallbackLocation: boolean;
+        hourlyTrend: Array<{ time: string; temperature: number; weatherCode: number }>;
+    } | null>(null);
     const [authorData, setAuthorData] = useState<{
         profile: {
             name: string;
@@ -140,6 +186,13 @@ export default function App() {
     const orbX = useTransform(smoothMouseX, [0, 1000], [-100, 100]);
     const orbY = useTransform(smoothMouseY, [0, 1000], [-100, 100]);
 
+    const weatherMeta = weatherData ? (weatherCodeMeta[weatherData.weatherCode] || { label: '天气变化中', icon: Cloud }) : null;
+    const WeatherIcon = weatherMeta?.icon || Cloud;
+    const hourlyTrend = weatherData?.hourlyTrend || [];
+    const trendTemps = hourlyTrend.map((item) => item.temperature);
+    const minTrendTemp = trendTemps.length ? Math.min(...trendTemps) : 0;
+    const maxTrendTemp = trendTemps.length ? Math.max(...trendTemps) : 0;
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const media = window.matchMedia('(max-width: 767px), (hover: none), (pointer: coarse)');
@@ -148,6 +201,96 @@ export default function App() {
             media.addEventListener('change', update);
             return () => media.removeEventListener('change', update);
         }
+    }, []);
+
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(new Date()), 1000);
+        return () => window.clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        const fallbackCoords = {
+            latitude: 39.9042,
+            longitude: 116.4074,
+            city: '北京',
+            fallbackLocation: true,
+        };
+
+        const fetchWeatherByCoords = async (latitude: number, longitude: number, fallbackLocation: boolean) => {
+            const weatherResponse = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&forecast_days=2&timezone=auto`
+            );
+            if (!weatherResponse.ok) {
+                throw new Error('weather fetch failed');
+            }
+            const weatherJson = await weatherResponse.json();
+            const current = weatherJson?.current;
+            if (!current) {
+                throw new Error('weather current data missing');
+            }
+
+            const hourlyTimes: string[] = weatherJson?.hourly?.time || [];
+            const hourlyTemps: number[] = weatherJson?.hourly?.temperature_2m || [];
+            const hourlyCodes: number[] = weatherJson?.hourly?.weather_code || [];
+            const currentTimestamp = new Date(current.time || Date.now()).getTime();
+
+            const nextHours = hourlyTimes
+                .map((time, index) => ({
+                    time,
+                    temperature: Number(hourlyTemps[index]),
+                    weatherCode: Number(hourlyCodes[index]),
+                    timestamp: new Date(time).getTime(),
+                }))
+                .filter((item) => Number.isFinite(item.timestamp) && item.timestamp >= currentTimestamp)
+                .slice(0, 8)
+                .map(({ time, temperature, weatherCode }) => ({ time, temperature, weatherCode }));
+
+            let city = fallbackCoords.city;
+            try {
+                const geoResponse = await fetch(
+                    `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=zh&count=1`
+                );
+                if (geoResponse.ok) {
+                    const geoJson = await geoResponse.json();
+                    const result = geoJson?.results?.[0];
+                    city = result?.city || result?.name || city;
+                }
+            } catch {
+                city = fallbackCoords.city;
+            }
+
+            setWeatherData({
+                temperature: Number(current.temperature_2m),
+                weatherCode: Number(current.weather_code),
+                windSpeed: Number(current.wind_speed_10m),
+                city,
+                fallbackLocation,
+                hourlyTrend: nextHours,
+            });
+        };
+
+        const fetchWeather = async () => {
+            try {
+                const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                    if (!navigator.geolocation) {
+                        reject(new Error('geolocation unavailable'));
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        timeout: 6000,
+                        maximumAge: 10 * 60 * 1000,
+                    });
+                });
+
+                await fetchWeatherByCoords(position.coords.latitude, position.coords.longitude, false);
+            } catch {
+                await fetchWeatherByCoords(fallbackCoords.latitude, fallbackCoords.longitude, true);
+            }
+        };
+
+        fetchWeather();
+        const interval = window.setInterval(fetchWeather, 30 * 60 * 1000);
+        return () => window.clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -460,6 +603,82 @@ export default function App() {
                                 >
                                     {authorData?.profile?.bio || '专注于创造优秀的用户体验，精通现代前端技术栈，具备丰富的项目经验和持续学习的热情。'}
                                 </motion.p>
+
+                                <motion.div
+                                    className="relative overflow-hidden rounded-2xl border border-cyan-300/25 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/15 p-4 backdrop-blur-xl"
+                                    initial={{ opacity: 0, y: 16 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.75 }}
+                                >
+                                    <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-cyan-300/20 blur-2xl" />
+                                    <div className="pointer-events-none absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-purple-400/20 blur-2xl" />
+                                    <div className="relative flex items-start justify-between gap-4">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/80">Live Weather</p>
+                                            <p className="mt-1 text-white text-lg font-semibold">
+                                                {now.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                            </p>
+                                            <p className="text-sm text-white/80">
+                                                {now.toLocaleTimeString('zh-CN', { hour12: false })}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2">
+                                            <WeatherIcon className="h-5 w-5 text-cyan-200" />
+                                            <div className="text-right">
+                                                <p className="text-base font-semibold text-white">
+                                                    {weatherData ? `${Math.round(weatherData.temperature)}°C` : '--°C'}
+                                                </p>
+                                                <p className="text-xs text-white/75">{weatherMeta?.label || '天气加载中'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative mt-3 flex flex-wrap items-center gap-3 text-xs text-white/75">
+                                        <span className="rounded-full bg-white/10 px-2.5 py-1">
+                                            城市：{weatherData?.city || '定位中'}
+                                        </span>
+                                        <span className="rounded-full bg-white/10 px-2.5 py-1">
+                                            风速：{weatherData ? `${Math.round(weatherData.windSpeed)} km/h` : '--'}
+                                        </span>
+                                        {weatherData?.fallbackLocation && (
+                                            <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-amber-100">
+                                                未授权定位，已切换默认城市
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {hourlyTrend.length > 0 && (
+                                        <div className="relative mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                                            <p className="text-[11px] uppercase tracking-[0.2em] text-white/60">未来天气趋势</p>
+                                            <div className="mt-3 grid grid-cols-8 gap-2">
+                                                {hourlyTrend.map((point) => {
+                                                    const pointMeta = weatherCodeMeta[point.weatherCode] || { label: '天气变化中', icon: Cloud };
+                                                    const PointIcon = pointMeta.icon;
+                                                    const barHeight = maxTrendTemp === minTrendTemp
+                                                        ? 42
+                                                        : 24 + ((point.temperature - minTrendTemp) / (maxTrendTemp - minTrendTemp)) * 44;
+
+                                                    return (
+                                                        <div key={point.time} className="flex flex-col items-center gap-1.5 text-white/85">
+                                                            <span className="text-[10px] text-white/60">
+                                                                {new Date(point.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                            </span>
+                                                            <div className="flex h-16 w-full items-end justify-center">
+                                                                <div
+                                                                    className="w-3 rounded-full bg-gradient-to-t from-cyan-500/70 to-blue-200/80"
+                                                                    style={{ height: `${barHeight}px` }}
+                                                                />
+                                                            </div>
+                                                            <PointIcon className="h-3.5 w-3.5 text-cyan-100" />
+                                                            <span className="text-[10px]">{Math.round(point.temperature)}°</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </motion.div>
                             </motion.div>
 
                             {isMobile ? (
@@ -637,6 +856,32 @@ export default function App() {
 
                         {mobileSection === 'about' && (
                             <div className="space-y-2">
+                                <div className="relative overflow-hidden rounded-xl border border-cyan-200/20 bg-gradient-to-br from-cyan-500/25 via-blue-500/10 to-purple-500/20 p-3">
+                                    <div className="absolute -right-6 -top-8 h-20 w-20 rounded-full bg-cyan-300/20 blur-2xl" />
+                                    <div className="relative flex items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-100/80">Weather</p>
+                                            <p className="text-sm text-white font-medium">
+                                                {now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
+                                            </p>
+                                            <p className="text-xs text-white/80">{now.toLocaleTimeString('zh-CN', { hour12: false })}</p>
+                                        </div>
+                                        <div className="rounded-lg bg-white/10 px-2.5 py-2 text-right">
+                                            <div className="flex items-center gap-1.5">
+                                                <WeatherIcon className="h-4 w-4 text-cyan-200" />
+                                                <p className="text-sm font-semibold text-white">
+                                                    {weatherData ? `${Math.round(weatherData.temperature)}°C` : '--°C'}
+                                                </p>
+                                            </div>
+                                            <p className="mt-1 text-[11px] text-white/75">{weatherMeta?.label || '天气加载中'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="relative mt-2 flex flex-wrap gap-2 text-[11px] text-white/80">
+                                        <span className="rounded-full bg-white/10 px-2 py-1">{weatherData?.city || '定位中'}</span>
+                                        <span className="rounded-full bg-white/10 px-2 py-1">风速 {weatherData ? `${Math.round(weatherData.windSpeed)} km/h` : '--'}</span>
+                                    </div>
+                                </div>
+
                                 {[
                                     { icon: User, label: '性别', value: authorData?.profile?.gender || '男' },
                                     { icon: Calendar, label: '年龄', value: authorData?.profile?.age || '24' },

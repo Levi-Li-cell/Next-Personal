@@ -18,6 +18,7 @@ import FrontendNotificationBell from '@/components/FrontendNotificationBell';
 
 const navItems = [
     { id: 'author', label: '作者', href: '/author' },
+    { id: 'geo-lab', label: '空间实验室', href: '/geo-lab' },
     { id: 'blog', label: '博客', href: '/blog' },
     { id: 'projects', label: '项目', href: '/projects' },
     { id: 'guestbook', label: '留言板', href: '/guestbook' },
