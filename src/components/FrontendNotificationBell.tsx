@@ -47,6 +47,8 @@ export default function FrontendNotificationBell() {
   const [items, setItems] = useState<FrontNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasUnreadPulse, setHasUnreadPulse] = useState(false);
+  const [showUnreadOnly, setShowUnreadOnly] = useState(true);
+  const [eventFilter, setEventFilter] = useState<"all" | "announcement" | "blog_published" | "project_published">("all");
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -58,7 +60,13 @@ export default function FrontendNotificationBell() {
 
     const fetchList = async () => {
       try {
-        const response = await fetch("/api/notifications?page=1&limit=8", { cache: "no-store" });
+        const params = new URLSearchParams({
+          page: "1",
+          limit: "12",
+          unreadOnly: showUnreadOnly ? "true" : "false",
+          eventType: eventFilter,
+        });
+        const response = await fetch(`/api/notifications?${params.toString()}`, { cache: "no-store" });
         const data = await response.json();
         if (data?.success && Array.isArray(data.data)) {
           const mapped = data.data.map((item: {
@@ -70,7 +78,7 @@ export default function FrontendNotificationBell() {
             createdAt: string;
           }) => toFrontNotification(item));
           setItems(mapped);
-          setHasUnreadPulse(mapped.length > 0);
+          setHasUnreadPulse(Number(data?.unreadCount || 0) > 0);
         }
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
@@ -80,7 +88,7 @@ export default function FrontendNotificationBell() {
     };
 
     fetchList();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, showUnreadOnly, eventFilter]);
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -137,6 +145,20 @@ export default function FrontendNotificationBell() {
     }
   };
 
+  const markAllRead = async () => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAll: true }),
+      });
+      setItems([]);
+      setHasUnreadPulse(false);
+    } catch (error) {
+      console.error("mark all notifications read failed:", error);
+    }
+  };
+
   if (!session?.user?.id) {
     return null;
   }
@@ -167,6 +189,31 @@ export default function FrontendNotificationBell() {
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
           <div className="font-medium">消息通知</div>
           <span className="text-xs text-white/50">公告 / 新博客 / 新项目</span>
+        </div>
+        <div className="px-4 py-2 border-b border-white/10 flex flex-wrap items-center gap-2">
+          <button
+            className={`text-[11px] rounded px-2 py-1 ${showUnreadOnly ? "bg-cyan-500/25 text-cyan-200" : "bg-white/10 text-white/70"}`}
+            onClick={() => setShowUnreadOnly((prev) => !prev)}
+          >
+            {showUnreadOnly ? "仅未读" : "全部"}
+          </button>
+          {[
+            { key: "all", label: "全部" },
+            { key: "announcement", label: "公告" },
+            { key: "blog_published", label: "博客" },
+            { key: "project_published", label: "项目" },
+          ].map((item) => (
+            <button
+              key={item.key}
+              className={`text-[11px] rounded px-2 py-1 ${eventFilter === item.key ? "bg-fuchsia-500/25 text-fuchsia-200" : "bg-white/10 text-white/70"}`}
+              onClick={() => setEventFilter(item.key as typeof eventFilter)}
+            >
+              {item.label}
+            </button>
+          ))}
+          <button className="ml-auto text-[11px] rounded px-2 py-1 bg-white/10 text-white/80" onClick={markAllRead}>
+            全部已读
+          </button>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
           {isLoading ? (

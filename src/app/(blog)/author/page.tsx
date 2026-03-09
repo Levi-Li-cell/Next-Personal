@@ -52,6 +52,71 @@ import SidebarNav from '@/components/SidebarNav';
 import { useSession } from '@/lib/auth/client';
 import { toast } from 'sonner';
 
+function buildResumeHtml(payload: {
+    profile: {
+        name: string;
+        title: string;
+        phone: string;
+        education: string;
+        location: string;
+        preferredCity: string;
+        preferredPosition: string;
+        expectedSalary: string;
+        bio: string;
+    };
+    skills: Array<{ name: string; category: string; level: string }>;
+    experiences: Array<{ company: string; position: string; startDate: string; endDate: string; description: string }>;
+    education: Array<{ school: string; major: string; degree: string; startDate: string; endDate: string }>;
+    honors: Array<{ title: string }>;
+}) {
+    const skillRows = payload.skills.slice(0, 18).map((s) => `<li>${s.name}（${s.category} / ${s.level}%）</li>`).join('');
+    const expRows = payload.experiences
+        .map((e) => `<li><strong>${e.company}</strong>｜${e.position}（${e.startDate} - ${e.endDate}）<br/>${e.description || ''}</li>`)
+        .join('');
+    const eduRows = payload.education
+        .map((e) => `<li>${e.school}｜${e.major} ${e.degree}（${e.startDate} - ${e.endDate}）</li>`)
+        .join('');
+    const honorRows = payload.honors.map((h) => `<li>${h.title}</li>`).join('');
+
+    return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>${payload.profile.name}-简历</title>
+  <style>
+    body{font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; color:#111; margin:0; padding:24px;}
+    .wrap{max-width:820px;margin:0 auto;}
+    h1{margin:0 0 6px;font-size:28px;}
+    .sub{color:#444;margin-bottom:14px;}
+    .meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;font-size:13px;color:#333;margin-bottom:16px;}
+    .sec{margin-top:14px;}
+    .sec h2{font-size:16px;margin:0 0 8px;padding-bottom:4px;border-bottom:1px solid #ddd;}
+    ul{margin:0;padding-left:18px;line-height:1.65;}
+    p{margin:0;line-height:1.7;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>${payload.profile.name}</h1>
+    <div class="sub">${payload.profile.title}</div>
+    <div class="meta">
+      <div>电话：${payload.profile.phone}</div>
+      <div>学历：${payload.profile.education}</div>
+      <div>地区：${payload.profile.location}</div>
+      <div>意向城市：${payload.profile.preferredCity}</div>
+      <div>意向岗位：${payload.profile.preferredPosition}</div>
+      <div>期望薪资：${payload.profile.expectedSalary}</div>
+    </div>
+    <div class="sec"><h2>个人简介</h2><p>${payload.profile.bio || ''}</p></div>
+    <div class="sec"><h2>核心技能</h2><ul>${skillRows}</ul></div>
+    <div class="sec"><h2>工作经历</h2><ul>${expRows}</ul></div>
+    <div class="sec"><h2>教育经历</h2><ul>${eduRows}</ul></div>
+    <div class="sec"><h2>荣誉证书</h2><ul>${honorRows}</ul></div>
+  </div>
+</body>
+</html>`;
+}
+
 const skillColorByCategory: Record<string, string> = {
     '前端基础': 'from-purple-500 to-pink-500',
     '框架技术': 'from-cyan-500 to-blue-500',
@@ -556,6 +621,55 @@ export default function App() {
         router.push('/geo-lab');
     };
 
+    const exportResumePdf = () => {
+        if (!authorData?.profile) {
+            toast.error('简历数据加载中，请稍后再试');
+            return;
+        }
+        const html = buildResumeHtml({
+            profile: {
+                name: authorData.profile.name || '李伟',
+                title: authorData.profile.title || '前端开发师',
+                phone: authorData.profile.phone || '',
+                education: authorData.profile.education || '',
+                location: authorData.profile.location || '',
+                preferredCity: authorData.profile.preferredCity || '',
+                preferredPosition: authorData.profile.preferredPosition || '',
+                expectedSalary: authorData.profile.expectedSalary || '',
+                bio: authorData.profile.bio || '',
+            },
+            skills: (authorData.skills || []).map((item) => ({ name: item.name, category: item.category, level: item.level })),
+            experiences: (authorData.experiences || []).map((item) => ({
+                company: item.company,
+                position: item.position,
+                startDate: item.startDate,
+                endDate: item.endDate,
+                description: item.description,
+            })),
+            education: (authorData.education || []).map((item) => ({
+                school: item.school,
+                major: item.major,
+                degree: item.degree,
+                startDate: item.startDate,
+                endDate: item.endDate,
+            })),
+            honors: (authorData.honors || []).map((item) => ({ title: item.title })),
+        });
+
+        const win = window.open('', '_blank', 'noopener,noreferrer,width=980,height=760');
+        if (!win) {
+            toast.error('请允许弹窗后再导出简历');
+            return;
+        }
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => {
+            win.print();
+        }, 300);
+    };
+
     return (
         <div ref={containerRef} className={`relative min-h-screen bg-black overflow-x-hidden ${isMobile ? '' : 'cursor-none'}`}>
             {/* Custom Cursor */}
@@ -882,20 +996,27 @@ export default function App() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <a
-                                            href={`tel:${authorData?.profile?.phone || '13043428526'}`}
-                                            className="rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-2 text-center text-sm font-medium text-white"
-                                        >
-                                            电话联系
-                                        </a>
-                                        <button
-                                            className="rounded-xl bg-white/[0.14] px-3 py-2 text-sm text-white"
-                                            onClick={() => scrollToSection('experience')}
-                                        >
-                                            查看经历
-                                        </button>
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <a
+                                        href={`tel:${authorData?.profile?.phone || '13043428526'}`}
+                                        className="rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-2 text-center text-sm font-medium text-white"
+                                    >
+                                        电话联系
+                                    </a>
+                                    <button
+                                        className="rounded-xl bg-white/[0.14] px-3 py-2 text-sm text-white"
+                                        onClick={() => scrollToSection('experience')}
+                                    >
+                                        查看经历
+                                    </button>
+                                </div>
+
+                                <button
+                                    className="w-full rounded-xl bg-gradient-to-r from-emerald-500/70 to-cyan-500/70 px-3 py-2 text-sm text-white"
+                                    onClick={exportResumePdf}
+                                >
+                                    导出简历 PDF
+                                </button>
 
                                     <div className="flex flex-wrap gap-2 pt-1">
                                         {(authorData?.profile?.hobbies?.slice(0, 4) || ['台球', '乒乓球', '羽毛球', '骑行']).map((hobby) => (
@@ -920,6 +1041,16 @@ export default function App() {
                                                 whileTap={{ scale: 0.95 }}
                                             >
                                                 <motion.span className="relative z-10">联系我</motion.span>
+                                            </motion.div>
+                                        </MagneticButton>
+
+                                        <MagneticButton onClick={exportResumePdf}>
+                                            <motion.div
+                                                className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-full relative overflow-hidden"
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                            >
+                                                <motion.span className="relative z-10">导出简历 PDF</motion.span>
                                             </motion.div>
                                         </MagneticButton>
 

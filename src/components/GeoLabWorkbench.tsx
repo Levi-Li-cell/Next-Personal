@@ -472,6 +472,7 @@ export default function GeoLabWorkbench() {
   const [bufferKm, setBufferKm] = useState(0.6);
   const [busy, setBusy] = useState(false);
   const [isDemoRunning, setIsDemoRunning] = useState(false);
+  const [demoStep, setDemoStep] = useState("未运行");
   const [resultMode, setResultMode] = useState<"auto" | "raw" | "analysis">("auto");
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({ point: true, line: true, polygon: true });
   const demoStoppedRef = useRef(false);
@@ -610,6 +611,7 @@ export default function GeoLabWorkbench() {
     if (isDemoRunning) return;
     demoStoppedRef.current = false;
     setIsDemoRunning(true);
+    setDemoStep("初始化");
     setDataset(sampleFeatureCollection);
     setAnalysisResult(null);
     appendLog("案例脚本启动：将自动演示完整链路");
@@ -618,32 +620,38 @@ export default function GeoLabWorkbench() {
 
     await sleep(900);
     if (breakIfStopped()) return setIsDemoRunning(false);
+    setDemoStep("Step1 数据准备");
     appendLog("[Step1] 数据准备完成：已载入示例园区数据");
 
     await sleep(1000);
     if (breakIfStopped()) return setIsDemoRunning(false);
+    setDemoStep("Step2 缓冲区分析");
     setBufferKm(0.8);
     runBuffer();
     appendLog("[Step2] 执行缓冲区分析，模拟服务覆盖范围");
 
     await sleep(1300);
     if (breakIfStopped()) return setIsDemoRunning(false);
+    setDemoStep("Step3 相交分析");
     setAnalysisResult(null);
     runIntersect();
     appendLog("[Step3] 执行相交分析，识别重叠区域");
 
     await sleep(1200);
     if (breakIfStopped()) return setIsDemoRunning(false);
+    setDemoStep("Step4 点面判断");
     runPointInPolygon();
     appendLog("[Step4] 执行点面判断，确认站点归属");
 
     await sleep(1100);
     if (breakIfStopped()) return setIsDemoRunning(false);
+    setDemoStep("Step5 最近点分析");
     runNearestAndDistance();
     appendLog("[Step5] 执行最近点/距离分析，输出最短服务距离");
 
     await sleep(900);
     if (breakIfStopped()) return setIsDemoRunning(false);
+    setDemoStep("已完成");
     appendLog("案例脚本完成：可点击“导出当前结果 GeoJSON”进行成果提交");
     setIsDemoRunning(false);
   };
@@ -651,6 +659,7 @@ export default function GeoLabWorkbench() {
   const stopDemoScript = () => {
     demoStoppedRef.current = true;
     setIsDemoRunning(false);
+    setDemoStep("已暂停");
     appendLog("案例脚本已手动暂停");
   };
 
@@ -668,6 +677,7 @@ export default function GeoLabWorkbench() {
             使用 Turf.js 做缓冲区/相交/点面判断/最近点分析，支持 GeoJSON、Shapefile(.zip)、GML 导入，结果可导出，并通过 MapLibre + Three.js 进行 2D/3D 可视化。
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-xl bg-white/10 px-3 py-2 text-xs text-white/80">脚本状态：{demoStep}</span>
             <button
               type="button"
               onClick={() => void runDemoScript()}

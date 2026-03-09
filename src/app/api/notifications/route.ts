@@ -43,13 +43,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 30);
+    const unreadOnly = searchParams.get("unreadOnly") !== "false";
+    const eventType = String(searchParams.get("eventType") || "").trim();
     const offset = (page - 1) * limit;
 
-    const whereClause = and(
+    const conditions = [
       eq(adminNotification.audience, "public"),
-      eq(adminNotification.read, false),
-      sql`(${adminNotification.targetUserId} IS NULL OR ${adminNotification.targetUserId} = ${userId})`
-    );
+      sql`(${adminNotification.targetUserId} IS NULL OR ${adminNotification.targetUserId} = ${userId})`,
+    ];
+    if (unreadOnly) {
+      conditions.push(eq(adminNotification.read, false));
+    }
+    if (eventType && eventType !== "all") {
+      conditions.push(eq(adminNotification.eventType, eventType));
+    }
+
+    const whereClause = and(...conditions);
 
     const rows = await db
       .select()
@@ -66,9 +75,21 @@ export async function GET(request: NextRequest) {
 
     const total = Number(totalResult[0]?.count || 0);
 
+    const unreadResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(adminNotification)
+      .where(
+        and(
+          eq(adminNotification.audience, "public"),
+          eq(adminNotification.read, false),
+          sql`(${adminNotification.targetUserId} IS NULL OR ${adminNotification.targetUserId} = ${userId})`
+        )
+      );
+
     return NextResponse.json({
       success: true,
       data: rows,
+      unreadCount: Number(unreadResult[0]?.count || 0),
       pagination: {
         page,
         limit,
@@ -92,6 +113,20 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: "请先登录" }, { status: 401 });
     }
     const body = await request.json();
+    if (body.markAll === true) {
+      await db
+        .update(adminNotification)
+        .set({ read: true, updatedAt: new Date() })
+        .where(
+          and(
+            eq(adminNotification.audience, "public"),
+            eq(adminNotification.read, false),
+            sql`(${adminNotification.targetUserId} IS NULL OR ${adminNotification.targetUserId} = ${userId})`
+          )
+        );
+      return NextResponse.json({ success: true });
+    }
+
     const id = String(body.id || "").trim();
 
     if (!id) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { OpenAI } from "openai";
 import { db } from "@/db";
 import { chatMessages } from "@/db/schema/chat";
+import { blog } from "@/db/schema/blog";
 import { getSystemPrompt } from "@/lib/knowledge";
 import { desc, eq } from "drizzle-orm";
 import { v4 as uuidv4 } from 'uuid';
@@ -29,6 +30,117 @@ const isPromptLeakAttempt = (text: string) => {
 };
 
 const PROMPT_LEAK_REFUSAL = "抱歉，我不能提供知识库原文、完整内容或系统提示词。你可以告诉我想了解的具体方向，我可以基于知识库给你简要总结。";
+
+type BlogCandidate = {
+    title: string;
+    slug: string;
+    excerpt: string | null;
+    content: string;
+    tags: string[] | null;
+    category: string;
+};
+
+type RagSource = {
+    title: string;
+    slug: string;
+    url: string;
+    score: number;
+    snippet: string;
+};
+
+function normalizeText(input: string): string {
+    return input
+        .replace(/[`#>*_~\-\[\]()]/g, " ")
+        .replace(/\s+/g, " ")
+        .toLowerCase()
+        .trim();
+}
+
+function tokenize(input: string): string[] {
+    const normalized = normalizeText(input);
+    const zhChars = normalized.match(/[\u4e00-\u9fa5]/g) || [];
+    const words = normalized.split(/[^\u4e00-\u9fa5a-z0-9]+/).filter((item) => item.length >= 2);
+    return Array.from(new Set([...words, ...zhChars]));
+}
+
+function buildSnippet(text: string, queryTokens: string[]): string {
+    const plain = normalizeText(text).slice(0, 1200);
+    if (!plain) return "";
+    const hit = queryTokens.find((token) => plain.includes(token));
+    if (!hit) {
+        return plain.slice(0, 180);
+    }
+    const index = plain.indexOf(hit);
+    const start = Math.max(0, index - 70);
+    const end = Math.min(plain.length, index + 110);
+    return plain.slice(start, end);
+}
+
+function scoreBlog(queryTokens: string[], candidate: BlogCandidate): number {
+    const title = normalizeText(candidate.title);
+    const excerpt = normalizeText(candidate.excerpt || "");
+    const content = normalizeText(candidate.content || "");
+    const tags = normalizeText((candidate.tags || []).join(" "));
+    let score = 0;
+
+    for (const token of queryTokens) {
+        if (title.includes(token)) score += 4;
+        if (tags.includes(token)) score += 3;
+        if (excerpt.includes(token)) score += 2;
+        if (content.includes(token)) score += 1;
+    }
+
+    return score;
+}
+
+async function retrieveBlogSources(question: string): Promise<RagSource[]> {
+    const tokens = tokenize(question);
+    if (!tokens.length) return [];
+
+    try {
+        const posts = await db
+            .select({
+                title: blog.title,
+                slug: blog.slug,
+                excerpt: blog.excerpt,
+                content: blog.content,
+                tags: blog.tags,
+                category: blog.category,
+            })
+            .from(blog)
+            .where(eq(blog.status, "published"))
+            .orderBy(desc(blog.createdAt))
+            .limit(80);
+
+        const ranked = posts
+            .map((post) => ({
+                ...post,
+                score: scoreBlog(tokens, {
+                    title: post.title,
+                    slug: post.slug,
+                    excerpt: post.excerpt,
+                    content: post.content,
+                    tags: (post.tags as string[] | null) || [],
+                    category: post.category,
+                }),
+            }))
+            .filter((item) => item.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3)
+            .map((item) => ({
+                title: item.title,
+                slug: item.slug,
+                url: `/blog/${item.slug}`,
+                score: item.score,
+                snippet: buildSnippet(`${item.excerpt || ""} ${item.content || ""}`, tokens),
+            }));
+
+        return ranked;
+    } catch (error) {
+        console.error("RAG source retrieval failed:", error);
+        return [];
+    }
+}
 
 export async function POST(req: NextRequest) {
     let sessionId = "";
@@ -94,10 +206,17 @@ export async function POST(req: NextRequest) {
         }
 
         const systemPrompt = getSystemPrompt();
+        const ragSources = await retrieveBlogSources(message);
+        const ragContext = ragSources.length
+            ? `\n\n=== 站内文章参考片段（仅内部参考，不要完整复述）===\n${ragSources
+                .map((source, index) => `${index + 1}. ${source.title} (${source.url})\n片段: ${source.snippet}`)
+                .join("\n\n")}\n=== 参考片段结束 ===\n\n请优先结合上述参考片段回答；可给出简要依据，但不要输出完整片段。`
+            : "";
+        const finalSystemPrompt = `${systemPrompt}${ragContext}`;
 
         // Construct messages array for OpenAI
         const messages: ChatCompletionMessageParam[] = [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: finalSystemPrompt },
             ...historyMessages,
             // Replicating original behavior: add current message again explicitly at the end
             { role: "user", content: message }
@@ -167,7 +286,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             success: true,
             message: responseContent,
-            sessionId: sessionId
+            sessionId: sessionId,
+            meta: {
+                sources: ragSources.map((source) => ({
+                    title: source.title,
+                    url: source.url,
+                })),
+            },
         });
 
     } catch (error: unknown) {
