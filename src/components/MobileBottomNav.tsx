@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, User, Wrench, Globe } from "lucide-react";
+import { BookOpen, User, Wrench } from "lucide-react";
 
 const navItems = [
   { href: "/author", label: "作者", icon: User, match: (path: string) => path.startsWith("/author") },
-  { href: "/geo-lab", label: "空间", icon: Globe, match: (path: string) => path.startsWith("/geo-lab") },
   { href: "/blog", label: "博客", icon: BookOpen, match: (path: string) => path.startsWith("/blog") },
-  { href: "/projects", label: "项目", icon: Wrench, match: (path: string) => path.startsWith("/projects") || path.startsWith("/guestbook") },
+  { href: "/projects", label: "项目", icon: Wrench, match: (path: string) => path.startsWith("/projects") || path.startsWith("/guestbook") || path.startsWith("/geo-lab") },
 ];
 
 export default function MobileBottomNav() {

@@ -222,7 +222,7 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-function ThreePreview({ dataset }: { dataset: AnyFeatureCollection | null }) {
+function ThreePreview({ dataset, fallbackDataset }: { dataset: AnyFeatureCollection | null; fallbackDataset: AnyFeatureCollection }) {
   const mountRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -254,13 +254,15 @@ function ThreePreview({ dataset }: { dataset: AnyFeatureCollection | null }) {
     scene.add(grid);
 
     const polygonFeatures = dataset.features.filter((feature) => feature.geometry?.type === "Polygon").slice(0, 24);
-    const bboxValue = turf.bbox(dataset as never) as [number, number, number, number];
+    const sourceForMesh = polygonFeatures.length > 0 ? dataset : fallbackDataset;
+    const finalPolygonFeatures = sourceForMesh.features.filter((feature) => feature.geometry?.type === "Polygon").slice(0, 24);
+    const bboxValue = turf.bbox(sourceForMesh as never) as [number, number, number, number];
     const centerX = (bboxValue[0] + bboxValue[2]) / 2;
     const centerY = (bboxValue[1] + bboxValue[3]) / 2;
     const scale = 1800;
 
     const extruded: THREE.Mesh[] = [];
-    polygonFeatures.forEach((feature, index) => {
+    finalPolygonFeatures.forEach((feature, index) => {
       const rings = feature.geometry?.coordinates as number[][][] | undefined;
       if (!rings?.[0]?.length) return;
 
@@ -312,7 +314,7 @@ function ThreePreview({ dataset }: { dataset: AnyFeatureCollection | null }) {
       renderer.dispose();
       root.innerHTML = "";
     };
-  }, [dataset]);
+  }, [dataset, fallbackDataset]);
 
   return <div ref={mountRef} className="h-[320px] w-full overflow-hidden rounded-2xl border border-white/10" />;
 }
@@ -896,7 +898,7 @@ export default function GeoLabWorkbench() {
           <p className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
             <Layers3 className="h-4 w-4 text-violet-300" /> WebGL 3D 预览（Three.js 面挤出）
           </p>
-          <ThreePreview dataset={displayLayer} />
+          <ThreePreview dataset={displayLayer} fallbackDataset={dataset} />
         </div>
       </div>
     </div>

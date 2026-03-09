@@ -32,7 +32,10 @@ import {
     CloudRain,
     CloudFog,
     CloudSnow,
-    CloudLightning
+    CloudLightning,
+    LocateFixed,
+    Search,
+    RefreshCw
 } from 'lucide-react';
 import SkillRadar from '@/components/SkillRadar';
 import ExperienceTimeline from '@/components/ExperienceTimeline';
@@ -111,6 +114,8 @@ const weatherCodeMeta: Record<number, { label: string; icon: typeof Sun }> = {
     99: { label: '强雷暴冰雹', icon: CloudLightning },
 };
 
+type WeatherSource = 'gps' | 'ip' | 'manual' | 'fallback';
+
 export default function App() {
     const router = useRouter();
     const { data: session } = useSession();
@@ -124,8 +129,14 @@ export default function App() {
         windSpeed: number;
         city: string;
         fallbackLocation: boolean;
+        source: WeatherSource;
         hourlyTrend: Array<{ time: string; temperature: number; weatherCode: number }>;
     } | null>(null);
+    const [manualCityInput, setManualCityInput] = useState('');
+    const [manualCityQuery, setManualCityQuery] = useState<string | null>(null);
+    const [weatherRefreshToken, setWeatherRefreshToken] = useState(0);
+    const [isWeatherLoading, setIsWeatherLoading] = useState(false);
+    const [weatherError, setWeatherError] = useState('');
     const [authorData, setAuthorData] = useState<{
         profile: {
             name: string;
@@ -188,6 +199,13 @@ export default function App() {
 
     const weatherMeta = weatherData ? (weatherCodeMeta[weatherData.weatherCode] || { label: '天气变化中', icon: Cloud }) : null;
     const WeatherIcon = weatherMeta?.icon || Cloud;
+    const weatherSourceText = weatherData?.source === 'gps'
+        ? 'GPS定位'
+        : weatherData?.source === 'ip'
+            ? 'IP定位'
+            : weatherData?.source === 'manual'
+                ? '手动查询'
+                : '默认城市';
     const hourlyTrend = weatherData?.hourlyTrend || [];
     const trendTemps = hourlyTrend.map((item) => item.temperature);
     const minTrendTemp = trendTemps.length ? Math.min(...trendTemps) : 0;
@@ -216,57 +234,72 @@ export default function App() {
             fallbackLocation: true,
         };
 
-        const fetchWeatherByCoords = async (latitude: number, longitude: number, fallbackLocation: boolean) => {
-            const weatherResponse = await fetch(
-                `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&forecast_days=2&timezone=auto`
-            );
-            if (!weatherResponse.ok) {
-                throw new Error('weather fetch failed');
-            }
-            const weatherJson = await weatherResponse.json();
-            const current = weatherJson?.current;
-            if (!current) {
-                throw new Error('weather current data missing');
-            }
-
-            const hourlyTimes: string[] = weatherJson?.hourly?.time || [];
-            const hourlyTemps: number[] = weatherJson?.hourly?.temperature_2m || [];
-            const hourlyCodes: number[] = weatherJson?.hourly?.weather_code || [];
-            const currentTimestamp = new Date(current.time || Date.now()).getTime();
-
-            const nextHours = hourlyTimes
-                .map((time, index) => ({
-                    time,
-                    temperature: Number(hourlyTemps[index]),
-                    weatherCode: Number(hourlyCodes[index]),
-                    timestamp: new Date(time).getTime(),
-                }))
-                .filter((item) => Number.isFinite(item.timestamp) && item.timestamp >= currentTimestamp)
-                .slice(0, 8)
-                .map(({ time, temperature, weatherCode }) => ({ time, temperature, weatherCode }));
-
-            let city = fallbackCoords.city;
+        const fetchWeatherByCoords = async (
+            latitude: number,
+            longitude: number,
+            source: WeatherSource,
+            fallbackLocation: boolean,
+            seedCity?: string
+        ) => {
+            setIsWeatherLoading(true);
+            setWeatherError('');
             try {
-                const geoResponse = await fetch(
-                    `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=zh&count=1`
+                const weatherResponse = await fetch(
+                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&forecast_days=2&timezone=auto`
                 );
-                if (geoResponse.ok) {
-                    const geoJson = await geoResponse.json();
-                    const result = geoJson?.results?.[0];
-                    city = result?.city || result?.name || city;
+                if (!weatherResponse.ok) {
+                    throw new Error('weather fetch failed');
                 }
-            } catch {
-                city = fallbackCoords.city;
-            }
+                const weatherJson = await weatherResponse.json();
+                const current = weatherJson?.current;
+                if (!current) {
+                    throw new Error('weather current data missing');
+                }
 
-            setWeatherData({
-                temperature: Number(current.temperature_2m),
-                weatherCode: Number(current.weather_code),
-                windSpeed: Number(current.wind_speed_10m),
-                city,
-                fallbackLocation,
-                hourlyTrend: nextHours,
-            });
+                const hourlyTimes: string[] = weatherJson?.hourly?.time || [];
+                const hourlyTemps: number[] = weatherJson?.hourly?.temperature_2m || [];
+                const hourlyCodes: number[] = weatherJson?.hourly?.weather_code || [];
+                const currentTimestamp = new Date(current.time || Date.now()).getTime();
+
+                const nextHours = hourlyTimes
+                    .map((time, index) => ({
+                        time,
+                        temperature: Number(hourlyTemps[index]),
+                        weatherCode: Number(hourlyCodes[index]),
+                        timestamp: new Date(time).getTime(),
+                    }))
+                    .filter((item) => Number.isFinite(item.timestamp) && item.timestamp >= currentTimestamp)
+                    .slice(0, 8)
+                    .map(({ time, temperature, weatherCode }) => ({ time, temperature, weatherCode }));
+
+                let city = seedCity || fallbackCoords.city;
+                try {
+                    const geoResponse = await fetch(
+                        `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=zh&count=1`
+                    );
+                    if (geoResponse.ok) {
+                        const geoJson = await geoResponse.json();
+                        const result = geoJson?.results?.[0];
+                        city = result?.city || result?.name || city;
+                    }
+                } catch {
+                    city = seedCity || fallbackCoords.city;
+                }
+
+                setWeatherData({
+                    temperature: Number(current.temperature_2m),
+                    weatherCode: Number(current.weather_code),
+                    windSpeed: Number(current.wind_speed_10m),
+                    city,
+                    source,
+                    fallbackLocation,
+                    hourlyTrend: nextHours,
+                });
+            } catch {
+                setWeatherError('天气加载失败，请稍后重试');
+            } finally {
+                setIsWeatherLoading(false);
+            }
         };
 
         const fetchWeather = async () => {
@@ -277,21 +310,106 @@ export default function App() {
                         return;
                     }
                     navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        timeout: 6000,
-                        maximumAge: 10 * 60 * 1000,
+                        enableHighAccuracy: true,
+                        timeout: 9000,
+                        maximumAge: 5 * 60 * 1000,
                     });
                 });
 
-                await fetchWeatherByCoords(position.coords.latitude, position.coords.longitude, false);
+                await fetchWeatherByCoords(position.coords.latitude, position.coords.longitude, 'gps', false);
+                return;
             } catch {
-                await fetchWeatherByCoords(fallbackCoords.latitude, fallbackCoords.longitude, true);
+                // gps 失败继续尝试 ip 定位
             }
+
+            try {
+                const ipResp = await fetch('https://ipapi.co/json/');
+                if (ipResp.ok) {
+                    const ipData = await ipResp.json();
+                    if (Number.isFinite(Number(ipData?.latitude)) && Number.isFinite(Number(ipData?.longitude))) {
+                        await fetchWeatherByCoords(Number(ipData.latitude), Number(ipData.longitude), 'ip', false, ipData?.city || 'IP定位城市');
+                        return;
+                    }
+                }
+            } catch {
+                // ip 失败继续默认城市
+            }
+
+            await fetchWeatherByCoords(fallbackCoords.latitude, fallbackCoords.longitude, 'fallback', true, fallbackCoords.city);
         };
 
         fetchWeather();
         const interval = window.setInterval(fetchWeather, 30 * 60 * 1000);
         return () => window.clearInterval(interval);
-    }, []);
+    }, [weatherRefreshToken]);
+
+    useEffect(() => {
+        if (!manualCityQuery) {
+            return;
+        }
+
+        const searchCityWeather = async () => {
+            setIsWeatherLoading(true);
+            setWeatherError('');
+            try {
+                const geoResponse = await fetch(
+                    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(manualCityQuery)}&language=zh&count=1`
+                );
+                if (!geoResponse.ok) {
+                    throw new Error('city geocode failed');
+                }
+                const geoJson = await geoResponse.json();
+                const result = geoJson?.results?.[0];
+                if (!result || !Number.isFinite(Number(result.latitude)) || !Number.isFinite(Number(result.longitude))) {
+                    setWeatherError('未找到该城市，请尝试更具体的地名');
+                    return;
+                }
+
+                const weatherResponse = await fetch(
+                    `https://api.open-meteo.com/v1/forecast?latitude=${result.latitude}&longitude=${result.longitude}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&forecast_days=2&timezone=auto`
+                );
+                if (!weatherResponse.ok) {
+                    throw new Error('weather fetch failed');
+                }
+                const weatherJson = await weatherResponse.json();
+                const current = weatherJson?.current;
+                if (!current) {
+                    throw new Error('weather current data missing');
+                }
+
+                const hourlyTimes: string[] = weatherJson?.hourly?.time || [];
+                const hourlyTemps: number[] = weatherJson?.hourly?.temperature_2m || [];
+                const hourlyCodes: number[] = weatherJson?.hourly?.weather_code || [];
+                const currentTimestamp = new Date(current.time || Date.now()).getTime();
+                const nextHours = hourlyTimes
+                    .map((time, index) => ({
+                        time,
+                        temperature: Number(hourlyTemps[index]),
+                        weatherCode: Number(hourlyCodes[index]),
+                        timestamp: new Date(time).getTime(),
+                    }))
+                    .filter((item) => Number.isFinite(item.timestamp) && item.timestamp >= currentTimestamp)
+                    .slice(0, 8)
+                    .map(({ time, temperature, weatherCode }) => ({ time, temperature, weatherCode }));
+
+                setWeatherData({
+                    temperature: Number(current.temperature_2m),
+                    weatherCode: Number(current.weather_code),
+                    windSpeed: Number(current.wind_speed_10m),
+                    city: result.city || result.name || manualCityQuery,
+                    source: 'manual',
+                    fallbackLocation: false,
+                    hourlyTrend: nextHours,
+                });
+            } catch {
+                setWeatherError('手动查询失败，请稍后重试');
+            } finally {
+                setIsWeatherLoading(false);
+            }
+        };
+
+        searchCityWeather();
+    }, [manualCityQuery]);
 
     useEffect(() => {
         const fetchAuthorData = async () => {
@@ -432,6 +550,10 @@ export default function App() {
             return;
         }
         router.push('/snake3d');
+    };
+
+    const goGeoLab = () => {
+        router.push('/geo-lab');
     };
 
     return (
@@ -629,7 +751,7 @@ export default function App() {
                                                 <p className="text-base font-semibold text-white">
                                                     {weatherData ? `${Math.round(weatherData.temperature)}°C` : '--°C'}
                                                 </p>
-                                                <p className="text-xs text-white/75">{weatherMeta?.label || '天气加载中'}</p>
+                                                <p className="text-xs text-white/75">{isWeatherLoading ? '天气刷新中' : (weatherMeta?.label || '天气加载中')}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -641,12 +763,69 @@ export default function App() {
                                         <span className="rounded-full bg-white/10 px-2.5 py-1">
                                             风速：{weatherData ? `${Math.round(weatherData.windSpeed)} km/h` : '--'}
                                         </span>
+                                        <span className="rounded-full bg-cyan-500/20 px-2.5 py-1 text-cyan-100">
+                                            来源：{weatherSourceText}
+                                        </span>
                                         {weatherData?.fallbackLocation && (
                                             <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-amber-100">
-                                                未授权定位，已切换默认城市
+                                                定位不可用，已切换默认城市
                                             </span>
                                         )}
                                     </div>
+
+                                    <div className="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                        <div className="relative flex-1">
+                                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+                                            <input
+                                                value={manualCityInput}
+                                                onChange={(e) => setManualCityInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const value = manualCityInput.trim();
+                                                        if (value) {
+                                                            setManualCityQuery(value);
+                                                        }
+                                                    }
+                                                }}
+                                                placeholder="输入城市名（如：井冈山、吉安、上海）"
+                                                className="w-full rounded-xl border border-white/15 bg-white/10 py-2 pl-9 pr-3 text-sm text-white placeholder:text-white/45"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const value = manualCityInput.trim();
+                                                    if (value) {
+                                                        setManualCityQuery(value);
+                                                    }
+                                                }}
+                                                className="rounded-xl bg-white/12 px-3 py-2 text-xs text-white hover:bg-white/20"
+                                            >
+                                                查询城市
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setWeatherRefreshToken((prev) => prev + 1)}
+                                                className="inline-flex items-center gap-1 rounded-xl bg-cyan-500/25 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/35"
+                                            >
+                                                <LocateFixed className="h-3.5 w-3.5" />
+                                                重新定位
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setWeatherRefreshToken((prev) => prev + 1)}
+                                                className="inline-flex items-center gap-1 rounded-xl bg-indigo-500/25 px-3 py-2 text-xs text-indigo-100 hover:bg-indigo-500/35"
+                                            >
+                                                <RefreshCw className="h-3.5 w-3.5" />
+                                                刷新
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {weatherError && (
+                                        <p className="relative mt-2 text-xs text-amber-200">{weatherError}</p>
+                                    )}
 
                                     {hourlyTrend.length > 0 && (
                                         <div className="relative mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-3">
@@ -761,6 +940,26 @@ export default function App() {
                                         transition={{ delay: 1 }}
                                         className="flex flex-col gap-4 pt-6"
                                     >
+                                        <motion.div
+                                            className="rounded-2xl border border-cyan-300/30 bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-indigo-500/15 p-4"
+                                            initial={{ opacity: 0, y: 12 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 1.02 }}
+                                        >
+                                            <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/85">Spatial Lab</p>
+                                            <p className="mt-1 text-sm text-white font-medium">空间分析实验室（GIS + WebGL）</p>
+                                            <p className="mt-1 text-xs text-white/75 leading-relaxed">
+                                                查看我在 GeoJSON/GML/Shapefile 解析、Turf.js 空间分析、MapLibre 地图可视化与 Three.js 3D 面挤出方面的实战能力。
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={goGeoLab}
+                                                className="mt-3 inline-flex items-center rounded-xl bg-cyan-500/25 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-500/35"
+                                            >
+                                                进入空间实验室
+                                            </button>
+                                        </motion.div>
+
                                         <MagneticButton>
                                             <motion.button
                                                 type="button"
@@ -880,6 +1079,20 @@ export default function App() {
                                         <span className="rounded-full bg-white/10 px-2 py-1">{weatherData?.city || '定位中'}</span>
                                         <span className="rounded-full bg-white/10 px-2 py-1">风速 {weatherData ? `${Math.round(weatherData.windSpeed)} km/h` : '--'}</span>
                                     </div>
+                                </div>
+
+                                <div className="rounded-xl border border-cyan-200/25 bg-gradient-to-r from-cyan-500/15 to-indigo-500/15 p-3">
+                                    <p className="text-sm text-white font-medium">空间分析实验室（GIS + WebGL）</p>
+                                    <p className="mt-1 text-xs text-white/75 leading-relaxed">
+                                        支持 GeoJSON/GML/Shapefile 导入、Turf.js 空间分析、MapLibre 可视化与 Three.js 3D 面挤出。
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={goGeoLab}
+                                        className="mt-2 rounded-lg bg-cyan-500/25 px-3 py-1.5 text-xs text-cyan-100"
+                                    >
+                                        进入空间实验室
+                                    </button>
                                 </div>
 
                                 {[
