@@ -21,7 +21,7 @@ export async function GET() {
         data: {
           id: null,
           name: "李伟",
-          title: "前端开发师",
+          title: "全栈工程师",
           bio: "本人性格踏实稳重，严谨务实、有较强抗压能力；具备良好审美与代码习惯；对互联网行业有较强学习热情，擅长团队协作开发与沟通。",
           gender: "男",
           age: "24",
@@ -29,7 +29,7 @@ export async function GET() {
           education: "本科",
           location: "江西 · 汉族",
           preferredCity: "全国",
-          preferredPosition: "前端开发师",
+          preferredPosition: "全栈工程师",
           expectedSalary: "面议",
           githubUrl: "",
           linkedinUrl: "",

@@ -8,6 +8,7 @@ import { AdminHeader } from "./admin-header";
 import { AdminBreadcrumb } from "./admin-breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth/client";
+import { RealtimeAdminNotification } from "@/components/admin/RealtimeAdminNotification";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -92,6 +93,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     <SidebarProvider>
       <AdminSidebar />
       <SidebarInset>
+        <RealtimeAdminNotification />
         <AdminHeader />
         <div className="flex flex-col">
           <div className="border-b px-6 py-4">

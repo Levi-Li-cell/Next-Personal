@@ -24,7 +24,7 @@ async function ensureProfile() {
     .values({
       id: nanoid(),
       name: "李伟",
-      title: "前端开发师",
+      title: "全栈工程师",
       photos: DEFAULT_AUTHOR_PHOTOS,
     })
     .returning();

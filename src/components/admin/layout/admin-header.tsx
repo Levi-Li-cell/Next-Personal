@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, User, LogOut, Settings } from "lucide-react";
+import { Bell, Search, User, LogOut, Settings, Home } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +19,29 @@ import { useState, useEffect } from "react";
 export function AdminHeader() {
   const router = useRouter();
   const [user, setUser] = useState<{ name?: string; email?: string; image?: string } | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
       setUser(JSON.parse(userStr));
     }
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch("/api/admin/notifications?unreadOnly=true&limit=1&page=1");
+        const result = await response.json();
+        if (result.success) {
+          setUnreadCount(result.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error("Fetch unread notifications failed:", error);
+      }
+    };
+
+    fetchUnreadCount();
+    const timer = window.setInterval(fetchUnreadCount, 30000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const handleLogout = async () => {
@@ -55,11 +72,28 @@ export function AdminHeader() {
 
       <div className="flex items-center gap-4">
         {/* 通知 */}
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          onClick={() => router.push("/admin/notifications")}
+        >
           <Bell className="h-4 w-4" />
-          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
-            3
-          </span>
+          {unreadCount > 0 ? (
+            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          ) : null}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="hidden md:inline-flex"
+          onClick={() => router.push("/")}
+        >
+          <Home className="h-4 w-4 mr-1" />
+          返回前台
         </Button>
 
         {/* 用户菜单 */}

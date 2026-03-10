@@ -21,6 +21,8 @@ export default function ProjectCreatePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
+          demoUrl: data.demoUrl?.trim() ? data.demoUrl.trim() : null,
+          githubUrl: data.githubUrl?.trim() ? data.githubUrl.trim() : null,
           techStack: data.techStack ? data.techStack.split(",").map((t) => t.trim()) : [],
         }),
       });

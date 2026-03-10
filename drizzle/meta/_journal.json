@@ -15,6 +15,13 @@
       "when": 1772613471870,
       "tag": "0001_curly_blockbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772636965755,
+      "tag": "0002_organic_thing",
+      "breakpoints": true
     }
   ]
 }

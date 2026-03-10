@@ -100,18 +100,19 @@ export default function ProjectsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all"
+                className="group bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all overflow-hidden"
                 whileHover={{ y: -5 }}
               >
                 {project.coverImage && (
-                  <div className="mb-4 rounded-lg overflow-hidden border border-white/10">
+                  <div className="overflow-hidden border-b border-white/10">
                     <img
                       src={project.coverImage}
                       alt={project.title}
-                      className="w-full h-40 object-cover"
+                      className="w-full h-40 object-cover object-top"
                     />
                   </div>
                 )}
+                <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`flex items-center gap-4 ${!project.coverImage ? 'w-full' : ''}`}>
                     {!project.coverImage && (
@@ -156,6 +157,7 @@ export default function ProjectsPage() {
                       {tech}
                     </span>
                   ))}
+                </div>
                 </div>
               </motion.div>
             </Link>

@@ -98,7 +98,10 @@ export default function UsersPage() {
         fetch(`/api/admin/users/${id}`, { method: "DELETE" })
       );
 
-      await Promise.all(deletePromises);
+      const results = await Promise.all(deletePromises);
+      if (results.some((res) => !res.ok)) {
+        throw new Error("部分删除失败");
+      }
       toast.success(`已删除 ${selectedRows.size} 个用户`);
       setSelectedRows(new Set());
       fetchUsers();
@@ -111,6 +114,11 @@ export default function UsersPage() {
   };
 
   const handleExport = () => {
+    if (users.length === 0) {
+      toast.error("暂无可导出数据");
+      return;
+    }
+
     const data = users.map((user) => ({
       用户名: user.name,
       邮箱: user.email,
@@ -167,7 +175,7 @@ export default function UsersPage() {
             options: [
               { label: "全部角色", value: "all" },
               { label: "管理员", value: "admin" },
-              { label: "成员", value: "member" },
+              { label: "普通用户", value: "user" },
             ],
             onChange: (value) => {
               setRoleFilter(value);
@@ -195,13 +203,7 @@ export default function UsersPage() {
             onClick: handleExport,
           },
         ]}
-        primaryActions={[
-          {
-            label: "新增用户",
-            icon: ToolbarIcons.Plus,
-            onClick: () => router.push("/admin/users/create"),
-          },
-        ]}
+        primaryActions={[]}
       />
 
       {/* 数据表格 */}

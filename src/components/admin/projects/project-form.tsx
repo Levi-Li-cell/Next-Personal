@@ -24,28 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProjectType } from "@/db/schema/project";
-import { Editor } from "@tinymce/tinymce-react";
-import "tinymce/tinymce";
-import "tinymce/icons/default";
-import "tinymce/themes/silver";
-import "tinymce/models/dom";
-import "tinymce/plugins/advlist";
-import "tinymce/plugins/autolink";
-import "tinymce/plugins/lists";
-import "tinymce/plugins/link";
-import "tinymce/plugins/image";
-import "tinymce/plugins/charmap";
-import "tinymce/plugins/preview";
-import "tinymce/plugins/anchor";
-import "tinymce/plugins/searchreplace";
-import "tinymce/plugins/visualblocks";
-import "tinymce/plugins/code";
-import "tinymce/plugins/fullscreen";
-import "tinymce/plugins/insertdatetime";
-import "tinymce/plugins/media";
-import "tinymce/plugins/table";
-import "tinymce/plugins/help";
-import "tinymce/plugins/wordcount";
+import { RichEditor } from "@/components/admin/common/rich-editor";
 
 const projectFormSchema = z.object({
   title: z.string().min(1, "请输入项目名称"),
@@ -146,62 +125,11 @@ export function ProjectForm({ project, onSubmit, isLoading }: ProjectFormProps) 
               </div>
               <FormControl>
                 {editorTab === "visual" ? (
-                  <div className="border rounded-md overflow-hidden">
-                    <Editor
-                      licenseKey="gpl"
-                      value={field.value || ""}
-                      onEditorChange={(content) => field.onChange(content)}
-                      init={{
-                        height: 460,
-                        menubar: false,
-                        plugins: [
-                          "advlist",
-                          "autolink",
-                          "lists",
-                          "link",
-                          "image",
-                          "charmap",
-                          "preview",
-                          "anchor",
-                          "searchreplace",
-                          "visualblocks",
-                          "code",
-                          "fullscreen",
-                          "insertdatetime",
-                          "media",
-                          "table",
-                          "help",
-                          "wordcount",
-                        ],
-                        toolbar:
-                          "undo redo | blocks | bold italic underline strikethrough | " +
-                          "h1 h2 h3 | alignleft aligncenter alignright alignjustify | " +
-                          "bullist numlist outdent indent | link image media | " +
-                          "blockquote table | removeformat | code fullscreen preview",
-                        images_upload_handler: async (blobInfo) => {
-                          const file = blobInfo.blob();
-                          const uploadFile = new File([file], blobInfo.filename(), {
-                            type: file.type,
-                          });
-                          const uploadFormData = new FormData();
-                          uploadFormData.append("file", uploadFile);
-                          const response = await fetch(
-                            `/api/upload?filename=${encodeURIComponent(uploadFile.name)}`,
-                            {
-                              method: "POST",
-                              body: uploadFormData,
-                            }
-                          );
-                          const result = await response.json();
-                          if (!result.url) {
-                            throw new Error(result.error || "图片上传失败");
-                          }
-                          return result.url as string;
-                        },
-                        promotion: false,
-                      }}
-                    />
-                  </div>
+                  <RichEditor
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    placeholder="请输入项目详细介绍..."
+                  />
                 ) : (
                   <Textarea
                     placeholder="项目的详细介绍（支持 Markdown）"
@@ -254,7 +182,7 @@ export function ProjectForm({ project, onSubmit, isLoading }: ProjectFormProps) 
             name="demoUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>演示链接</FormLabel>
+                <FormLabel>演示链接（可选）</FormLabel>
                 <FormControl>
                   <Input placeholder="https://demo.example.com" {...field} />
                 </FormControl>
@@ -268,7 +196,7 @@ export function ProjectForm({ project, onSubmit, isLoading }: ProjectFormProps) 
             name="githubUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>GitHub 链接</FormLabel>
+                <FormLabel>GitHub 链接（可选）</FormLabel>
                 <FormControl>
                   <Input placeholder="https://github.com/user/repo" {...field} />
                 </FormControl>

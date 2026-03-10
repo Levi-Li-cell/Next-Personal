@@ -9,11 +9,38 @@ const honors = [
   { title: 'HarmonyOS应用开发高级认证', icon: Star, highlight: true },
 ];
 
-export default function HonorGallery() {
+interface HonorItem {
+  title: string;
+  icon?: typeof Award;
+  highlight?: boolean;
+}
+
+interface HonorGalleryProps {
+  honorsData?: HonorItem[];
+  selfEvaluation?: string[];
+}
+
+export default function HonorGallery({ honorsData, selfEvaluation }: HonorGalleryProps) {
+  const displayHonors = honorsData && honorsData.length > 0
+    ? honorsData.map((item, index) => ({
+      title: item.title,
+      icon: item.icon || (index % 2 === 0 ? Trophy : Award),
+      highlight: item.highlight ?? index < 3,
+    }))
+    : honors;
+  const evaluationText = selfEvaluation && selfEvaluation.length > 0
+    ? selfEvaluation
+    : [
+      '本人性格踏实稳重，严谨务实、有较强的抗压能力',
+      '设计上具备良好的审美能力，有良好的代码编程习惯',
+      '注重代码质量和用户体验，善于从产品角度思考技术实现',
+      '对前端技术有持续学习的热情，每周保持阅读技术博客和参与开源项目的习惯',
+    ];
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {honors.map((honor, index) => (
+        {displayHonors.map((honor, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, scale: 0.8, rotateY: -180 }}
@@ -121,12 +148,7 @@ export default function HonorGallery() {
         </h3>
 
         <div className="grid md:grid-cols-2 gap-4">
-          {[
-            '本人性格踏实稳重，严谨务实、有较强的抗压能力',
-            '设计上具备良好的审美能力，有良好的代码编程习惯',
-            '注重代码质量和用户体验，善于从产品角度思考技术实现',
-            '对前端技术有持续学习的热情，每周保持阅读技术博客和参与开源项目的习惯',
-          ].map((text, index) => (
+          {evaluationText.map((text, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -20 }}

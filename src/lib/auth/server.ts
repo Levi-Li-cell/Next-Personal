@@ -4,8 +4,14 @@ import { username } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { restrictedUsernames } from "./usernames";
 
+const normalizeBaseUrl = (value?: string) => (value || "").trim().replace(/\/+$/, "");
+
+const authBaseURL =
+  normalizeBaseUrl(process.env.NEXT_PUBLIC_AUTH_URL) ||
+  normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
+
 export const auth = betterAuth({
-  baseURL: process.env.NEXT_PUBLIC_BASE_URL,
+  baseURL: authBaseURL,
   database: drizzleAdapter(db, {
     provider: "pg",
   }),

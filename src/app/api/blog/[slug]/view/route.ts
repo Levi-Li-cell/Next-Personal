@@ -26,6 +26,6 @@ export async function POST(
     return NextResponse.json({ success: true, viewCount: (blogPost.viewCount || 0) + 1 });
   } catch (error) {
     console.error("增加阅读量失败:", error);
-    return NextResponse.json({ error: "增加阅读量失败" }, { status: 500 });
+    return NextResponse.json({ success: true, viewCount: 0, degraded: true });
   }
 }

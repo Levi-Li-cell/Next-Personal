@@ -57,8 +57,24 @@ const experiences = [
   },
 ];
 
-export default function ExperienceTimeline() {
+interface ExperienceItem {
+  period: string;
+  company: string;
+  position: string;
+  project: string;
+  techStack: string[];
+  description: string;
+  responsibilities: string[];
+  color: string;
+}
+
+interface ExperienceTimelineProps {
+  experiencesData?: ExperienceItem[];
+}
+
+export default function ExperienceTimeline({ experiencesData }: ExperienceTimelineProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
+  const displayExperiences = experiencesData && experiencesData.length > 0 ? experiencesData : experiences;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -67,7 +83,7 @@ export default function ExperienceTimeline() {
         <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-purple-500 via-pink-500 to-cyan-500"></div>
 
         <div className="space-y-8">
-          {experiences.map((exp, index) => (
+          {displayExperiences.map((exp, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -50 }}

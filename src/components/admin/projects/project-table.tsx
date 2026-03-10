@@ -2,7 +2,7 @@
 
 import { ProjectType } from "@/db/schema/project";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, ExternalLink, Send } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +14,45 @@ import { formatDate, StatusBadge, Column } from "../data-table";
 interface ProjectTableProps {
   onEdit: (project: ProjectType) => void;
   onDelete: (project: ProjectType) => void;
+  onPublish?: (project: ProjectType) => void;
 }
 
-export function getProjectColumns({ onEdit, onDelete }: ProjectTableProps): Column<ProjectType>[] {
+export function getProjectColumns({ onEdit, onDelete, onPublish }: ProjectTableProps): Column<ProjectType>[] {
   return [
+    {
+      key: "coverImage",
+      header: "封面",
+      cell: (project: ProjectType) => (
+        <div className="space-y-2">
+          {project.coverImage ? (
+            <img
+              src={project.coverImage}
+              alt={project.title}
+              className="h-12 w-20 rounded-md object-cover border"
+            />
+          ) : (
+            <div className="h-12 w-20 rounded-md border bg-muted/40 text-xs text-muted-foreground flex items-center justify-center">
+              无封面
+            </div>
+          )}
+          <div className="max-w-[220px] text-xs text-muted-foreground break-all">
+            {project.coverImage ? (
+              <a
+                href={project.coverImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+                title={project.coverImage}
+              >
+                {project.coverImage}
+              </a>
+            ) : (
+              "-"
+            )}
+          </div>
+        </div>
+      ),
+    },
     {
       key: "title",
       header: "项目名称",
@@ -104,6 +139,12 @@ export function getProjectColumns({ onEdit, onDelete }: ProjectTableProps): Colu
               <Pencil className="mr-2 h-4 w-4" />
               编辑
             </DropdownMenuItem>
+            {onPublish && project.status !== "published" && (
+              <DropdownMenuItem onClick={() => onPublish(project)}>
+                <Send className="mr-2 h-4 w-4" />
+                发布
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => onDelete(project)}
               className="text-red-600"

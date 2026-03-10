@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCircle, X, Send, Loader2, Trash2, Bot, User, Sparkles, Mic, Square } from 'lucide-react';
 import TypewriterText from './TypewriterText';
+import { withApiBase } from '@/lib/api-url';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -13,9 +14,10 @@ interface Message {
 
 interface ChatAssistantProps {
     apiUrl?: string;
+    hidePrompt?: boolean;
 }
 
-export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000' }: ChatAssistantProps) {
+export default function ChatAssistant({ apiUrl = '', hidePrompt = false }: ChatAssistantProps) {
     const [mounted, setMounted] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
@@ -105,7 +107,7 @@ export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL
 
                 setIsLoading(true);
                 try {
-                    const response = await fetch(`${apiUrl}/api/voice/transcribe`, {
+                    const response = await fetch(withApiBase('/api/voice/transcribe', 'frontend', apiUrl), {
                         method: 'POST',
                         body: formData,
                     });
@@ -159,7 +161,7 @@ export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${apiUrl}/api/chat`, {
+            const response = await fetch(withApiBase('/api/chat', 'frontend', apiUrl), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -211,7 +213,7 @@ export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL
 
     const clearChat = async () => {
         try {
-            await fetch(`${apiUrl}/api/chat/history/${sessionId}`, {
+            await fetch(withApiBase(`/api/chat/history/${sessionId}`, 'frontend', apiUrl), {
                 method: 'DELETE'
             });
         } catch (error) {
@@ -391,7 +393,7 @@ export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL
                 <motion.div
                     style={{
                         position: 'fixed',
-                        bottom: isMobile ? '1.5rem' : '2rem',
+                        bottom: isMobile ? '5rem' : '2rem',
                         right: isMobile ? '1.5rem' : '2rem',
                         zIndex: 9999,
                         display: 'flex',
@@ -402,7 +404,7 @@ export default function ChatAssistant({ apiUrl = process.env.NEXT_PUBLIC_API_URL
                 >
                     {/* 悬浮提示标签 */}
                     <AnimatePresence>
-                        {!isOpen && (
+                        {!isOpen && !hidePrompt && (
                             <motion.div
                                 initial={{ opacity: 0, x: 20, scale: 0.8 }}
                                 animate={{ opacity: 1, x: 0, scale: 1 }}

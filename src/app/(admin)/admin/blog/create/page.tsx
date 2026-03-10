@@ -8,20 +8,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useSession } from "@/lib/auth/client";
 
 export default function BlogCreatePage() {
   const router = useRouter();
+  const { data: session, isPending } = useSession();
   const [isSaving, setIsSaving] = useState(false);
   const [authorId, setAuthorId] = useState<string>("");
 
   useEffect(() => {
-    // 从 localStorage 获取用户信息
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setAuthorId(user.id);
+    if (isPending) {
+      return;
     }
-  }, []);
+
+    if (session?.user?.id) {
+      setAuthorId(session.user.id);
+    }
+  }, [session, isPending]);
 
   const handleSubmit = async (data: BlogFormValues) => {
     if (!authorId) {

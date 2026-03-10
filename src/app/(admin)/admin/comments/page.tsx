@@ -123,7 +123,10 @@ export default function CommentsManagePage() {
         })
       );
 
-      await Promise.all(updatePromises);
+      const results = await Promise.all(updatePromises);
+      if (results.some((res) => !res.ok)) {
+        throw new Error("部分更新失败");
+      }
       toast.success(`已批准 ${selectedRows.size} 条评论`);
       setSelectedRows(new Set());
       fetchComments();
@@ -145,7 +148,10 @@ export default function CommentsManagePage() {
         })
       );
 
-      await Promise.all(updatePromises);
+      const results = await Promise.all(updatePromises);
+      if (results.some((res) => !res.ok)) {
+        throw new Error("部分更新失败");
+      }
       toast.success(`已拒绝 ${selectedRows.size} 条评论`);
       setSelectedRows(new Set());
       fetchComments();
@@ -164,7 +170,10 @@ export default function CommentsManagePage() {
         fetch(`/api/admin/comments/${id}`, { method: "DELETE" })
       );
 
-      await Promise.all(deletePromises);
+      const results = await Promise.all(deletePromises);
+      if (results.some((res) => !res.ok)) {
+        throw new Error("部分删除失败");
+      }
       toast.success(`已删除 ${selectedRows.size} 条评论`);
       setSelectedRows(new Set());
       fetchComments();

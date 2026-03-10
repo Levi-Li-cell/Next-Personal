@@ -15,9 +15,24 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string;
-  type: "blog" | "project" | "user";
+  type: "blog" | "project";
   title: string;
   time: string;
+}
+
+function formatRelativeTime(input: string | Date | null | undefined) {
+  if (!input) return "刚刚";
+  const time = new Date(input).getTime();
+  const now = Date.now();
+  const diff = Math.max(0, now - time);
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diff < minute) return "刚刚";
+  if (diff < hour) return `${Math.floor(diff / minute)} 分钟前`;
+  if (diff < day) return `${Math.floor(diff / hour)} 小时前`;
+  return `${Math.floor(diff / day)} 天前`;
 }
 
 export default function AdminDashboard() {
@@ -36,8 +51,8 @@ export default function AdminDashboard() {
         // 获取统计数据
         const [usersRes, blogsRes, projectsRes] = await Promise.all([
           fetch("/api/admin/users?limit=1"),
-          fetch("/api/blog?limit=1&status=all"),
-          fetch("/api/projects?limit=1"),
+          fetch("/api/admin/blog?limit=5&status=all"),
+          fetch("/api/admin/projects?limit=5&status=all"),
         ]);
 
         const usersData = await usersRes.json();
@@ -48,15 +63,28 @@ export default function AdminDashboard() {
           users: usersData.pagination?.total || 0,
           blogs: blogsData.pagination?.total || 0,
           projects: projectsData.pagination?.total || 0,
-          views: 0, // TODO: 添加访问量统计
+          views:
+            (blogsData.data || []).reduce((sum: number, item: { viewCount?: number }) => sum + (item.viewCount || 0), 0),
         });
 
-        // 模拟最近活动
-        setRecentActivities([
-          { id: "1", type: "blog", title: "新文章发布", time: "5分钟前" },
-          { id: "2", type: "user", title: "新用户注册", time: "10分钟前" },
-          { id: "3", type: "project", title: "项目更新", time: "1小时前" },
-        ]);
+        const blogActivities = (blogsData.data || []).map(
+          (item: { id: string; title: string; createdAt?: string; status?: string }) => ({
+            id: `blog-${item.id}`,
+            type: "blog" as const,
+            title: `${item.status === "published" ? "发布" : "更新"}文章：${item.title}`,
+            time: formatRelativeTime(item.createdAt),
+          })
+        );
+        const projectActivities = (projectsData.data || []).map(
+          (item: { id: string; title: string; createdAt?: string; status?: string }) => ({
+            id: `project-${item.id}`,
+            type: "project" as const,
+            title: `${item.status === "published" ? "发布" : "更新"}项目：${item.title}`,
+            time: formatRelativeTime(item.createdAt),
+          })
+        );
+
+        setRecentActivities([...blogActivities, ...projectActivities].slice(0, 6));
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -143,9 +171,6 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-2">
                     {activity.type === "blog" && (
                       <FileText className="h-4 w-4 text-blue-500" />
-                    )}
-                    {activity.type === "user" && (
-                      <Users className="h-4 w-4 text-green-500" />
                     )}
                     {activity.type === "project" && (
                       <FolderKanban className="h-4 w-4 text-purple-500" />

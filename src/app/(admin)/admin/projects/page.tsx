@@ -26,6 +26,11 @@ export default function ProjectsManagePage() {
     project: ProjectType | null;
   }>({ open: false, project: null });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [publishDialog, setPublishDialog] = useState<{
+    open: boolean;
+    project: ProjectType | null;
+  }>({ open: false, project: null });
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
@@ -64,6 +69,36 @@ export default function ProjectsManagePage() {
     router.push(`/admin/projects/${project.id}`);
   };
 
+  const handlePublish = async () => {
+    if (!publishDialog.project) return;
+
+    setIsPublishing(true);
+    try {
+      const response = await fetch(`/api/projects/${publishDialog.project.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...publishDialog.project,
+          status: "published",
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success("项目已发布");
+        fetchProjects();
+      } else {
+        toast.error(result.error || "发布失败");
+      }
+    } catch (error) {
+      console.error("Failed to publish project:", error);
+      toast.error("发布失败");
+    } finally {
+      setIsPublishing(false);
+      setPublishDialog({ open: false, project: null });
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteDialog.project) return;
 
@@ -98,7 +133,10 @@ export default function ProjectsManagePage() {
         fetch(`/api/projects/${id}`, { method: "DELETE" })
       );
 
-      await Promise.all(deletePromises);
+      const results = await Promise.all(deletePromises);
+      if (results.some((res) => !res.ok)) {
+        throw new Error("部分删除失败");
+      }
       toast.success(`已删除 ${selectedRows.size} 个项目`);
       setSelectedRows(new Set());
       fetchProjects();
@@ -111,6 +149,11 @@ export default function ProjectsManagePage() {
   };
 
   const handleExport = () => {
+    if (projects.length === 0) {
+      toast.error("暂无可导出数据");
+      return;
+    }
+
     const data = projects.map((project) => ({
       项目名称: project.title,
       描述: project.description,
@@ -145,6 +188,7 @@ export default function ProjectsManagePage() {
     ...getProjectColumns({
       onEdit: handleEdit,
       onDelete: (project) => setDeleteDialog({ open: true, project }),
+      onPublish: (project) => setPublishDialog({ open: true, project }),
     }),
   ];
 
@@ -231,6 +275,16 @@ export default function ProjectsManagePage() {
         onConfirm={handleDelete}
         isLoading={isDeleting}
         variant="destructive"
+      />
+
+      <ConfirmDialog
+        open={publishDialog.open}
+        onOpenChange={(open) => setPublishDialog({ open, project: publishDialog.project })}
+        title="确认发布"
+        description={`确定要发布项目 "${publishDialog.project?.title}" 吗？发布后前台可见。`}
+        confirmLabel="发布"
+        onConfirm={handlePublish}
+        isLoading={isPublishing}
       />
     </div>
   );

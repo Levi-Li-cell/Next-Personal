@@ -2,7 +2,7 @@
 
 import { BlogType } from "@/db/schema/blog";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Pencil, Trash2, Eye, Send } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,10 +15,45 @@ interface BlogTableProps {
   onEdit: (blog: BlogType) => void;
   onDelete: (blog: BlogType) => void;
   onView?: (blog: BlogType) => void;
+  onPublish?: (blog: BlogType) => void;
 }
 
-export function getBlogColumns({ onEdit, onDelete, onView }: BlogTableProps): Column<BlogType>[] {
+export function getBlogColumns({ onEdit, onDelete, onView, onPublish }: BlogTableProps): Column<BlogType>[] {
   return [
+    {
+      key: "coverImage",
+      header: "封面",
+      cell: (blog: BlogType) => (
+        <div className="space-y-2">
+          {blog.coverImage ? (
+            <img
+              src={blog.coverImage}
+              alt={blog.title}
+              className="h-12 w-20 rounded-md object-cover border"
+            />
+          ) : (
+            <div className="h-12 w-20 rounded-md border bg-muted/40 text-xs text-muted-foreground flex items-center justify-center">
+              无封面
+            </div>
+          )}
+          <div className="max-w-[220px] text-xs text-muted-foreground break-all">
+            {blog.coverImage ? (
+              <a
+                href={blog.coverImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+                title={blog.coverImage}
+              >
+                {blog.coverImage}
+              </a>
+            ) : (
+              "-"
+            )}
+          </div>
+        </div>
+      ),
+    },
     {
       key: "title",
       header: "标题",
@@ -84,6 +119,12 @@ export function getBlogColumns({ onEdit, onDelete, onView }: BlogTableProps): Co
               <Pencil className="mr-2 h-4 w-4" />
               编辑
             </DropdownMenuItem>
+            {onPublish && blog.status !== "published" && (
+              <DropdownMenuItem onClick={() => onPublish(blog)}>
+                <Send className="mr-2 h-4 w-4" />
+                发布
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => onDelete(blog)}
               className="text-red-600"

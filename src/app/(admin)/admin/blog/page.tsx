@@ -26,6 +26,11 @@ export default function BlogManagePage() {
     blog: BlogType | null;
   }>({ open: false, blog: null });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [publishDialog, setPublishDialog] = useState<{
+    open: boolean;
+    blog: BlogType | null;
+  }>({ open: false, blog: null });
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const fetchBlogs = useCallback(async () => {
     setIsLoading(true);
@@ -64,6 +69,36 @@ export default function BlogManagePage() {
     router.push(`/admin/blog/${blog.id}`);
   };
 
+  const handlePublish = async () => {
+    if (!publishDialog.blog) return;
+
+    setIsPublishing(true);
+    try {
+      const response = await fetch(`/api/blog/${publishDialog.blog.slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...publishDialog.blog,
+          status: "published",
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success("文章已发布");
+        fetchBlogs();
+      } else {
+        toast.error(result.error || "发布失败");
+      }
+    } catch (error) {
+      console.error("Failed to publish blog:", error);
+      toast.error("发布失败");
+    } finally {
+      setIsPublishing(false);
+      setPublishDialog({ open: false, blog: null });
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteDialog.blog) return;
 
@@ -99,7 +134,10 @@ export default function BlogManagePage() {
         fetch(`/api/blog/${blog.slug}`, { method: "DELETE" })
       );
 
-      await Promise.all(deletePromises);
+      const results = await Promise.all(deletePromises);
+      if (results.some((res) => !res.ok)) {
+        throw new Error("部分删除失败");
+      }
       toast.success(`已删除 ${selectedRows.size} 篇文章`);
       setSelectedRows(new Set());
       fetchBlogs();
@@ -115,10 +153,23 @@ export default function BlogManagePage() {
     if (selectedRows.size === 0) return;
 
     try {
-      // 这里可以调用批量发布的 API
-      toast.success(`已发布 ${selectedRows.size} 篇文章`);
-      setSelectedRows(new Set());
-      fetchBlogs();
+        const selectedBlogs = blogs.filter((b) => selectedRows.has(b.id));
+        const publishPromises = selectedBlogs.map((blog) =>
+          fetch(`/api/blog/${blog.slug}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...blog, status: "published" }),
+          })
+        );
+
+        const results = await Promise.all(publishPromises);
+        if (results.some((res) => !res.ok)) {
+          throw new Error("部分发布失败");
+        }
+
+        toast.success(`已发布 ${selectedRows.size} 篇文章`);
+        setSelectedRows(new Set());
+        fetchBlogs();
     } catch (error) {
       console.error("Failed to batch publish blogs:", error);
       toast.error("批量发布失败");
@@ -126,6 +177,11 @@ export default function BlogManagePage() {
   };
 
   const handleExport = () => {
+    if (blogs.length === 0) {
+      toast.error("暂无可导出数据");
+      return;
+    }
+
     const data = blogs.map((blog) => ({
       标题: blog.title,
       分类: blog.category,
@@ -160,6 +216,7 @@ export default function BlogManagePage() {
       onEdit: handleEdit,
       onDelete: (blog) => setDeleteDialog({ open: true, blog }),
       onView: (blog) => window.open(`/blog/${blog.slug}`, "_blank"),
+      onPublish: (blog) => setPublishDialog({ open: true, blog }),
     }),
   ];
 
@@ -251,6 +308,16 @@ export default function BlogManagePage() {
         onConfirm={handleDelete}
         isLoading={isDeleting}
         variant="destructive"
+      />
+
+      <ConfirmDialog
+        open={publishDialog.open}
+        onOpenChange={(open) => setPublishDialog({ open, blog: publishDialog.blog })}
+        title="确认发布"
+        description={`确定要发布文章 "${publishDialog.blog?.title}" 吗？发布后前台可见。`}
+        confirmLabel="发布"
+        onConfirm={handlePublish}
+        isLoading={isPublishing}
       />
     </div>
   );

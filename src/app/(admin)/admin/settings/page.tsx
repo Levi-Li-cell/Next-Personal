@@ -89,6 +89,16 @@ export default function SettingsPage() {
               </div>
               <Button variant="outline">修改</Button>
             </div>
+            <Separator className="my-4" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">通知邮箱配置</p>
+                <p className="text-sm text-muted-foreground">为每个管理员设置独立通知邮箱</p>
+              </div>
+              <Button variant="outline" asChild>
+                <Link href="/admin/settings/notify">配置</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

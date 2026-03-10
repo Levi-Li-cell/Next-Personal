@@ -230,6 +230,11 @@ export default function BlogPage() {
             </div>
           </div>
 
+          <div className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white/60 text-xs">
+            <Info className="w-4 h-4 text-purple-400 mt-0.5" />
+            <p>提示：搜索会匹配标题与摘要；点击分类可筛选，再次点击取消；切换“每页显示”会回到第一页。</p>
+          </div>
+
           {/* 分类筛选 */}
           {categories.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -282,18 +287,19 @@ export default function BlogPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer"
+                className="group bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer overflow-hidden"
                 whileHover={{ y: -5 }}
               >
                 {post.coverImage && (
-                  <div className="mb-4 rounded-lg overflow-hidden border border-white/10">
+                  <div className="overflow-hidden border-b border-white/10">
                     <img
                       src={post.coverImage}
                       alt={post.title}
-                      className="w-full h-40 object-cover"
+                      className="w-full h-40 object-cover object-top"
                     />
                   </div>
                 )}
+                <div className="p-6">
                 <div className="flex items-center gap-2 text-purple-400 text-sm mb-3">
                   <BookOpen className="w-4 h-4" />
                   <span>{post.category}</span>
@@ -306,6 +312,7 @@ export default function BlogPage() {
                     <span>{new Date(post.createdAt).toLocaleDateString('zh-CN')}</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
                 </div>
               </motion.article>
             </Link>

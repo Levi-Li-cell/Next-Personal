@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "@/lib/auth/client";
 
 interface UserProfile {
   id: string;
@@ -19,15 +20,25 @@ interface UserProfile {
 }
 
 export default function ProfileSettingsPage() {
+  const { data: session, isPending } = useSession();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      setUser(JSON.parse(userStr));
+    if (isPending) {
+      return;
     }
-  }, []);
+
+    if (session?.user) {
+      setUser({
+        id: session.user.id,
+        name: session.user.name || "",
+        username: session.user.username || "",
+        email: session.user.email || "",
+        image: session.user.image || "",
+      });
+    }
+  }, [session, isPending]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,9 +61,7 @@ export default function ProfileSettingsPage() {
 
       const result = await response.json();
       if (result.success) {
-        // 更新 localStorage
         const updatedUser = { ...user, ...data };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
         setUser(updatedUser as UserProfile);
         toast.success("个人资料已更新");
       } else {

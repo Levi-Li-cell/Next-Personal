@@ -14,7 +14,25 @@ const courses = [
   '神经网络和深度学习'
 ];
 
-export default function EducationSection() {
+interface EducationData {
+  school: string;
+  major: string;
+  degree: string;
+  startDate: string;
+  endDate: string;
+  courses: string[];
+}
+
+interface EducationSectionProps {
+  educationData?: EducationData;
+}
+
+export default function EducationSection({ educationData }: EducationSectionProps) {
+  const school = educationData?.school || '南昌交通学院';
+  const major = educationData?.major || '智能科技';
+  const period = educationData ? `${educationData.startDate} - ${educationData.endDate}` : '2021.9 - 2025.6';
+  const displayCourses = educationData?.courses && educationData.courses.length > 0 ? educationData.courses : courses;
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -32,14 +50,14 @@ export default function EducationSection() {
           </motion.div>
 
           <div className="flex-1">
-            <h3 className="text-white text-3xl mb-2">南昌交通学院</h3>
+            <h3 className="text-white text-3xl mb-2">{school}</h3>
             <div className="flex flex-wrap gap-4 text-white/70">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>2021.9 - 2025.6</span>
+                <span>{period}</span>
               </div>
               <div className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm">
-                智能科技
+                {major}
               </div>
             </div>
           </div>
@@ -53,7 +71,7 @@ export default function EducationSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {courses.map((course, index) => (
+          {displayCourses.map((course, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}

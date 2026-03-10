@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: comments,
       pagination: {
-        page: page - 1,
+        page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),

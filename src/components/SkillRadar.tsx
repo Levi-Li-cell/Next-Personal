@@ -46,10 +46,24 @@ const skills = [
   },
 ];
 
-export default function SkillRadar() {
+interface SkillItem {
+  category: string;
+  icon: typeof Code;
+  items: string[];
+  level: number;
+  color: string;
+}
+
+interface SkillRadarProps {
+  skillsData?: SkillItem[];
+}
+
+export default function SkillRadar({ skillsData }: SkillRadarProps) {
+  const displaySkills = skillsData && skillsData.length > 0 ? skillsData : skills;
+
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-      {skills.map((skill, index) => (
+      {displaySkills.map((skill, index) => (
         <motion.div
           key={skill.category}
           initial={{ opacity: 0, y: 50, rotateX: -20 }}

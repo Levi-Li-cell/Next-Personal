@@ -3,6 +3,40 @@ import { db } from "@/db";
 import { blog } from "@/db/schema/blog";
 import { eq, desc, like, and, sql } from "drizzle-orm";
 
+const fallbackBlogs = [
+  {
+    id: "fallback-blog-1",
+    title: "欢迎访问我的技术博客",
+    slug: "welcome",
+    excerpt: "服务正在恢复中，稍后将展示完整博客内容。",
+    coverImage: null,
+    category: "公告",
+    tags: ["公告"],
+    status: "published",
+    viewCount: 0,
+    likeCount: 0,
+    createdAt: new Date(),
+    publishedAt: new Date(),
+  },
+];
+
+function toBlogListFallback(item: any) {
+  return {
+    id: item.id,
+    title: item.title,
+    slug: item.slug,
+    excerpt: item.excerpt || "",
+    coverImage: item.coverImage || null,
+    category: item.category || "未分类",
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    status: item.status || "published",
+    viewCount: Number(item.viewCount || 0),
+    likeCount: Number(item.likeCount || 0),
+    createdAt: item.createdAt || new Date(),
+    publishedAt: item.publishedAt || item.createdAt || new Date(),
+  };
+}
+
 // GET /api/blog - 获取博客列表
 export async function GET(request: NextRequest) {
   try {
@@ -71,9 +105,40 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("获取博客列表失败:", error);
-    return NextResponse.json(
-      { success: false, error: "获取博客列表失败" },
-      { status: 500 }
-    );
+
+    try {
+      const response = await fetch("https://admin.fzvtbi.cn/api/blog?page=1&limit=100&status=published", {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      if (response.ok && data?.success && Array.isArray(data.data)) {
+        const mapped = data.data.map(toBlogListFallback);
+        return NextResponse.json({
+          success: true,
+          data: mapped,
+          pagination: {
+            page: 1,
+            limit: mapped.length,
+            total: mapped.length,
+            totalPages: 1,
+          },
+          degraded: true,
+        });
+      }
+    } catch {
+      // ignore remote fallback failure
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: fallbackBlogs,
+      pagination: {
+        page: 1,
+        limit: fallbackBlogs.length,
+        total: fallbackBlogs.length,
+        totalPages: 1,
+      },
+      degraded: true,
+    });
   }
 }

@@ -66,6 +66,11 @@ export default function BlogEditPage() {
   const handleSubmit = async (data: BlogFormValues) => {
     setIsSaving(true);
     try {
+      if (!blog?.slug) {
+        toast.error("文章标识丢失，请刷新后重试");
+        return;
+      }
+
       const response = await fetch(`/api/blog/${blog?.slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

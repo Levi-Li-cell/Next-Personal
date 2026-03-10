@@ -5,6 +5,7 @@
 /.pnp
 .pnp.*
 .temp/
+/docs
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
@@ -40,6 +41,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*.local
 
 .vercel
 .env*.local

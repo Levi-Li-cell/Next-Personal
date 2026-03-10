@@ -629,7 +629,7 @@ export default function App() {
         const html = buildResumeHtml({
             profile: {
                 name: authorData.profile.name || '李伟',
-                title: authorData.profile.title || '前端开发师',
+                title: authorData.profile.title || '全栈工程师',
                 phone: authorData.profile.phone || '',
                 education: authorData.profile.education || '',
                 location: authorData.profile.location || '',
@@ -825,7 +825,7 @@ export default function App() {
                                         transition={{ duration: 2, repeat: Infinity }}
                                     />
                                     <TypeWriter
-                                        text={authorData?.profile?.title || '前端开发师'}
+                                        text={authorData?.profile?.title || '全栈工程师'}
                                         className="text-lg sm:text-2xl text-cyan-300"
                                         delay={1.5}
                                     />
@@ -984,7 +984,7 @@ export default function App() {
                                     <div className="grid grid-cols-3 gap-2">
                                         <div className="rounded-xl bg-white/[0.10] px-3 py-2">
                                             <p className="text-xs text-white/75">意向岗位</p>
-                                            <p className="mt-1 text-sm text-white">{authorData?.profile?.preferredPosition || '前端开发师'}</p>
+                                            <p className="mt-1 text-sm text-white">{authorData?.profile?.preferredPosition || '全栈工程师'}</p>
                                         </div>
                                         <div className="rounded-xl bg-white/[0.10] px-3 py-2">
                                             <p className="text-xs text-white/75">意向城市</p>
@@ -1233,7 +1233,7 @@ export default function App() {
                                     { icon: GraduationCap, label: '学历', value: authorData?.profile?.education || '本科' },
                                     { icon: MapPin, label: '户籍', value: authorData?.profile?.location || '江西 · 汉族' },
                                     { icon: Target, label: '意向城市', value: authorData?.profile?.preferredCity || '全国' },
-                                    { icon: Briefcase, label: '意向岗位', value: authorData?.profile?.preferredPosition || '前端开发师' },
+                                    { icon: Briefcase, label: '意向岗位', value: authorData?.profile?.preferredPosition || '全栈工程师' },
                                     { icon: DollarSign, label: '期望薪资', value: authorData?.profile?.expectedSalary || '面议' },
                                 ].map((item) => (
                                     <div key={item.label} className="rounded-xl bg-white/[0.10] p-3">
@@ -1341,7 +1341,7 @@ export default function App() {
                                 { icon: GraduationCap, label: '学历', value: authorData?.profile?.education || '本科' },
                                 { icon: MapPin, label: '户籍', value: authorData?.profile?.location || '江西 · 汉族' },
                                 { icon: Target, label: '意向城市', value: authorData?.profile?.preferredCity || '全国' },
-                                { icon: Briefcase, label: '意向岗位', value: authorData?.profile?.preferredPosition || '前端开发师' },
+                                { icon: Briefcase, label: '意向岗位', value: authorData?.profile?.preferredPosition || '全栈工程师' },
                                 { icon: DollarSign, label: '期望薪资', value: authorData?.profile?.expectedSalary || '面议' },
                             ].map((item, index) => (
                                 <motion.div
@@ -1609,11 +1609,11 @@ export default function App() {
                         whileInView={{ opacity: 1 }}
                         viewport={{ once: true }}
                     >
-                        © 2024 {authorData?.profile?.name || '李伟'}. All rights reserved.
+                        © 2026 李伟
                     </motion.p>
                 </div>
             </footer>
-            <ChatAssistant />
+            <ChatAssistant hidePrompt />
         </div>
     );
 }

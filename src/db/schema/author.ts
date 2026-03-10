@@ -4,7 +4,7 @@ import { pgTable, text, timestamp, json, boolean } from "drizzle-orm/pg-core";
 export const authorProfile = pgTable("author_profile", {
   id: text("id").primaryKey(),
   name: text("name").notNull().default("李伟"),
-  title: text("title").notNull().default("前端开发师"),
+  title: text("title").notNull().default("全栈工程师"),
   bio: text("bio"),
   gender: text("gender").default("男"),
   age: text("age").default("24"),
@@ -12,7 +12,7 @@ export const authorProfile = pgTable("author_profile", {
   education: text("education").default("本科"),
   location: text("location").default("江西 · 汉族"),
   preferredCity: text("preferred_city").default("全国"),
-  preferredPosition: text("preferred_position").default("前端开发师"),
+  preferredPosition: text("preferred_position").default("全栈工程师"),
   expectedSalary: text("expected_salary").default("面议"),
   githubUrl: text("github_url"),
   linkedinUrl: text("linkedin_url"),
