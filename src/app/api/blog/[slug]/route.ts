@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { blog, blogComment } from "@/db/schema/blog";
-import { eq, sql, and } from "drizzle-orm";
+import { createPublicNotification } from "@/lib/notifications/public-notify";
 import { deleteBlobUrls } from "@/lib/admin/blob";
 import { extractImageUrlsFromHtml, htmlToMarkdown } from "@/lib/admin/markdown";
-import { createPublicNotification } from "@/lib/notifications/public-notify";
 
 const fallbackBlogDetail = (slug: string) => ({
   id: "fallback-blog-1",
@@ -14,6 +14,9 @@ const fallbackBlogDetail = (slug: string) => ({
   content: "# 服务维护中\n\n当前数据库连接不可用，已自动切换为降级内容。",
   coverImage: null,
   category: "公告",
+  targetAudience: "both",
+  ctaType: "both",
+  featured: true,
   tags: ["公告"],
   status: "published",
   viewCount: 0,
@@ -23,108 +26,55 @@ const fallbackBlogDetail = (slug: string) => ({
   publishedAt: new Date(),
 });
 
-// GET /api/blog/[slug] - 获取单篇博客
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+function normalizeAudience(value: string | undefined) {
+  return value === "hr" || value === "client" ? value : "both";
+}
+
+function normalizeCta(value: string | undefined) {
+  return value === "hr" || value === "client" ? value : "both";
+}
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
-
-    const blogPost = await db
-      .select()
-      .from(blog)
-      .where(eq(blog.slug, slug))
-      .limit(1);
+    const blogPost = await db.select().from(blog).where(eq(blog.slug, slug)).limit(1);
 
     if (!blogPost[0]) {
-      return NextResponse.json(
-        { success: false, error: "博客不存在" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "博客不存在" }, { status: 404 });
     }
 
     const commentCountResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(blogComment)
-      .where(
-        and(
-          eq(blogComment.blogId, blogPost[0].id),
-          eq(blogComment.status, "approved")
-        )
-      );
-
-    const commentCount = Number(commentCountResult[0]?.count || 0);
+      .where(and(eq(blogComment.blogId, blogPost[0].id), eq(blogComment.status, "approved")));
 
     return NextResponse.json({
       success: true,
       data: {
         ...blogPost[0],
-        commentCount,
+        commentCount: Number(commentCountResult[0]?.count || 0),
       },
     });
   } catch (error) {
-    console.error("获取博客详情失败:", error);
+    console.error("Failed to fetch blog detail:", error);
     const { slug } = await params;
-
-    try {
-      const listResponse = await fetch("https://admin.fzvtbi.cn/api/blog?page=1&limit=100&status=all", {
-        cache: "no-store",
-      });
-      const listData = await listResponse.json();
-      if (listResponse.ok && listData?.success && Array.isArray(listData.data)) {
-        const matched = listData.data.find((item: any) => item.slug === slug);
-        if (matched) {
-          return NextResponse.json({
-            success: true,
-            data: {
-              ...matched,
-              commentCount: 0,
-            },
-            degraded: true,
-          });
-        }
-      }
-    } catch {
-      // ignore remote fallback failure
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: fallbackBlogDetail(slug),
-      degraded: true,
-    });
+    return NextResponse.json({ success: true, data: fallbackBlogDetail(slug), degraded: true });
   }
 }
 
-// PUT /api/blog/[slug] - 更新博客（admin使用）
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
     const body = await request.json();
 
-    const existing = await db
-      .select()
-      .from(blog)
-      .where(eq(blog.slug, slug))
-      .limit(1);
-
+    const existing = await db.select().from(blog).where(eq(blog.slug, slug)).limit(1);
     if (!existing[0]) {
-      return NextResponse.json(
-        { success: false, error: "博客不存在" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "博客不存在" }, { status: 404 });
     }
 
     const contentHtml = String(body.content || "");
     const nextContent = htmlToMarkdown(contentHtml);
-    const nextImageLinks = [
-      ...new Set([...extractImageUrlsFromHtml(contentHtml), body.coverImage].filter(Boolean)),
-    ];
-
+    const nextImageLinks = [...new Set([...extractImageUrlsFromHtml(contentHtml), body.coverImage].filter(Boolean))];
     const previousImageLinks = Array.isArray(existing[0].imageLinks) ? existing[0].imageLinks : [];
     const removedImageLinks = previousImageLinks.filter((url) => !nextImageLinks.includes(url));
     await deleteBlobUrls(removedImageLinks);
@@ -139,6 +89,9 @@ export async function PUT(
         coverImage: body.coverImage,
         imageLinks: nextImageLinks,
         category: body.category === "公告" ? "公告" : "生活",
+        targetAudience: normalizeAudience(body.targetAudience),
+        ctaType: normalizeCta(body.ctaType),
+        featured: Boolean(body.featured),
         tags: body.tags || [],
         status: body.status,
         publishedAt: body.status === "published" ? new Date() : null,
@@ -160,46 +113,25 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: current });
   } catch (error) {
-    console.error("更新博客失败:", error);
-    return NextResponse.json(
-      { success: false, error: "更新博客失败" },
-      { status: 500 }
-    );
+    console.error("Failed to update blog:", error);
+    return NextResponse.json({ success: false, error: "更新博客失败" }, { status: 500 });
   }
 }
 
-// DELETE /api/blog/[slug] - 删除博客（admin使用）
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
-
-    const existing = await db
-      .select()
-      .from(blog)
-      .where(eq(blog.slug, slug))
-      .limit(1);
-
+    const existing = await db.select().from(blog).where(eq(blog.slug, slug)).limit(1);
     if (!existing[0]) {
-      return NextResponse.json(
-        { success: false, error: "博客不存在" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "博客不存在" }, { status: 404 });
     }
 
     const imageLinks = Array.isArray(existing[0].imageLinks) ? existing[0].imageLinks : [];
     await deleteBlobUrls(imageLinks);
-
     await db.delete(blog).where(eq(blog.id, existing[0].id));
-
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("删除博客失败:", error);
-    return NextResponse.json(
-      { success: false, error: "删除博客失败" },
-      { status: 500 }
-    );
+    console.error("Failed to delete blog:", error);
+    return NextResponse.json({ success: false, error: "删除博客失败" }, { status: 500 });
   }
 }

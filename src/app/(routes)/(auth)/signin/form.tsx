@@ -108,6 +108,7 @@ export default function SignInForm() {
         await signIn.social({
           provider: "google",
           callbackURL: "/",
+          errorCallbackURL: "/signin",
         });
       } catch (error) {
         console.error("Google sign in error:", error);

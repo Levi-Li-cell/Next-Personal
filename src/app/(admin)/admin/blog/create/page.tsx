@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { BlogForm, BlogFormValues } from "@/components/admin/blog/blog-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useSession } from "@/lib/auth/client";

@@ -1,9 +1,10 @@
 "use client";
 
-import { motion } from 'motion/react';
-import { Folder, ExternalLink, Github, Loader2, ArrowRight } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { motion } from "motion/react";
+import { ArrowRight, ExternalLink, Folder, Github, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ConversionCta } from "@/components/conversion/ConversionCta";
 
 interface Project {
   id: string;
@@ -39,17 +40,18 @@ export default function ProjectsPage() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('/api/projects');
+        const response = await fetch("/api/projects");
         const data: ProjectResponse = await response.json();
-        
-        if (data.success) {
-          setProjects(data.data);
-        } else {
-          setError('获取项目列表失败');
+
+        if (!data.success) {
+          setError("获取项目列表失败");
+          return;
         }
+
+        setProjects(data.data);
       } catch (err) {
-        setError('网络错误，请稍后重试');
-        console.error('获取项目列表失败:', err);
+        console.error("Failed to fetch projects:", err);
+        setError("网络错误，请稍后重试");
       } finally {
         setLoading(false);
       }
@@ -60,110 +62,98 @@ export default function ProjectsPage() {
 
   return (
     <div className="container mx-auto px-6 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-12"
-      >
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
+        <div className="mb-6 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(243,201,106,0.12),rgba(255,255,255,0.04))] p-6">
+          <p className="text-xs uppercase tracking-[0.28em] text-[#f3c96a]">Case Proof</p>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-white/68">
+            项目页继续保留，但定位已经变成“交付能力证据库”。招聘方看复杂度和技术栈，甲方看方案与结果。
+          </p>
+        </div>
+        <h1 className="mb-4 text-4xl font-bold md:text-5xl">
+          <span className="bg-gradient-to-r from-[#f3c96a] via-[#ff8b5d] to-[#9ac6ff] bg-clip-text text-transparent">
             项目作品
           </span>
         </h1>
-        <p className="text-white/60 text-lg">我参与开发的一些项目</p>
+        <p className="text-lg text-white/60">保留项目案例与技术信息，把它们升级成真正的业务转化证据。</p>
       </motion.div>
 
       {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-10 w-10 animate-spin text-[#f3c96a]" />
           <span className="ml-3 text-white/60">加载中...</span>
         </div>
       ) : error ? (
-        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-6 text-center">
-          <p className="text-red-400">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md text-white transition-colors"
-          >
+        <div className="rounded-lg border border-red-500/30 bg-red-500/20 p-6 text-center">
+          <p className="text-red-300">{error}</p>
+          <button onClick={() => window.location.reload()} className="mt-4 rounded-md bg-[#f3c96a] px-4 py-2 text-black">
             重试
           </button>
         </div>
       ) : projects.length === 0 ? (
-        <div className="text-center py-20">
+        <div className="py-20 text-center">
           <p className="text-white/60">暂无项目</p>
         </div>
       ) : (
-        <div className="columns-1 md:columns-2 lg:columns-3 gap-6 [column-fill:_balance]">
+        <div className="columns-1 gap-6 [column-fill:_balance] md:columns-2 lg:columns-3">
           {projects.map((project, index) => (
             <Link key={project.id} href={`/projects/${project.id}`} className="mb-6 block break-inside-avoid">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="group bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all overflow-hidden"
+                transition={{ delay: index * 0.06 }}
                 whileHover={{ y: -5 }}
+                className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition-all hover:border-[#f3c96a]/40"
               >
                 {project.coverImage && (
                   <div className="overflow-hidden border-b border-white/10">
-                    <img
-                      src={project.coverImage}
-                      alt={project.title}
-                      className="w-full h-40 object-cover object-top"
-                    />
+                    <img src={project.coverImage} alt={project.title} className="h-40 w-full object-cover object-top" />
                   </div>
                 )}
                 <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`flex items-center gap-4 ${!project.coverImage ? 'w-full' : ''}`}>
-                    {!project.coverImage && (
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Folder className="w-6 h-6 text-white" />
-                      </div>
-                    )}
-                    {!project.coverImage && (
-                      <h2 className="text-xl font-semibold text-white group-hover:text-purple-300 transition-colors flex-grow">
-                        {project.title}
-                      </h2>
-                    )}
+                  <div className={`mb-4 flex items-center justify-between ${!project.coverImage ? "gap-4" : ""}`}>
+                    <div className={`flex items-center gap-4 ${!project.coverImage ? "w-full" : ""}`}>
+                      {!project.coverImage && (
+                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#f3c96a] to-[#ff8b5d]">
+                          <Folder className="h-6 w-6 text-black" />
+                        </div>
+                      )}
+                      {!project.coverImage && <h2 className="flex-grow text-xl font-semibold text-white transition-colors group-hover:text-[#f3c96a]">{project.title}</h2>}
+                    </div>
+                    <div className="flex gap-3">
+                      {project.githubUrl && (
+                        <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white" onClick={(event) => event.stopPropagation()}>
+                          <Github className="h-5 w-5" />
+                        </a>
+                      )}
+                      {project.demoUrl && (
+                        <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white" onClick={(event) => event.stopPropagation()}>
+                          <ExternalLink className="h-5 w-5" />
+                        </a>
+                      )}
+                      <ArrowRight className="h-5 w-5 text-[#f3c96a] opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
                   </div>
-                  <div className="flex gap-3">
-                    {project.githubUrl && (
-                      <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-white hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
-                        <Github className="w-5 h-5" />
-                      </a>
-                    )}
-                    {project.demoUrl && (
-                      <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="text-white hover:text-white transition-colors" onClick={(e) => e.stopPropagation()}>
-                        <ExternalLink className="w-5 h-5" />
-                      </a>
-                    )}
-                    <ArrowRight className="w-5 h-5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {project.coverImage && <h2 className="mb-3 text-xl font-semibold text-white transition-colors group-hover:text-[#f3c96a]">{project.title}</h2>}
+                  <p className="mb-4 text-sm leading-7 text-white/65">{project.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {project.techStack.map((tech) => (
+                      <span key={tech} className="rounded-full bg-[#f3c96a]/14 px-3 py-1 text-xs text-[#f3c96a]">
+                        {tech}
+                      </span>
+                    ))}
                   </div>
-                </div>
-                {project.coverImage && (
-                  <h2 className="text-xl font-semibold text-white mb-3 group-hover:text-purple-300 transition-colors">
-                    {project.title}
-                  </h2>
-                )}
-                <p className="text-white text-sm mb-4">
-                  {project.description}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {project.techStack.map((tech) => (
-                    <span
-                      key={tech}
-                      className="px-3 py-1 text-xs bg-purple-500/20 text-purple-300 rounded-full"
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
                 </div>
               </motion.div>
             </Link>
           ))}
         </div>
       )}
+
+      <ConversionCta
+        eyebrow="Projects To Pipeline"
+        title="项目看完以后，下一步应该是发起合作或招聘沟通"
+        description="案例页的职责是缩短判断时间，让感兴趣的人直接进入招聘方入口或合作入口。"
+      />
     </div>
   );
 }

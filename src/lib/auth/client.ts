@@ -9,10 +9,18 @@ const isRuntimeLocalhost =
 
 const normalizeBaseUrl = (value?: string) => (value || "").trim().replace(/\/+$/, "");
 
+const env = (name: string) => {
+  const value = process.env[name];
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
+// In the browser, default to same-origin auth endpoints.
+// Only override with NEXT_PUBLIC_AUTH_URL when you intentionally host auth on a different origin.
 const authBaseURL = isRuntimeLocalhost
   ? normalizeBaseUrl(runtimeOrigin) || "http://localhost:3000"
-  : normalizeBaseUrl(process.env.NEXT_PUBLIC_AUTH_URL) ||
-    normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL) ||
+  : normalizeBaseUrl(env("NEXT_PUBLIC_AUTH_URL")) ||
     normalizeBaseUrl(runtimeOrigin) ||
     "http://localhost:3000";
 

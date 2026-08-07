@@ -1,14 +1,16 @@
 "use client";
 
-import { motion } from 'motion/react';
-import { ArrowLeft, Calendar, BookOpen, Eye, ThumbsUp, MessageSquare } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useMemo } from 'react';
-import { useSession } from '@/lib/auth/client';
-import { toast } from 'sonner';
-import BlogComments from '@/components/BlogComments';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { motion } from "motion/react";
+import { ArrowLeft, BookOpen, Calendar, Eye, MessageSquare, ThumbsUp } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
+import { useSession } from "@/lib/auth/client";
+import BlogComments from "@/components/BlogComments";
+import { ConversionCta } from "@/components/conversion/ConversionCta";
 
 interface BlogPost {
   id: string;
@@ -18,6 +20,9 @@ interface BlogPost {
   content: string;
   coverImage: string | null;
   category: string;
+  targetAudience?: "hr" | "client" | "both";
+  ctaType?: "hr" | "client" | "both";
+  featured?: boolean;
   tags: string[];
   authorId: string;
   status: string;
@@ -63,65 +68,9 @@ export default function BlogDetailPage() {
 
   const galleryImages = useMemo(() => {
     if (!post) return [];
-
-    const markdownImages = [...post.content.matchAll(/!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map(
-      (match) => match[1]
-    );
-
+    const markdownImages = [...post.content.matchAll(/!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1]);
     return [...new Set([post.coverImage, ...markdownImages].filter((url): url is string => Boolean(url)))];
   }, [post]);
-
-  const openImageViewer = (imageUrl: string) => {
-    const index = galleryImages.findIndex((url) => url === imageUrl);
-    if (index >= 0) {
-      setActiveImageIndex(index);
-      return;
-    }
-    setActiveImageIndex(0);
-  };
-
-  const showPrevImage = () => {
-    if (activeImageIndex === null || galleryImages.length === 0) return;
-    setActiveImageIndex((activeImageIndex - 1 + galleryImages.length) % galleryImages.length);
-  };
-
-  const showNextImage = () => {
-    if (activeImageIndex === null || galleryImages.length === 0) return;
-    setActiveImageIndex((activeImageIndex + 1) % galleryImages.length);
-  };
-
-  // 处理点赞
-  const handleLike = async () => {
-    if (!session) {
-      toast.error('请先登录');
-      return;
-    }
-
-    if (isLiking) return;
-
-    setIsLiking(true);
-    try {
-      const response = await fetch(`/api/blog/${slug}/like`, {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setLiked(data.liked);
-          setLikeCount(data.likeCount);
-        }
-      } else {
-        const error = await response.json();
-        toast.error(error.error || '点赞失败');
-      }
-    } catch (error) {
-      console.error('点赞失败:', error);
-      toast.error('点赞失败');
-    } finally {
-      setIsLiking(false);
-    }
-  };
 
   useEffect(() => {
     async function fetchBlogDetail() {
@@ -131,50 +80,43 @@ export default function BlogDetailPage() {
         setLoading(true);
         setError(null);
 
-        // 获取博客详情
         const detailResponse = await fetch(`/api/blog/${slug}`);
         const detailData: BlogDetailResponse = await detailResponse.json();
 
-        if (detailData.success) {
-          setPost(detailData.data);
+        if (!detailData.success) {
+          setError("获取博客详情失败");
+          return;
+        }
 
-          // 获取相关文章
-          const relatedResponse = await fetch(`/api/blog?category=${encodeURIComponent(detailData.data.category)}&limit=3`);
-          const relatedData: RelatedPostsResponse = await relatedResponse.json();
+        setPost(detailData.data);
 
-          if (relatedData.success) {
-            // 过滤掉当前文章
-            setRelatedPosts(relatedData.data.filter(p => p.slug !== slug));
-          }
+        const relatedResponse = await fetch(`/api/blog?category=${encodeURIComponent(detailData.data.category)}&limit=3`);
+        const relatedData: RelatedPostsResponse = await relatedResponse.json();
+        if (relatedData.success) {
+          setRelatedPosts(relatedData.data.filter((item) => item.slug !== slug));
+        }
 
-          // 增加阅读量
-          try {
-            await fetch(`/api/blog/${slug}/view`, {
-              method: 'POST',
-            });
-          } catch (error) {
-            console.error('增加阅读量失败:', error);
-          }
+        try {
+          await fetch(`/api/blog/${slug}/view`, { method: "POST" });
+        } catch (viewError) {
+          console.error("Failed to track view:", viewError);
+        }
 
-          // 获取点赞状态
-          try {
-            const likeResponse = await fetch(`/api/blog/${slug}/like`);
-            if (likeResponse.ok) {
-              const likeData = await likeResponse.json();
-              if (likeData.success) {
-                setLiked(likeData.liked);
-                setLikeCount(likeData.likeCount);
-              }
+        try {
+          const likeResponse = await fetch(`/api/blog/${slug}/like`);
+          if (likeResponse.ok) {
+            const likeData = await likeResponse.json();
+            if (likeData.success) {
+              setLiked(likeData.liked);
+              setLikeCount(likeData.likeCount);
             }
-          } catch (error) {
-            console.error('获取点赞状态失败:', error);
           }
-        } else {
-          setError('获取博客详情失败');
+        } catch (likeError) {
+          console.error("Failed to fetch like state:", likeError);
         }
       } catch (err) {
-        setError('网络错误，请稍后重试');
-        console.error('获取博客详情失败:', err);
+        console.error("Failed to fetch blog detail:", err);
+        setError("网络错误，请稍后重试");
       } finally {
         setLoading(false);
       }
@@ -183,11 +125,39 @@ export default function BlogDetailPage() {
     fetchBlogDetail();
   }, [slug]);
 
+  const handleLike = async () => {
+    if (!session) {
+      toast.error("请先登录");
+      return;
+    }
+
+    if (isLiking) return;
+    setIsLiking(true);
+
+    try {
+      const response = await fetch(`/api/blog/${slug}/like`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "点赞失败");
+      setLiked(data.liked);
+      setLikeCount(data.likeCount);
+    } catch (err) {
+      console.error("Failed to like blog:", err);
+      toast.error("点赞失败");
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const openImageViewer = (imageUrl: string) => {
+    const index = galleryImages.findIndex((url) => url === imageUrl);
+    setActiveImageIndex(index >= 0 ? index : 0);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-6 py-12">
-        <div className="flex justify-center items-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-[#f3c96a]" />
           <span className="ml-3 text-white/60">加载中...</span>
         </div>
       </div>
@@ -197,12 +167,9 @@ export default function BlogDetailPage() {
   if (error || !post) {
     return (
       <div className="container mx-auto px-6 py-12">
-        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-6 text-center">
-          <p className="text-red-400">{error || '博客不存在'}</p>
-          <button 
-            onClick={() => router.push('/blog')}
-            className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md text-white transition-colors"
-          >
+        <div className="rounded-lg border border-red-500/30 bg-red-500/20 p-6 text-center">
+          <p className="text-red-300">{error || "文章不存在"}</p>
+          <button onClick={() => router.push("/blog")} className="mt-4 rounded-md bg-[#f3c96a] px-4 py-2 text-black">
             返回博客列表
           </button>
         </div>
@@ -212,75 +179,42 @@ export default function BlogDetailPage() {
 
   return (
     <div className="container mx-auto px-6 py-12">
-      {/* 返回按钮 */}
-      <motion.button
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-2 text-white/60 hover:text-white mb-8"
-        onClick={() => router.push('/blog')}
-      >
-        <ArrowLeft className="w-5 h-5" />
+      <motion.button initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-8 flex items-center gap-2 text-white/60 hover:text-white" onClick={() => router.push("/blog")}>
+        <ArrowLeft className="h-5 w-5" />
         <span>返回博客列表</span>
       </motion.button>
 
-      {/* 博客内容 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-3xl mx-auto"
-      >
-        {/* 分类和日期 */}
-        <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-white/60">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-3xl">
+        <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-white/60">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4" />
+            <BookOpen className="h-4 w-4" />
             <span>{post.category}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span>{new Date(post.createdAt).toLocaleDateString('zh-CN')}</span>
+            <Calendar className="h-4 w-4" />
+            <span>{new Date(post.createdAt).toLocaleDateString("zh-CN")}</span>
           </div>
         </div>
 
-        {/* 标题 */}
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">
-          {post.title}
-        </h1>
+        <h1 className="mb-6 text-3xl font-bold leading-tight text-white md:text-4xl">{post.title}</h1>
 
-        {/* 封面图片 */}
         {post.coverImage && (
-          <div className="mb-8 rounded-xl overflow-hidden border border-white/10">
-            <button
-              type="button"
-              className="block w-full cursor-zoom-in"
-              onClick={() => openImageViewer(post.coverImage!)}
-            >
-              <img
-                src={post.coverImage}
-                alt={post.title}
-                className="block w-full h-auto object-top"
-              />
+          <div className="mb-8 overflow-hidden rounded-xl border border-white/10">
+            <button type="button" className="block w-full cursor-zoom-in" onClick={() => openImageViewer(post.coverImage!)}>
+              <img src={post.coverImage} alt={post.title} className="block h-auto w-full object-top" />
             </button>
           </div>
         )}
 
-        {/* 内容 */}
-        <div className="prose prose-invert max-w-none mb-12 text-white prose-headings:text-white prose-p:text-white prose-strong:text-white prose-li:text-white prose-blockquote:text-white/90 prose-code:text-white prose-a:text-cyan-300">
+        <div className="prose prose-invert mb-12 max-w-none text-white prose-a:text-[#9ac6ff] prose-blockquote:text-white/85 prose-code:text-white prose-headings:text-white prose-li:text-white prose-p:text-white prose-strong:text-white">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               img: ({ src, alt }) => {
-                if (!src || typeof src !== 'string') return null;
+                if (!src || typeof src !== "string") return null;
                 return (
-                  <button
-                    type="button"
-                    className="my-4 block w-full cursor-zoom-in"
-                    onClick={() => openImageViewer(src)}
-                  >
-                    <img
-                      src={src}
-                      alt={alt || '博客图片'}
-                      className="block w-full rounded-lg border border-white/10 object-top"
-                    />
+                  <button type="button" className="my-4 block w-full cursor-zoom-in" onClick={() => openImageViewer(src)}>
+                    <img src={src} alt={alt || "博客图片"} className="block w-full rounded-lg border border-white/10 object-top" />
                   </button>
                 );
               },
@@ -290,74 +224,52 @@ export default function BlogDetailPage() {
           </ReactMarkdown>
         </div>
 
-        {/* 标签 */}
         {post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-8">
-            {post.tags.map(tag => (
-              <span
-                key={tag}
-                className="px-3 py-1 text-xs bg-purple-500/20 text-purple-300 rounded-full"
-              >
+          <div className="mb-8 flex flex-wrap gap-2">
+            {post.tags.map((tag) => (
+              <span key={tag} className="rounded-full bg-[#f3c96a]/14 px-3 py-1 text-xs text-[#f3c96a]">
                 {tag}
               </span>
             ))}
           </div>
         )}
 
-        {/* 统计信息 */}
-        <div className="flex items-center gap-6 mb-12 text-white/60">
+        <div className="mb-12 flex items-center gap-6 text-white/60">
           <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4" />
+            <Eye className="h-4 w-4" />
             <span>{post.viewCount} 阅读</span>
           </div>
+          <button onClick={handleLike} disabled={isLiking} className={`flex items-center gap-2 ${liked ? "text-[#f3c96a]" : "text-white/60 hover:text-white"}`}>
+            <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+            <span>{likeCount} 点赞</span>
+          </button>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleLike}
-              disabled={isLiking}
-              className={`flex items-center gap-2 ${liked ? 'text-red-400' : 'text-white/60 hover:text-white'}`}
-            >
-              <ThumbsUp className={`w-4 h-4 ${liked ? 'fill-current' : ''}`} />
-              <span>{likeCount} 点赞</span>
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="h-4 w-4" />
             <span>{post.commentCount} 评论</span>
           </div>
         </div>
 
-        {/* 评论区 */}
         <BlogComments slug={slug} />
       </motion.div>
 
-      {/* 相关文章 */}
       {relatedPosts.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="max-w-3xl mx-auto mt-16"
-        >
-          <h2 className="text-2xl font-bold text-white mb-6">相关文章</h2>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mx-auto mt-16 max-w-3xl">
+          <h2 className="mb-6 text-2xl font-bold text-white">相关文章</h2>
           <div className="space-y-6">
             {relatedPosts.map((relatedPost, index) => (
               <motion.div
                 key={relatedPost.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer"
+                transition={{ delay: 0.08 * index }}
+                className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-[#f3c96a]/40"
                 onClick={() => router.push(`/blog/${relatedPost.slug}`)}
               >
-                <h3 className="text-lg font-semibold text-white mb-2 hover:text-purple-300 transition-colors">
-                  {relatedPost.title}
-                </h3>
-                <p className="text-white/60 text-sm mb-3 line-clamp-2">
-                  {relatedPost.excerpt}
-                </p>
+                <h3 className="mb-2 text-lg font-semibold text-white transition-colors hover:text-[#f3c96a]">{relatedPost.title}</h3>
+                <p className="mb-3 line-clamp-2 text-sm text-white/60">{relatedPost.excerpt}</p>
                 <div className="flex items-center justify-between text-sm text-white/40">
                   <span>{relatedPost.category}</span>
-                  <span>{new Date(relatedPost.createdAt).toLocaleDateString('zh-CN')}</span>
+                  <span>{new Date(relatedPost.createdAt).toLocaleDateString("zh-CN")}</span>
                 </div>
               </motion.div>
             ))}
@@ -365,41 +277,32 @@ export default function BlogDetailPage() {
         </motion.div>
       )}
 
+      <div className="mx-auto max-w-3xl">
+        <ConversionCta
+          eyebrow="Article To Action"
+          title="如果这篇文章体现了你要找的能力，下一步就别停在阅读"
+          description="招聘方可以直接进入招聘入口发起面试沟通，合作方可以进入合作入口提交需求。"
+        />
+        <div className="mt-4 flex flex-wrap gap-3">
+          {post.ctaType !== "client" && (
+            <Link href="/for-hr" className="rounded-full bg-[#f3c96a] px-5 py-2.5 text-sm font-medium text-black">
+              招聘方入口
+            </Link>
+          )}
+          {post.ctaType !== "hr" && (
+            <Link href="/for-clients" className="rounded-full border border-white/12 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/90">
+              合作入口
+            </Link>
+          )}
+        </div>
+      </div>
+
       {activeImageIndex !== null && galleryImages.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-          <button
-            type="button"
-            className="absolute right-4 top-4 rounded-md bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
-            onClick={() => setActiveImageIndex(null)}
-          >
+          <button type="button" className="absolute right-4 top-4 rounded-md bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20" onClick={() => setActiveImageIndex(null)}>
             关闭
           </button>
-
-          {galleryImages.length > 1 && (
-            <button
-              type="button"
-              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md bg-white/10 px-3 py-2 text-white hover:bg-white/20"
-              onClick={showPrevImage}
-            >
-              上一张
-            </button>
-          )}
-
-          <img
-            src={galleryImages[activeImageIndex]}
-            alt={`图片 ${activeImageIndex + 1}`}
-            className="max-h-[85vh] max-w-[90vw] rounded-lg"
-          />
-
-          {galleryImages.length > 1 && (
-            <button
-              type="button"
-              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md bg-white/10 px-3 py-2 text-white hover:bg-white/20"
-              onClick={showNextImage}
-            >
-              下一张
-            </button>
-          )}
+          <img src={galleryImages[activeImageIndex]} alt={`图片 ${activeImageIndex + 1}`} className="max-h-[85vh] max-w-[90vw] rounded-lg" />
         </div>
       )}
     </div>

@@ -2,14 +2,9 @@
 
 import { ProjectType } from "@/db/schema/project";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Trash2, ExternalLink, Send } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { formatDate, StatusBadge, Column } from "../data-table";
+import { ExternalLink, MoreHorizontal, Pencil, Send, Star, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Column } from "../data-table/data-table";
 
 interface ProjectTableProps {
   onEdit: (project: ProjectType) => void;
@@ -17,75 +12,45 @@ interface ProjectTableProps {
   onPublish?: (project: ProjectType) => void;
 }
 
+const audienceLabels: Record<string, string> = {
+  both: "HR / 甲方",
+  hr: "HR",
+  client: "甲方",
+};
+
 export function getProjectColumns({ onEdit, onDelete, onPublish }: ProjectTableProps): Column<ProjectType>[] {
   return [
     {
-      key: "coverImage",
-      header: "封面",
-      cell: (project: ProjectType) => (
-        <div className="space-y-2">
-          {project.coverImage ? (
-            <img
-              src={project.coverImage}
-              alt={project.title}
-              className="h-12 w-20 rounded-md object-cover border"
-            />
-          ) : (
-            <div className="h-12 w-20 rounded-md border bg-muted/40 text-xs text-muted-foreground flex items-center justify-center">
-              无封面
-            </div>
-          )}
-          <div className="max-w-[220px] text-xs text-muted-foreground break-all">
-            {project.coverImage ? (
-              <a
-                href={project.coverImage}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-                title={project.coverImage}
-              >
-                {project.coverImage}
-              </a>
-            ) : (
-              "-"
-            )}
+      key: "title",
+      header: "项目名称",
+      cell: (project) => (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 font-medium">
+            <span>{project.title}</span>
+            {project.featured && <Star className="h-3.5 w-3.5 fill-current text-amber-500" />}
           </div>
+          <div className="max-w-xs truncate text-xs text-muted-foreground">{project.description || "无描述"}</div>
         </div>
       ),
     },
     {
-      key: "title",
-      header: "项目名称",
-      cell: (project: ProjectType) => (
-        <div>
-          <div className="font-medium">{project.title}</div>
-          <div className="text-xs text-muted-foreground truncate max-w-xs">
-            {project.description || "无描述"}
-          </div>
-        </div>
-      ),
+      key: "targetAudience",
+      header: "受众",
+      cell: (project) => audienceLabels[project.targetAudience || "both"] || "HR / 甲方",
     },
     {
       key: "techStack",
       header: "技术栈",
-      cell: (project: ProjectType) => {
-        const techStack = project.techStack;
-        if (!techStack || techStack.length === 0) return "-";
+      cell: (project) => {
+        if (!project.techStack?.length) return "-";
         return (
           <div className="flex flex-wrap gap-1">
-            {techStack.slice(0, 3).map((tech) => (
-              <span
-                key={tech}
-                className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs"
-              >
+            {project.techStack.slice(0, 3).map((tech) => (
+              <span key={tech} className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs">
                 {tech}
               </span>
             ))}
-            {techStack.length > 3 && (
-              <span className="text-xs text-muted-foreground">
-                +{techStack.length - 3}
-              </span>
-            )}
+            {project.techStack.length > 3 && <span className="text-xs text-muted-foreground">+{project.techStack.length - 3}</span>}
           </div>
         );
       },
@@ -93,41 +58,25 @@ export function getProjectColumns({ onEdit, onDelete, onPublish }: ProjectTableP
     {
       key: "status",
       header: "状态",
-      cell: (project: ProjectType) => {
-        const statusLabels: Record<string, { label: string; className: string }> = {
-          published: { label: "已发布", className: "bg-green-100 text-green-800" },
-          draft: { label: "草稿", className: "bg-gray-100 text-gray-800" },
-        };
-        return <StatusBadge status={project.status} labels={statusLabels} />;
-      },
+      cell: (project) => (project.status === "published" ? "已发布" : "草稿"),
     },
     {
       key: "demoUrl",
       header: "演示链接",
-      cell: (project: ProjectType) => {
-        if (!project.demoUrl) return "-";
-        return (
-          <a
-            href={project.demoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline inline-flex items-center gap-1"
-          >
+      cell: (project) =>
+        project.demoUrl ? (
+          <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline">
             查看 <ExternalLink className="h-3 w-3" />
           </a>
-        );
-      },
-    },
-    {
-      key: "createdAt",
-      header: "创建时间",
-      cell: (project: ProjectType) => formatDate(project.createdAt),
+        ) : (
+          "-"
+        ),
     },
     {
       key: "actions",
       header: "",
       width: "50px",
-      cell: (project: ProjectType) => (
+      cell: (project) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -145,10 +94,7 @@ export function getProjectColumns({ onEdit, onDelete, onPublish }: ProjectTableP
                 发布
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem
-              onClick={() => onDelete(project)}
-              className="text-red-600"
-            >
+            <DropdownMenuItem onClick={() => onDelete(project)} className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               删除
             </DropdownMenuItem>

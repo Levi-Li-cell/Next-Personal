@@ -1,54 +1,40 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { project } from "@/db/schema/project";
-import { eq, desc, like, and, sql, or } from "drizzle-orm";
-import { randomUUID } from "crypto";
 import { htmlToMarkdown } from "@/lib/admin/markdown";
 import { createPublicNotification } from "@/lib/notifications/public-notify";
 
-// GET /api/admin/projects - 获取项目列表（包含草稿）
+function normalizeAudience(value: string | undefined) {
+  return value === "hr" || value === "client" ? value : "both";
+}
+
+function normalizeCta(value: string | undefined) {
+  return value === "hr" || value === "client" ? value : "both";
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
     const search = searchParams.get("search");
     const status = searchParams.get("status") || "all";
-
+    const audience = searchParams.get("audience");
+    const featured = searchParams.get("featured");
     const offset = (page - 1) * limit;
 
-    // 构建查询条件
     const conditions = [];
-    if (status !== "all") {
-      conditions.push(eq(project.status, status));
-    }
-    if (search) {
-      conditions.push(
-        or(
-          like(project.title, `%${search}%`),
-          like(project.description, `%${search}%`)
-        )
-      );
-    }
+    if (status !== "all") conditions.push(eq(project.status, status));
+    if (audience && audience !== "all") conditions.push(eq(project.targetAudience, audience));
+    if (featured === "true") conditions.push(eq(project.featured, true));
+    if (search) conditions.push(or(like(project.title, `%${search}%`), like(project.description, `%${search}%`)));
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // 查询项目列表
-    const projects = await db
-      .select()
-      .from(project)
-      .where(whereClause)
-      .orderBy(desc(project.createdAt))
-      .limit(limit)
-      .offset(offset);
-
-    // 查询总数
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(project)
-      .where(whereClause);
-
-    const total = Number(countResult[0]?.count || 0);
+    const projects = await db.select().from(project).where(whereClause).orderBy(desc(project.featured), desc(project.createdAt)).limit(limit).offset(offset);
+    const countResult = await db.select({ count: sql<number>`count(*)` }).from(project).where(whereClause);
 
     return NextResponse.json({
       success: true,
@@ -56,50 +42,38 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        total: Number(countResult[0]?.count || 0),
+        totalPages: Math.ceil(Number(countResult[0]?.count || 0) / limit),
       },
     });
   } catch (error) {
-    console.error("获取项目列表失败:", error);
-    return NextResponse.json(
-      { success: false, error: "获取项目列表失败" },
-      { status: 500 }
-    );
+    console.error("Failed to fetch admin projects:", error);
+    return NextResponse.json({ success: false, error: "获取项目列表失败" }, { status: 500 });
   }
 }
 
-// POST /api/admin/projects - 创建项目
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      title,
-      description,
-      content,
-      coverImage,
-      techStack,
-      demoUrl,
-      githubUrl,
-      status,
-    } = body;
-
-    const contentHtml = String(content || "");
+    const contentHtml = String(body.content || "");
     const markdownContent = htmlToMarkdown(contentHtml);
-    // 创建项目
+
     const [newProject] = await db
       .insert(project)
       .values({
         id: randomUUID(),
-        title,
-        description,
+        title: body.title,
+        description: body.description,
         content: markdownContent,
-        coverImage,
-        techStack: techStack || [],
-        demoUrl,
-        githubUrl,
-        status: status || "draft",
-        publishedAt: status === "published" ? new Date() : null,
+        coverImage: body.coverImage,
+        techStack: body.techStack || [],
+        targetAudience: normalizeAudience(body.targetAudience),
+        ctaType: normalizeCta(body.ctaType),
+        featured: Boolean(body.featured),
+        demoUrl: body.demoUrl,
+        githubUrl: body.githubUrl,
+        status: body.status || "draft",
+        publishedAt: body.status === "published" ? new Date() : null,
       })
       .returning();
 
@@ -114,10 +88,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: newProject });
   } catch (error) {
-    console.error("创建项目失败:", error);
-    return NextResponse.json(
-      { success: false, error: "创建项目失败" },
-      { status: 500 }
-    );
+    console.error("Failed to create admin project:", error);
+    return NextResponse.json({ success: false, error: "创建项目失败" }, { status: 500 });
   }
 }

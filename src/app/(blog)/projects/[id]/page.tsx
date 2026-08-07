@@ -1,21 +1,26 @@
 "use client";
 
-import { motion } from 'motion/react';
-import { ArrowLeft, Calendar, ExternalLink, Github, Folder } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { motion } from "motion/react";
+import { ArrowLeft, Calendar, ExternalLink, Folder, Github } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { ConversionCta } from "@/components/conversion/ConversionCta";
 
 interface Project {
   id: string;
   title: string;
   description: string;
   content: string;
+  coverImage: string | null;
   techStack: string[];
+  targetAudience?: "hr" | "client" | "both";
+  ctaType?: "hr" | "client" | "both";
+  featured?: boolean;
   demoUrl: string | null;
   githubUrl: string | null;
-  coverImage: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -40,19 +45,18 @@ export default function ProjectDetailPage() {
       try {
         setLoading(true);
         setError(null);
-
-        // 获取项目详情
         const response = await fetch(`/api/projects/${id}`);
         const data: ProjectDetailResponse = await response.json();
 
-        if (data.success) {
-          setProject(data.data);
-        } else {
-          setError('获取项目详情失败');
+        if (!data.success) {
+          setError("获取项目详情失败");
+          return;
         }
+
+        setProject(data.data);
       } catch (err) {
-        setError('网络错误，请稍后重试');
-        console.error('获取项目详情失败:', err);
+        console.error("Failed to fetch project detail:", err);
+        setError("网络错误，请稍后重试");
       } finally {
         setLoading(false);
       }
@@ -64,8 +68,8 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-6 py-12">
-        <div className="flex justify-center items-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-[#f3c96a]" />
           <span className="ml-3 text-white/60">加载中...</span>
         </div>
       </div>
@@ -75,12 +79,9 @@ export default function ProjectDetailPage() {
   if (error || !project) {
     return (
       <div className="container mx-auto px-6 py-12">
-        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-6 text-center">
-          <p className="text-red-400">{error || '项目不存在'}</p>
-          <button 
-            onClick={() => router.push('/projects')}
-            className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md text-white transition-colors"
-          >
+        <div className="rounded-lg border border-red-500/30 bg-red-500/20 p-6 text-center">
+          <p className="text-red-300">{error || "项目不存在"}</p>
+          <button onClick={() => router.push("/projects")} className="mt-4 rounded-md bg-[#f3c96a] px-4 py-2 text-black">
             返回项目列表
           </button>
         </div>
@@ -90,144 +91,104 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="container mx-auto px-6 py-12">
-      {/* 返回按钮 */}
-      <motion.button
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-2 text-white/60 hover:text-white mb-8"
-        onClick={() => router.push('/projects')}
-      >
-        <ArrowLeft className="w-5 h-5" />
+      <motion.button initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-8 flex items-center gap-2 text-white/60 hover:text-white" onClick={() => router.push("/projects")}>
+        <ArrowLeft className="h-5 w-5" />
         <span>返回项目列表</span>
       </motion.button>
 
-      {/* 项目内容 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-3xl mx-auto"
-      >
-        {/* 项目标题和链接 */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 md:mb-0 leading-tight">
-            {project.title}
-          </h1>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-3xl">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+          <h1 className="mb-4 text-3xl font-bold leading-tight text-white md:mb-0 md:text-4xl">{project.title}</h1>
           <div className="flex gap-3">
             {project.githubUrl && (
-              <a 
-                href={project.githubUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-                aria-label="GitHub 仓库"
-              >
-                <Github className="w-6 h-6 text-white/80 hover:text-white" />
+              <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-white/5 p-2 transition-colors hover:bg-white/10" aria-label="GitHub 仓库">
+                <Github className="h-6 w-6 text-white/80 hover:text-white" />
               </a>
             )}
             {project.demoUrl && (
-              <a 
-                href={project.demoUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-                aria-label="项目演示"
-              >
-                <ExternalLink className="w-6 h-6 text-white/80 hover:text-white" />
+              <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-white/5 p-2 transition-colors hover:bg-white/10" aria-label="项目演示">
+                <ExternalLink className="h-6 w-6 text-white/80 hover:text-white" />
               </a>
             )}
           </div>
         </div>
 
-        {/* 项目信息 */}
-        <div className="flex flex-wrap items-center gap-4 mb-8 text-sm text-white/60">
+        <div className="mb-8 flex flex-wrap items-center gap-4 text-sm text-white/60">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span>创建于 {new Date(project.createdAt).toLocaleDateString('zh-CN')}</span>
+            <Calendar className="h-4 w-4" />
+            <span>创建于 {new Date(project.createdAt).toLocaleDateString("zh-CN")}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Folder className="w-4 h-4" />
-            <span>状态: {project.status === 'published' ? '已发布' : '草稿'}</span>
+            <Folder className="h-4 w-4" />
+            <span>状态 {project.status === "published" ? "已发布" : "草稿"}</span>
           </div>
         </div>
 
-        {/* 封面图片 */}
         {project.coverImage && (
-          <div className="mb-8 rounded-xl overflow-hidden border border-white/10">
-            <img 
-              src={project.coverImage} 
-              alt={project.title} 
-              className="block w-full h-auto object-top"
-            />
+          <div className="mb-8 overflow-hidden rounded-xl border border-white/10">
+            <img src={project.coverImage} alt={project.title} className="block h-auto w-full object-top" />
           </div>
         )}
 
-        {/* 项目描述 */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-white mb-4">项目描述</h2>
-          <p className="text-white/70 leading-relaxed">
-            {project.description}
-          </p>
+          <h2 className="mb-4 text-2xl font-bold text-white">项目描述</h2>
+          <p className="leading-relaxed text-white/70">{project.description}</p>
         </div>
 
-        {/* 项目详细内容 */}
         {project.content && (
           <div className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-4">项目详情</h2>
-            <div className="prose prose-invert max-w-none text-white prose-headings:text-white prose-p:text-white prose-strong:text-white prose-li:text-white prose-blockquote:text-white/90 prose-code:text-white prose-a:text-cyan-300">
+            <h2 className="mb-4 text-2xl font-bold text-white">项目详情</h2>
+            <div className="prose prose-invert max-w-none text-white prose-a:text-[#9ac6ff] prose-blockquote:text-white/85 prose-code:text-white prose-headings:text-white prose-li:text-white prose-p:text-white prose-strong:text-white">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{project.content}</ReactMarkdown>
             </div>
           </div>
         )}
 
-        {/* 技术栈 */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">技术栈</h2>
+          <h2 className="mb-4 text-2xl font-bold text-white">技术栈</h2>
           <div className="flex flex-wrap gap-3">
             {project.techStack.map((tech, index) => (
-              <motion.span
-                key={tech}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg"
-              >
+              <motion.span key={tech} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 * index }} className="rounded-lg bg-[#f3c96a]/14 px-4 py-2 text-[#f3c96a]">
                 {tech}
               </motion.span>
             ))}
           </div>
         </div>
 
-        {/* 链接 */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">项目链接</h2>
+          <h2 className="mb-4 text-2xl font-bold text-white">项目链接</h2>
           <div className="space-y-3">
             {project.githubUrl && (
-              <a 
-                href={project.githubUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Github className="w-5 h-5 text-white/80" />
-                <span className="text-white hover:text-purple-300 transition-colors">
-                  {project.githubUrl}
-                </span>
+              <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg bg-white/5 p-4 transition-colors hover:bg-white/10">
+                <Github className="h-5 w-5 text-white/80" />
+                <span className="text-white transition-colors hover:text-[#f3c96a]">{project.githubUrl}</span>
               </a>
             )}
             {project.demoUrl && (
-              <a 
-                href={project.demoUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <ExternalLink className="w-5 h-5 text-white/80" />
-                <span className="text-white hover:text-purple-300 transition-colors">
-                  {project.demoUrl}
-                </span>
+              <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg bg-white/5 p-4 transition-colors hover:bg-white/10">
+                <ExternalLink className="h-5 w-5 text-white/80" />
+                <span className="text-white transition-colors hover:text-[#f3c96a]">{project.demoUrl}</span>
               </a>
             )}
           </div>
+        </div>
+
+        <ConversionCta
+          eyebrow="Case To Contact"
+          title="如果这个项目方向和你的需求接近，下一步就是直接发起沟通"
+          description="项目详情页负责证明交付能力，真正的转化动作应该是进入招聘方入口或合作入口。"
+        />
+        <div className="mt-4 flex flex-wrap gap-3">
+          {project.ctaType !== "client" && (
+            <Link href="/for-hr" className="rounded-full bg-[#f3c96a] px-5 py-2.5 text-sm font-medium text-black">
+              招聘方入口
+            </Link>
+          )}
+          {project.ctaType !== "hr" && (
+            <Link href="/for-clients" className="rounded-full border border-white/12 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/90">
+              合作入口
+            </Link>
+          )}
         </div>
       </motion.div>
     </div>
