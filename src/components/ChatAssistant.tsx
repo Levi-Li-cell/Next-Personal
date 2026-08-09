@@ -147,7 +147,7 @@ export default function ChatAssistant({ apiUrl = '', hidePrompt = false }: ChatA
         setIsOpen(true);
     };
 
-    const sendMessage = async () => {
+const sendMessage = async () => {
         if (!input.trim() || isLoading) return;
 
         const userMessage: Message = {
@@ -159,6 +159,13 @@ export default function ChatAssistant({ apiUrl = '', hidePrompt = false }: ChatA
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);
+
+        // 先插入一条空的 assistant 消息，用于流式更新
+        setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: '',
+            timestamp: new Date()
+        }]);
 
         try {
             const response = await fetch(withApiBase('/api/chat', 'frontend', apiUrl), {
@@ -172,44 +179,81 @@ export default function ChatAssistant({ apiUrl = '', hidePrompt = false }: ChatA
                 })
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || '请求失败');
+            }
 
-            if (data.success) {
-                const assistantMessage: Message = {
-                    role: 'assistant',
-                    content: data.message,
-                    timestamp: new Date()
-                };
-                setMessages(prev => {
-                    const newMessages = [...prev, assistantMessage];
-                    setTypingMessageIndex(newMessages.length - 1); // 设置打字动画索引
-                    return newMessages;
-                });
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error('无法读取流');
 
-                if (data.sessionId && data.sessionId !== sessionId) {
-                    setSessionId(data.sessionId);
-                    sessionStorage.setItem('chat_session_id', data.sessionId);
+            const decoder = new TextDecoder();
+            let assistantText = '';
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6).trim();
+                        if (data === '[DONE]') break;
+
+                        try {
+                            const parsed = JSON.parse(data);
+                            const content = parsed.content || parsed.delta?.content || '';
+                            if (content) {
+                                assistantText += content;
+                                setMessages(prev => {
+                                    const updated = [...prev];
+                                    updated[updated.length - 1] = {
+                                        role: 'assistant',
+                                        content: assistantText,
+                                        timestamp: new Date()
+                                    };
+                                    return updated;
+                                });
+                            }
+                        } catch (e) {
+                            // 忽略解析错误
+                        }
+                    }
                 }
-            } else {
-                const errorMessage: Message = {
-                    role: 'assistant',
-                    content: data.error || '抱歉，发生了错误，请稍后再试。',
-                    timestamp: new Date()
-                };
-                setMessages(prev => [...prev, errorMessage]);
+            }
+
+            // 流结束后，如果内容为空则显示错误
+            if (!assistantText) {
+                setMessages(prev => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = {
+                        role: 'assistant',
+                        content: '抱歉，AI 没有返回内容，请稍后再试。',
+                        timestamp: new Date()
+                    };
+                    return updated;
+                });
             }
         } catch (error) {
             console.error('Chat error:', error);
-            const errorMessage: Message = {
-                role: 'assistant',
-                content: '网络错误，请检查后端服务是否已启动。',
-                timestamp: new Date()
-            };
-            setMessages(prev => [...prev, errorMessage]);
+            setMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                    role: 'assistant',
+                    content: error instanceof Error ? error.message : '网络错误，请检查后端服务是否已启动。',
+                    timestamp: new Date()
+                };
+                return updated;
+            });
         } finally {
             setIsLoading(false);
         }
     };
+
 
     const clearChat = async () => {
         try {
