@@ -9,3 +9,5 @@ export * from "./author";
 export * from "./guestbook";
 export * from "./notification";
 export * from "./lead";
+export * from "./self-evaluation";
+export * from "./knowledge";

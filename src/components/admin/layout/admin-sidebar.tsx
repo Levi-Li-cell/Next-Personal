@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Monitor,
   NotebookPen,
+  BookOpen,
   Settings,
   UserCircle,
   Users,
@@ -58,6 +59,7 @@ const menuItems: MenuItem[] = [
   { title: "留言板管理", url: "/admin/guestbook", icon: NotebookPen },
   { title: "通知中心", url: "/admin/notifications", icon: Bell },
   { title: "AI 客服消息", url: "/admin/chat", icon: Bot },
+  { title: "知识库管理", url: "/admin/knowledge", icon: BookOpen },
   { title: "赞助记录", url: "/admin/sponsors", icon: HandCoins },
   { title: "可视化大屏", url: "/admin/visual", icon: Monitor },
   {

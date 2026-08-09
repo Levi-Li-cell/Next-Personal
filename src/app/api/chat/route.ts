@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import OpenAI from "openai";
 import { db } from "@/db";
 import { chatMessages } from "@/db/schema/chat";
 import { blog } from "@/db/schema/blog";
@@ -244,10 +243,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const openai = createOpenAI({
-      apiKey,
-      baseURL,
-    });
+    const client = new OpenAI({ apiKey, baseURL });
 
     let historyMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
     let canPersist = !DISABLE_CHAT_DB;
@@ -279,7 +275,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const systemPrompt = getSystemPrompt();
+    const systemPrompt = await getSystemPrompt();
     const ragSources = await retrieveBlogSources(trimmedMessage);
     const ragContext = ragSources.length
       ? `\n\n=== 站内文章参考片段（仅内部参考，不要完整复述）===\n${ragSources
@@ -292,31 +288,63 @@ export async function POST(req: NextRequest) {
     const modelName = candidates[0];
     const persistSessionId = sessionId;
 
-    const result = streamText({
-      model: openai(modelName),
-      system: finalSystemPrompt,
-      messages: [
-        ...historyMessages,
-        { role: "user", content: trimmedMessage },
-      ],
-      temperature: 0.3,
-      maxOutputTokens: 1024,
-      onFinish: async ({ text }) => {
-        if (!canPersist || !text) return;
+    const apiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: finalSystemPrompt },
+      ...historyMessages,
+      { role: "user", content: trimmedMessage },
+    ];
+
+    const encoder = new TextEncoder();
+    let fullText = "";
+
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
         try {
-          await db.insert(chatMessages).values({
-            sessionId: persistSessionId,
-            role: "assistant",
-            content: text,
-          });
-        } catch (dbError) {
-          console.error("Chat response persistence failed:", dbError);
+          // DeepSeek extension: thinking param disables thinking mode so content is returned directly
+          const completion = await client.chat.completions.create({
+            model: modelName,
+            messages: apiMessages,
+            temperature: 0.3,
+            max_tokens: 1024,
+            stream: true,
+            thinking: { type: "disabled" },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any) as unknown as AsyncIterable<{ choices?: Array<{ delta?: { content?: string | null } }> }>;
+
+          for await (const chunk of completion) {
+            const delta = chunk.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullText += delta;
+              controller.enqueue(encoder.encode(delta));
+            }
+          }
+
+          controller.close();
+
+          if (canPersist && fullText.trim()) {
+            try {
+              await db.insert(chatMessages).values({
+                sessionId: persistSessionId,
+                role: "assistant",
+                content: fullText,
+              });
+            } catch (dbError) {
+              console.error("Chat response persistence failed:", dbError);
+            }
+          }
+        } catch (streamError) {
+          console.error("Stream error:", streamError);
+          const errorMsg =
+            streamError instanceof Error ? streamError.message : "流式响应出错";
+          controller.enqueue(encoder.encode(`\n[错误] ${errorMsg}`));
+          controller.close();
         }
       },
     });
 
-    return result.toTextStreamResponse({
+    return new Response(stream, {
       headers: {
+        "Content-Type": "text/plain; charset=utf-8",
         "X-Session-Id": sessionId,
         "X-Chat-Model": modelName,
         "Cache-Control": "no-cache, no-transform",
