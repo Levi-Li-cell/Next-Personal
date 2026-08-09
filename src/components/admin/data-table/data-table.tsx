@@ -38,6 +38,8 @@ interface DataTableProps<T> {
   getRowId?: (item: T) => string;
   emptyTitle?: string;
   emptyDescription?: string;
+  /** 固定列宽布局：表格不超出容器，单元格内容自动换行，避免横向滚动 */
+  fixedLayout?: boolean;
 }
 
 export function DataTable<T>({
@@ -51,6 +53,7 @@ export function DataTable<T>({
   getRowId,
   emptyTitle = "暂无数据",
   emptyDescription = "没有找到任何数据",
+  fixedLayout = false,
 }: DataTableProps<T>) {
   const allSelected = data.length > 0 && data.every((item) => {
     const id = getRowId ? getRowId(item) : String((item as { id?: string }).id);
@@ -88,10 +91,14 @@ export function DataTable<T>({
     onRowSelectionChange(newSelected);
   };
 
+  // 固定布局下的表格样式：table-fixed + 内容换行，避免横向滚动
+  const tableClass = fixedLayout ? "table-fixed break-words" : "";
+  const cellClass = fixedLayout ? "whitespace-normal break-words align-top" : "";
+
   if (isLoading) {
     return (
       <div className="rounded-md border">
-        <Table>
+        <Table className={tableClass}>
           <TableHeader>
             <TableRow>
               {columns.map((col) => (
@@ -105,7 +112,7 @@ export function DataTable<T>({
             {[...Array(5)].map((_, rowIndex) => (
               <TableRow key={rowIndex}>
                 {columns.map((col) => (
-                  <TableCell key={col.key}>
+                  <TableCell key={col.key} className={cellClass}>
                     <Skeleton className="h-4 w-full" />
                   </TableCell>
                 ))}
@@ -120,11 +127,11 @@ export function DataTable<T>({
   if (data.length === 0) {
     return (
       <div className="rounded-md border">
-        <Table>
+        <Table className={tableClass}>
           <TableHeader>
             <TableRow>
               {columns.map((col) => (
-                <TableHead key={col.key}>{col.header}</TableHead>
+                <TableHead key={col.key} style={{ width: col.width }}>{col.header}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -143,7 +150,7 @@ export function DataTable<T>({
   return (
     <div className="space-y-4">
       <div className="rounded-md border">
-        <Table>
+        <Table className={tableClass}>
           <TableHeader>
             <TableRow>
               {columns.map((col) => (
@@ -171,7 +178,7 @@ export function DataTable<T>({
                   data-state={isSelected && "selected"}
                 >
                   {columns.map((col) => (
-                    <TableCell key={col.key}>
+                    <TableCell key={col.key} className={cellClass}>
                       {col.key === "select" ? (
                         <Checkbox
                           checked={isSelected}

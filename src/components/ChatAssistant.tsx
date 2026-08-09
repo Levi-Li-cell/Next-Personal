@@ -257,29 +257,16 @@ const sendMessage = async () => {
 
 
 const clearChat = async () => {
-        if (!sessionId || sessionId === 'undefined') {
-            setMessages([]);
-            const newSessionId = uuidv4();
-            setSessionId(newSessionId);
-            sessionStorage.setItem('chat_session_id', newSessionId);
-            return;
-        }
-
-        try {
-            // 优先使用 Vercel 生产域名
-            const baseUrl = window.location.origin || 'https://next-personal-k0iiqb4w3-levi006s-projects.vercel.app';
-            const url = `${baseUrl}/api/chat/history/${sessionId}`;
-            
-            const res = await fetch(url, { method: 'DELETE' });
-            
-            if (!res.ok) {
-                console.warn('Clear history failed (domain issue)', res.status);
+        if (sessionId && sessionId !== 'undefined') {
+            try {
+                await fetch(withApiBase(`/api/chat/history/${sessionId}`, 'frontend', apiUrl), {
+                    method: 'DELETE',
+                });
+            } catch (err) {
+                console.warn('Failed to clear history:', err);
             }
-        } catch (err) {
-            console.warn('Clear history failed (domain issue)', err);
         }
 
-        // 无论失败都执行本地清理
         setMessages([]);
         const newSessionId = uuidv4();
         setSessionId(newSessionId);
@@ -828,8 +815,31 @@ const clearChat = async () => {
                                             ? '1px solid rgba(6, 182, 212, 0.4)'
                                             : '1px solid rgba(255, 255, 255, 0.1)'
                                     }}>
-                                        {/* 使用打字机效果显示新的AI消息 */}
-                                        {msg.role === 'assistant' && index === typingMessageIndex ? (
+                                        {/* 空内容 + isLoading 时显示打字动画 */}
+                                        {msg.role === 'assistant' && !msg.content && isLoading ? (
+                                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', padding: '4px 0' }}>
+                                                {[0, 1, 2].map((i) => (
+                                                    <motion.div
+                                                        key={i}
+                                                        style={{
+                                                            width: '8px',
+                                                            height: '8px',
+                                                            borderRadius: '50%',
+                                                            background: 'linear-gradient(135deg, #a855f7, #ec4899)'
+                                                        }}
+                                                        animate={{
+                                                            y: [-3, 3, -3],
+                                                            opacity: [0.5, 1, 0.5]
+                                                        }}
+                                                        transition={{
+                                                            duration: 0.6,
+                                                            repeat: Infinity,
+                                                            delay: i * 0.15
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        ) : msg.role === 'assistant' && index === typingMessageIndex ? (
                                             <TypewriterText
                                                 text={msg.content}
                                                 speed={25}
@@ -855,80 +865,6 @@ const clearChat = async () => {
                                     </div>
                                 </motion.div>
                             ))}
-
-                            {isLoading && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: -30, scale: 0.9 }}
-                                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                                    style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}
-                                >
-                                    {/* AI头像带旋转效果 */}
-                                    <motion.div
-                                        style={{
-                                            width: '32px',
-                                            height: '32px',
-                                            background: 'linear-gradient(135deg, #a855f7, #ec4899)',
-                                            borderRadius: '50%',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            flexShrink: 0,
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        {/* 旋转光环 */}
-                                        <motion.div
-                                            style={{
-                                                position: 'absolute',
-                                                inset: '-3px',
-                                                borderRadius: '50%',
-                                                border: '2px solid transparent',
-                                                borderTopColor: '#a855f7',
-                                                borderRightColor: '#ec4899'
-                                            }}
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                        />
-                                        <Bot className="w-4 h-4 text-white" />
-                                    </motion.div>
-
-                                    {/* 加载动画气泡 */}
-                                    <div style={{
-                                        background: 'rgba(255, 255, 255, 0.1)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        padding: '16px 24px',
-                                        borderRadius: '16px 16px 16px 4px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px'
-                                    }}>
-                                        {/* 三个跳动的圆点 */}
-                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                            {[0, 1, 2].map((i) => (
-                                                <motion.div
-                                                    key={i}
-                                                    style={{
-                                                        width: '8px',
-                                                        height: '8px',
-                                                        borderRadius: '50%',
-                                                        background: 'linear-gradient(135deg, #a855f7, #ec4899)'
-                                                    }}
-                                                    animate={{
-                                                        y: [-3, 3, -3],
-                                                        opacity: [0.5, 1, 0.5]
-                                                    }}
-                                                    transition={{
-                                                        duration: 0.6,
-                                                        repeat: Infinity,
-                                                        delay: i * 0.15
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
 
                             <div ref={messagesEndRef} />
                         </div>
