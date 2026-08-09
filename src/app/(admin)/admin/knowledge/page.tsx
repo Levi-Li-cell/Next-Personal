@@ -173,10 +173,14 @@ export default function KnowledgeManagePage() {
     }
   };
 
-  const handleSeed = async () => {
+  const handleSeed = async (force = false) => {
     setSeeding(true);
     try {
-      const response = await fetch("/api/admin/knowledge/seed", { method: "POST" });
+      const response = await fetch("/api/admin/knowledge/seed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force }),
+      });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "初始化失败");
       toast.success(data.message || "初始化完成");
@@ -314,8 +318,20 @@ export default function KnowledgeManagePage() {
         ]}
         secondaryActions={[
           {
-            label: seeding ? "导入中..." : "导入本地知识库",
-            onClick: handleSeed,
+            label: seeding ? "导入中..." : "导入默认知识库",
+            onClick: () => handleSeed(false),
+            icon: <Database className="h-4 w-4" />,
+            variant: "outline",
+            loading: seeding,
+            disabled: seeding,
+          },
+          {
+            label: seeding ? "覆盖中..." : "强制覆盖导入",
+            onClick: () => {
+              if (confirm("将清空现有知识库并重新导入默认内容，确认？")) {
+                handleSeed(true);
+              }
+            },
             icon: <Database className="h-4 w-4" />,
             variant: "outline",
             loading: seeding,
@@ -333,7 +349,7 @@ export default function KnowledgeManagePage() {
         pagination={pagination}
         onPageChange={(page) => setPagination((current) => ({ ...current, pageIndex: page }))}
         emptyTitle="暂无知识库内容"
-        emptyDescription="可点击「导入本地知识库」从现有 md/txt 文件初始化，或手动新增。"
+        emptyDescription="可点击「导入默认知识库」初始化，或手动新增。之后请仅在后台维护。"
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

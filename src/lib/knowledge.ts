@@ -1,13 +1,55 @@
-import fs from "fs";
-import path from "path";
-import { asc, eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { asc, eq, sql } from "drizzle-orm";
+import { DEFAULT_KNOWLEDGE_SEEDS } from "@/lib/knowledge-seed-data";
 
-const KNOWLEDGE_DIR = path.join(process.cwd(), "src/lib/knowledge");
+async function ensureKnowledgeTable() {
+  const { db } = await import("@/db");
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS knowledge (
+      id text PRIMARY KEY,
+      title text NOT NULL,
+      content text NOT NULL,
+      category text NOT NULL DEFAULT 'general',
+      sort_order integer NOT NULL DEFAULT 0,
+      is_active boolean NOT NULL DEFAULT true,
+      created_at timestamp DEFAULT now() NOT NULL,
+      updated_at timestamp DEFAULT now()
+    )
+  `);
+}
+
+/** 库为空时自动灌入默认种子，之后只维护后台 */
+async function ensureSeededIfEmpty() {
+  try {
+    const { db } = await import("@/db");
+    const { knowledge } = await import("@/db/schema/knowledge");
+    await ensureKnowledgeTable();
+
+    const countResult = await db.select({ count: sql<number>`count(*)` }).from(knowledge);
+    const total = Number(countResult[0]?.count || 0);
+    if (total > 0) return;
+
+    await db.insert(knowledge).values(
+      DEFAULT_KNOWLEDGE_SEEDS.map((item) => ({
+        id: randomUUID(),
+        title: item.title,
+        content: item.content,
+        category: item.category,
+        sortOrder: item.sortOrder,
+        isActive: true,
+      }))
+    );
+  } catch (error) {
+    console.error("Auto seed knowledge failed:", error);
+  }
+}
 
 async function loadDbKnowledge(): Promise<string> {
   try {
     const { db } = await import("@/db");
     const { knowledge } = await import("@/db/schema/knowledge");
+    await ensureSeededIfEmpty();
+
     const rows = await db
       .select({
         title: knowledge.title,
@@ -32,29 +74,9 @@ async function loadDbKnowledge(): Promise<string> {
   }
 }
 
-function loadFileKnowledge(): string {
-  let knowledgeContent = "";
-  try {
-    if (fs.existsSync(KNOWLEDGE_DIR)) {
-      const files = fs.readdirSync(KNOWLEDGE_DIR);
-      for (const file of files) {
-        if (file.endsWith(".md") || file.endsWith(".txt")) {
-          const filePath = path.join(KNOWLEDGE_DIR, file);
-          const content = fs.readFileSync(filePath, "utf-8");
-          knowledgeContent += `\n\n--- 来自文件: ${file} ---\n\n${content}`;
-        }
-      }
-    }
-  } catch (error) {
-    console.error("Error reading knowledge files:", error);
-  }
-  return knowledgeContent;
-}
-
 export async function getSystemPrompt(): Promise<string> {
-  const dbContent = await loadDbKnowledge();
-  const fileContent = dbContent ? "" : loadFileKnowledge();
-  const knowledgeContent = dbContent || fileContent;
+  // 仅使用数据库知识库，不再读取本地 md/txt
+  const knowledgeContent = await loadDbKnowledge();
 
   return `你是李伟的个人求职助手。你的唯一目标是帮助李伟顺利拿到面试机会和 offer，用积极、可信、专业的方式展示他的能力。
 
@@ -77,13 +99,4 @@ ${knowledgeContent || "（暂无知识库内容，请基于通用全栈工程师
 === 李伟个人知识库结束 ===
 
 现在请回答用户的问题。`;
-}
-
-/** @deprecated use getSystemPrompt async */
-export function getSystemPromptSync(): string {
-  const knowledgeContent = loadFileKnowledge();
-  return `你是李伟的个人求职助手。请基于知识库积极、专业地回答。
-=== 李伟个人知识库 ===
-${knowledgeContent}
-=== 结束 ===`;
 }
