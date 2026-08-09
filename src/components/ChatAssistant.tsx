@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCircle, X, Send, Loader2, Trash2, Bot, User, Sparkles, Mic, Square } from 'lucide-react';
-import TypewriterText from './TypewriterText';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { withApiBase } from '@/lib/api-url';
 
 interface Message {
@@ -26,7 +27,6 @@ export default function ChatAssistant({ apiUrl = '', hidePrompt = false }: ChatA
     const [isLoading, setIsLoading] = useState(false);
     const [sessionId, setSessionId] = useState<string>('');
     const [isMobile, setIsMobile] = useState(false);
-    const [typingMessageIndex, setTypingMessageIndex] = useState<number | null>(null); // 跟踪正在打字的消息索引
     const [isRecording, setIsRecording] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -839,19 +839,89 @@ const clearChat = async () => {
                                                     />
                                                 ))}
                                             </div>
-                                        ) : msg.role === 'assistant' && index === typingMessageIndex ? (
-                                            <TypewriterText
-                                                text={msg.content}
-                                                speed={25}
-                                                onComplete={() => setTypingMessageIndex(null)}
-                                                style={{
-                                                    color: 'white',
-                                                    fontSize: '14px',
-                                                    whiteSpace: 'pre-wrap',
-                                                    lineHeight: 1.6,
-                                                    wordBreak: 'break-word'
-                                                }}
-                                            />
+                                        ) : msg.role === 'assistant' ? (
+                                            (() => {
+                                                const isStreaming = isLoading && index === messages.length - 1;
+                                                return (
+                                                    <div className="chat-markdown" style={{ color: 'white', fontSize: '14px', lineHeight: 1.6, wordBreak: 'break-word' }}>
+                                                        <ReactMarkdown
+                                                            remarkPlugins={[remarkGfm]}
+                                                            components={{
+                                                                p: ({ children }) => <p style={{ margin: '0 0 8px 0', whiteSpace: 'pre-wrap' }}>{children}</p>,
+                                                                ul: ({ children }) => <ul style={{ margin: '4px 0 8px 0', paddingLeft: '20px' }}>{children}</ul>,
+                                                                ol: ({ children }) => <ol style={{ margin: '4px 0 8px 0', paddingLeft: '20px' }}>{children}</ol>,
+                                                                li: ({ children }) => <li style={{ margin: '2px 0' }}>{children}</li>,
+                                                                code: ({ className, children, ...props }: any) => {
+                                                                    const isInline = !className && typeof children === 'string' && !children.includes('\n');
+                                                                    if (isInline) {
+                                                                        return (
+                                                                            <code style={{
+                                                                                background: 'rgba(255,255,255,0.12)',
+                                                                                padding: '1px 5px',
+                                                                                borderRadius: '4px',
+                                                                                fontSize: '13px',
+                                                                                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace'
+                                                                            }} {...props}>{children}</code>
+                                                                        );
+                                                                    }
+                                                                    return (
+                                                                        <pre style={{
+                                                                            background: 'rgba(0,0,0,0.4)',
+                                                                            padding: '12px',
+                                                                            borderRadius: '8px',
+                                                                            overflowX: 'auto',
+                                                                            margin: '8px 0',
+                                                                            border: '1px solid rgba(255,255,255,0.1)'
+                                                                        }}>
+                                                                            <code className={className} style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '13px' }} {...props}>{children}</code>
+                                                                        </pre>
+                                                                    );
+                                                                },
+                                                                a: ({ children, href }) => (
+                                                                    <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', textDecoration: 'underline' }}>{children}</a>
+                                                                ),
+                                                                strong: ({ children }) => <strong style={{ fontWeight: 600, color: '#fff' }}>{children}</strong>,
+                                                                blockquote: ({ children }) => (
+                                                                    <blockquote style={{
+                                                                        borderLeft: '3px solid rgba(168, 85, 247, 0.6)',
+                                                                        paddingLeft: '12px',
+                                                                        margin: '8px 0',
+                                                                        color: 'rgba(255,255,255,0.75)'
+                                                                    }}>{children}</blockquote>
+                                                                ),
+                                                                h1: ({ children }) => <h1 style={{ fontSize: '18px', fontWeight: 600, margin: '12px 0 8px 0' }}>{children}</h1>,
+                                                                h2: ({ children }) => <h2 style={{ fontSize: '16px', fontWeight: 600, margin: '10px 0 6px 0' }}>{children}</h2>,
+                                                                h3: ({ children }) => <h3 style={{ fontSize: '15px', fontWeight: 600, margin: '8px 0 4px 0' }}>{children}</h3>,
+                                                                table: ({ children }) => (
+                                                                    <div style={{ overflowX: 'auto', margin: '8px 0' }}>
+                                                                        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '13px' }}>{children}</table>
+                                                                    </div>
+                                                                ),
+                                                                th: ({ children }) => <th style={{ border: '1px solid rgba(255,255,255,0.2)', padding: '6px 10px', textAlign: 'left', background: 'rgba(255,255,255,0.05)' }}>{children}</th>,
+                                                                td: ({ children }) => <td style={{ border: '1px solid rgba(255,255,255,0.2)', padding: '6px 10px' }}>{children}</td>,
+                                                            }}
+                                                        >
+                                                            {msg.content}
+                                                        </ReactMarkdown>
+                                                        {isStreaming && (
+                                                            <motion.span
+                                                                aria-hidden
+                                                                animate={{ opacity: [1, 0, 1] }}
+                                                                transition={{ duration: 0.9, repeat: Infinity }}
+                                                                style={{
+                                                                    display: 'inline-block',
+                                                                    width: '7px',
+                                                                    height: '14px',
+                                                                    background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+                                                                    marginLeft: '2px',
+                                                                    verticalAlign: 'text-bottom',
+                                                                    borderRadius: '1px'
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()
                                         ) : (
                                             <p style={{
                                                 color: 'white',
