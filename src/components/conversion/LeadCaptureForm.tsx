@@ -59,8 +59,12 @@ export function LeadCaptureForm({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!form.name.trim() || !form.message.trim()) {
-      toast.error("请至少填写称呼和需求说明");
+    if (!form.name.trim()) {
+      toast.error("请填写称呼");
+      return;
+    }
+    if (!form.message.trim()) {
+      toast.error("请填写需求说明");
       return;
     }
 
