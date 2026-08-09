@@ -156,16 +156,13 @@ const sendMessage = async () => {
             timestamp: new Date()
         };
 
-        setMessages(prev => [...prev, userMessage]);
-        setInput('');
-        setIsLoading(true);
-
-        // 先插入一条空的 assistant 消息，用于流式更新
-        setMessages(prev => [...prev, {
+        setMessages(prev => [...prev, userMessage, {
             role: 'assistant',
             content: '',
             timestamp: new Date()
         }]);
+        setInput('');
+        setIsLoading(true);
 
         try {
             const response = await fetch(withApiBase('/api/chat', 'frontend', apiUrl), {
@@ -179,9 +176,32 @@ const sendMessage = async () => {
                 })
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || '请求失败');
+            const contentType = response.headers.get('content-type') || '';
+            const nextSessionId = response.headers.get('x-session-id');
+            if (nextSessionId && nextSessionId !== sessionId) {
+                setSessionId(nextSessionId);
+                sessionStorage.setItem('chat_session_id', nextSessionId);
+            }
+
+            // 非流式错误 / 注入拒绝 仍可能返回 JSON
+            if (!response.ok || contentType.includes('application/json')) {
+                const data = await response.json().catch(() => ({} as { error?: string; message?: string; success?: boolean; sessionId?: string }));
+                if (data.sessionId && data.sessionId !== sessionId) {
+                    setSessionId(data.sessionId);
+                    sessionStorage.setItem('chat_session_id', data.sessionId);
+                }
+                const text = data.message || data.error || '抱歉，发生了错误，请稍后再试。';
+                setMessages(prev => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = {
+                        role: 'assistant',
+                        content: text,
+                        timestamp: new Date()
+                    };
+                    return updated;
+                });
+                setIsLoading(false);
+                return;
             }
 
             const reader = response.body?.getReader();
@@ -189,45 +209,26 @@ const sendMessage = async () => {
 
             const decoder = new TextDecoder();
             let assistantText = '';
-            let buffer = '';
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = line.slice(6).trim();
-                        if (data === '[DONE]') break;
-
-                        try {
-                            const parsed = JSON.parse(data);
-                            const content = parsed.content || parsed.delta?.content || '';
-                            if (content) {
-                                assistantText += content;
-                                setMessages(prev => {
-                                    const updated = [...prev];
-                                    updated[updated.length - 1] = {
-                                        role: 'assistant',
-                                        content: assistantText,
-                                        timestamp: new Date()
-                                    };
-                                    return updated;
-                                });
-                            }
-                        } catch (e) {
-                            // 忽略解析错误
-                        }
-                    }
-                }
+                const chunk = decoder.decode(value, { stream: true });
+                if (!chunk) continue;
+                assistantText += chunk;
+                setMessages(prev => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = {
+                        role: 'assistant',
+                        content: assistantText,
+                        timestamp: new Date()
+                    };
+                    return updated;
+                });
             }
 
-            // 流结束后，如果内容为空则显示错误
-            if (!assistantText) {
+            if (!assistantText.trim()) {
                 setMessages(prev => {
                     const updated = [...prev];
                     updated[updated.length - 1] = {
@@ -255,19 +256,36 @@ const sendMessage = async () => {
     };
 
 
-    const clearChat = async () => {
-        try {
-            await fetch(withApiBase(`/api/chat/history/${sessionId}`, 'frontend', apiUrl), {
-                method: 'DELETE'
-            });
-        } catch (error) {
-            console.error('Failed to clear history:', error);
+const clearChat = async () => {
+        if (!sessionId || sessionId === 'undefined') {
+            setMessages([]);
+            const newSessionId = uuidv4();
+            setSessionId(newSessionId);
+            sessionStorage.setItem('chat_session_id', newSessionId);
+            return;
         }
+
+        try {
+            // 优先使用 Vercel 生产域名
+            const baseUrl = window.location.origin || 'https://next-personal-k0iiqb4w3-levi006s-projects.vercel.app';
+            const url = `${baseUrl}/api/chat/history/${sessionId}`;
+            
+            const res = await fetch(url, { method: 'DELETE' });
+            
+            if (!res.ok) {
+                console.warn('Clear history failed (domain issue)', res.status);
+            }
+        } catch (err) {
+            console.warn('Clear history failed (domain issue)', err);
+        }
+
+        // 无论失败都执行本地清理
         setMessages([]);
         const newSessionId = uuidv4();
         setSessionId(newSessionId);
         sessionStorage.setItem('chat_session_id', newSessionId);
     };
+
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {

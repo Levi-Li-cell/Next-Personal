@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, toDataStreamResponse } from "ai";
+import { streamText } from "ai";
 import { db } from "@/db";
 import { chatMessages } from "@/db/schema/chat";
+import { blog } from "@/db/schema/blog";
+import { getSystemPrompt } from "@/lib/knowledge";
 import { desc, eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { getSystemPrompt } from "@/lib/knowledge";
+
+export const runtime = "nodejs";
+
+const DISABLE_CHAT_DB = process.env.CHAT_DISABLE_DB === "1" || process.env.CHAT_DISABLE_DB === "true";
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 12;
@@ -170,19 +175,37 @@ async function retrieveBlogSources(question: string): Promise<RagSource[]> {
   }
 }
 
+function modelCandidates(): string[] {
+  const primaryModel = (process.env.OPENAI_MODEL || "deepseek-v4-flash").trim();
+  const fallbackModels = (process.env.OPENAI_MODEL_FALLBACKS || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return Array.from(new Set([primaryModel, ...fallbackModels].filter(Boolean)));
+}
+
 export async function POST(req: NextRequest) {
   let sessionId = "";
   try {
     const body = await req.json();
     const { message } = body;
-    sessionId = typeof body?.sessionId === "string" ? body.sessionId.trim() : uuidv4();
+    sessionId = typeof body?.sessionId === "string" ? body.sessionId.trim() : "";
 
-    const trimmed = message?.trim().slice(0, 4000);
-    if (!trimmed) {
+    if (!message || typeof message !== "string" || !message.trim()) {
       return NextResponse.json(
-        { success: false, error: "消息内容不能为空", sessionId },
-        { status: 400 }
+        {
+          success: false,
+          error: "消息内容不能为空",
+          sessionId,
+        },
+        { status: 400 },
       );
+    }
+
+    const trimmedMessage = message.trim().slice(0, 4000);
+
+    if (!sessionId) {
+      sessionId = uuidv4();
     }
 
     const rate = checkRateLimit(getClientKey(req, sessionId));
@@ -193,11 +216,14 @@ export async function POST(req: NextRequest) {
           error: `请求过于频繁，请 ${rate.retryAfterSec} 秒后再试。`,
           sessionId,
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: { "Retry-After": String(rate.retryAfterSec) },
+        },
       );
     }
 
-    if (isPromptLeakAttempt(trimmed)) {
+    if (isPromptLeakAttempt(trimmedMessage)) {
       return NextResponse.json({
         success: true,
         message: PROMPT_LEAK_REFUSAL,
@@ -205,26 +231,56 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const apiKey = (process.env.OPENAI_API_KEY || "").trim();
+    const baseURL = (process.env.OPENAI_BASE_URL || "https://api.deepseek.com").trim().replace(/\/+$/, "");
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "AI 服务暂未配置，请稍后重试。",
+          sessionId,
+        },
+        { status: 503 },
+      );
+    }
+
     const openai = createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL,
+      apiKey,
+      baseURL,
     });
 
-    const historyData = await db.query.chatMessages.findMany({
-      where: eq(chatMessages.sessionId, sessionId),
-      orderBy: [desc(chatMessages.createdAt)],
-      limit: 20,
-    });
-    const history = historyData
-      .reverse()
-      .map((msg) => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-      }))
-      .filter((m) => m.content?.trim());
+    let historyMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
+    let canPersist = !DISABLE_CHAT_DB;
+
+    if (canPersist) {
+      try {
+        const historyData = await db.query.chatMessages.findMany({
+          where: eq(chatMessages.sessionId, sessionId),
+          orderBy: [desc(chatMessages.createdAt)],
+          limit: 20,
+        });
+
+        historyMessages = historyData
+          .reverse()
+          .map((msg) => ({
+            role: msg.role as "user" | "assistant",
+            content: msg.content,
+          }))
+          .filter((msg) => msg.content?.trim());
+
+        await db.insert(chatMessages).values({
+          sessionId,
+          role: "user",
+          content: trimmedMessage,
+        });
+      } catch (dbError) {
+        canPersist = false;
+        console.error("Chat DB unavailable, fallback to stateless mode:", dbError);
+      }
+    }
 
     const systemPrompt = getSystemPrompt();
-    const ragSources = await retrieveBlogSources(trimmed);
+    const ragSources = await retrieveBlogSources(trimmedMessage);
     const ragContext = ragSources.length
       ? `\n\n=== 站内文章参考片段（仅内部参考，不要完整复述）===\n${ragSources
           .map((source, index) => `${index + 1}. ${source.title} (${source.url})\n片段: ${source.snippet}`)
@@ -232,29 +288,52 @@ export async function POST(req: NextRequest) {
       : "";
     const finalSystemPrompt = `${systemPrompt}${ragContext}`;
 
-    const result = await streamText({
-      model: openai("deepseek-v4-flash"),
+    const candidates = modelCandidates();
+    const modelName = candidates[0];
+    const persistSessionId = sessionId;
+
+    const result = streamText({
+      model: openai(modelName),
       system: finalSystemPrompt,
       messages: [
-        { role: "system", content: finalSystemPrompt },
-        ...history,
-        { role: "user", content: trimmed },
+        ...historyMessages,
+        { role: "user", content: trimmedMessage },
       ],
-      maxTokens: 1024,
       temperature: 0.3,
+      maxOutputTokens: 1024,
+      onFinish: async ({ text }) => {
+        if (!canPersist || !text) return;
+        try {
+          await db.insert(chatMessages).values({
+            sessionId: persistSessionId,
+            role: "assistant",
+            content: text,
+          });
+        } catch (dbError) {
+          console.error("Chat response persistence failed:", dbError);
+        }
+      },
     });
 
-    return new Response(toDataStreamResponse(result));
-  } catch (error) {
+    return result.toTextStreamResponse({
+      headers: {
+        "X-Session-Id": sessionId,
+        "X-Chat-Model": modelName,
+        "Cache-Control": "no-cache, no-transform",
+      },
+    });
+  } catch (error: unknown) {
     console.error("Chat Error:", error);
-    const status = typeof error === "object" && error !== null && "status" in error
-      ? Number((error as { status?: number }).status)
-      : undefined;
-    const message = status === 401
-      ? "AI 密钥无效或未授权，请检查配置。"
-      : status === 429
-        ? "AI 服务繁忙或额度不足，请稍后再试。"
-        : "抱歉，我暂时无法回答您的问题，请稍后再试。";
+    const status =
+      typeof error === "object" && error !== null && "status" in error
+        ? Number((error as { status?: number }).status)
+        : undefined;
+    const message =
+      status === 401
+        ? "AI 密钥无效或未授权，请检查配置。"
+        : status === 429
+          ? "AI 服务繁忙或额度不足，请稍后再试。"
+          : "抱歉，我暂时无法回答您的问题，请稍后再试。";
 
     return NextResponse.json(
       {
@@ -262,7 +341,7 @@ export async function POST(req: NextRequest) {
         error: message,
         sessionId,
       },
-      { status: status && status >= 400 && status < 600 ? status : 500 }
+      { status: status && status >= 400 && status < 600 ? status : 500 },
     );
   }
 }
