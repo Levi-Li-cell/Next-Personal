@@ -2,9 +2,15 @@ import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lead } from "@/db/schema/lead";
+import { sql } from "drizzle-orm";
+
+async function ensureColumn() {
+  await db.execute(sql`ALTER TABLE lead ADD COLUMN IF NOT EXISTS source_section text`);
+}
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureColumn();
     const body = await request.json();
 
     const type = body.type === "hr" ? "hr" : "client";
@@ -21,6 +27,7 @@ export async function POST(request: NextRequest) {
       budgetRange: type === "client" ? String(body.budgetRange || "").trim() || null : null,
       timeline: String(body.timeline || "").trim() || null,
       sourcePage: String(body.sourcePage || "").trim() || null,
+      sourceSection: String(body.sourceSection || "direct").trim() || "direct",
       message: String(body.message || "").trim(),
       notes: null,
     };

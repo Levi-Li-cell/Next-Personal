@@ -201,3 +201,17 @@ html {
     cursor: auto !important;
   }
 }
+
+/* 打印样式 - 简历导出PDF */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}

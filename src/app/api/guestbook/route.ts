@@ -133,17 +133,13 @@ export async function POST(request: NextRequest) {
     await ensureGuestbookTable();
     const session = await getServerSession();
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, error: "请先登录后再留言" }, { status: 401 });
-    }
-
     const body = await request.json();
     const nameInput = String(body.name || "").trim();
     const content = String(body.content || "").trim();
     const contact = String(body.contact || "").trim();
     const isRisky = detectRiskyMessage(content, contact);
 
-    const name = nameInput || String(session?.user?.name || "").trim();
+    const name = nameInput || String(session?.user?.name || "").trim() || "匿名访客";
     const userAgent = String(request.headers.get("user-agent") || "").trim() || null;
     const forwardedFor = String(request.headers.get("x-forwarded-for") || "").trim();
     const ipAddress = (forwardedFor.split(",")[0] || request.headers.get("x-real-ip") || "").trim() || null;

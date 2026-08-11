@@ -56,7 +56,7 @@ const isPromptLeakAttempt = (text: string) => {
 };
 
 const PROMPT_LEAK_REFUSAL =
-  "抱歉，我不能提供系统提示词或知识库原文导出。你可以问具体方向（经历、技能、项目等），我可以基于公开资料简要说明。";
+  "抱歉，此问题我不能回复。你可以问具体方向（经历、技能、项目等），我可以基于公开资料简要说明。";
 
 type BlogCandidate = {
   title: string;

@@ -35,7 +35,10 @@ import {
     CloudLightning,
     LocateFixed,
     Search,
-    RefreshCw
+    RefreshCw,
+    FileDown,
+    MessageCircle,
+    Globe
 } from 'lucide-react';
 import SkillRadar from '@/components/SkillRadar';
 import ExperienceTimeline from '@/components/ExperienceTimeline';
@@ -48,6 +51,8 @@ import TypeWriter from '@/components/TypeWriter';
 import MagneticButton from '@/components/MagneticButton';
 import FloatingElements from '@/components/FloatingElements';
 import ChatAssistant from '@/components/ChatAssistant';
+import { DualLeadForm } from '@/components/conversion/DualLeadForm';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import SidebarNav from '@/components/SidebarNav';
 import { useSession } from '@/lib/auth/client';
 import { toast } from 'sonner';
@@ -184,6 +189,7 @@ type WeatherSource = 'gps' | 'ip' | 'manual' | 'fallback';
 export default function App() {
     const router = useRouter();
     const { data: session } = useSession();
+    const { flags } = useFeatureFlags();
     const [imagesState, setImagesState] = useState<string[]>(initialImages);
     const [isMobile, setIsMobile] = useState(false);
     const [now, setNow] = useState(new Date());
@@ -217,6 +223,9 @@ export default function App() {
             expectedSalary: string;
             githubUrl?: string;
             linkedinUrl?: string;
+            email?: string;
+            wechat?: string;
+            blogUrl?: string;
             hobbies: string[];
             photos?: string[];
         };
@@ -243,6 +252,7 @@ export default function App() {
         }>;
         honors: Array<{ id: string; title: string }>;
     } | null>(null);
+    const [evaluationItems, setEvaluationItems] = useState<Array<{ id: string; content: string; sortOrder: number }>>([]);
 
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
@@ -494,6 +504,19 @@ export default function App() {
 
         fetchAuthorData();
 
+        const fetchEvaluation = async () => {
+            try {
+                const res = await fetch('/api/author/evaluation');
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data)) {
+                    setEvaluationItems(data.data);
+                }
+            } catch {
+                // fallback to hardcoded
+            }
+        };
+        fetchEvaluation();
+
         const handleMouseMove = (e: MouseEvent) => {
             setMousePosition({ x: e.clientX, y: e.clientY });
             mouseX.set(e.clientX);
@@ -578,13 +601,15 @@ export default function App() {
 
     const honorData = authorData?.honors?.map((item) => ({ title: item.title }));
 
-    const selfEvaluation = [
-        '本人性格踏实稳重，严谨务实、有较强的抗压能力',
-        '设计上具备良好的审美能力，有良好的代码编程习惯',
-        '对互联网行业有较强的学习热情和自学能力，有较强的独立思考能力',
-        '乐于在开发者社区Github上交流学习，将新的知识纳入自己的知识体系中',
-        '擅于团队协作开发，沟通交流，有意进入贵司成为开发岗中的一员',
-    ];
+    const selfEvaluation = evaluationItems.length > 0
+        ? evaluationItems.map((item) => item.content)
+        : [
+            '本人性格踏实稳重，严谨务实、有较强的抗压能力',
+            '设计上具备良好的审美能力，有良好的代码编程习惯',
+            '对互联网行业有较强的学习热情和自学能力，有较强的独立思考能力',
+            '乐于在开发者社区Github上交流学习，将新的知识纳入自己的知识体系中',
+            '擅于团队协作开发，沟通交流，有意进入贵司成为开发岗中的一员',
+        ];
 
     const mobileSections = [
         { key: 'about', label: '关于', hint: '基础资料与求职意向' },
@@ -609,11 +634,6 @@ export default function App() {
     };
 
     const goSnakeGame = () => {
-        if (!session?.user?.id) {
-            toast.error('小游戏仅登录用户可访问');
-            router.push('/signin?redirect=/snake3d');
-            return;
-        }
         router.push('/snake3d');
     };
 
@@ -840,6 +860,7 @@ export default function App() {
                                     {authorData?.profile?.bio || '专注于创造优秀的用户体验，精通现代前端技术栈，具备丰富的项目经验和持续学习的热情。'}
                                 </motion.p>
 
+                                {flags.showWeatherWidget && (
                                 <motion.div
                                     className="relative overflow-hidden rounded-2xl border border-cyan-300/25 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/15 p-4 backdrop-blur-xl"
                                     initial={{ opacity: 0, y: 16 }}
@@ -972,6 +993,7 @@ export default function App() {
                                         </div>
                                     )}
                                 </motion.div>
+                                )}
                             </motion.div>
 
                             {isMobile ? (
@@ -1071,6 +1093,7 @@ export default function App() {
                                         transition={{ delay: 1 }}
                                         className="flex flex-col gap-4 pt-6"
                                     >
+                                        {flags.showGeoLab && (
                                         <motion.div
                                             className="rounded-2xl border border-cyan-300/30 bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-indigo-500/15 p-4"
                                             initial={{ opacity: 0, y: 12 }}
@@ -1090,7 +1113,9 @@ export default function App() {
                                                 进入空间实验室
                                             </button>
                                         </motion.div>
+                                        )}
 
+                                        {flags.showSnakeGame && (
                                         <MagneticButton>
                                             <motion.button
                                                 type="button"
@@ -1103,7 +1128,10 @@ export default function App() {
                                                 工作辛苦了来玩会儿游戏吧
                                             </motion.button>
                                         </MagneticButton>
+                                        )}
 
+                                        {flags.showSponsorPage && (
+                                        <>
                                         <MagneticButton>
                                             <motion.a
                                                 href="/sponsor"
@@ -1128,6 +1156,22 @@ export default function App() {
                                             </motion.a>
                                         </MagneticButton>
                                         <motion.p className="text-white/80 text-sm font-medium">请我喝杯咖啡吧～ 代码更香浓 😊</motion.p>
+                                        </>
+                                        )}
+
+                                        <MagneticButton>
+                                            <motion.a
+                                                href="/resume"
+                                                target="_blank"
+                                                rel="noopener"
+                                                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-300/30 px-4 py-2 text-sm text-white hover:from-purple-500/50 hover:to-pink-500/50"
+                                                whileHover={{ scale: 1.06 }}
+                                                whileTap={{ scale: 0.96 }}
+                                            >
+                                                <FileDown className="w-4 h-4" />
+                                                导出简历 PDF
+                                            </motion.a>
+                                        </MagneticButton>
                                     </motion.div>
                                 </>
                             )}
@@ -1186,6 +1230,7 @@ export default function App() {
 
                         {mobileSection === 'about' && (
                             <div className="space-y-2">
+                                {flags.showWeatherWidget && (
                                 <div className="relative overflow-hidden rounded-xl border border-cyan-200/20 bg-gradient-to-br from-cyan-500/25 via-blue-500/10 to-purple-500/20 p-3">
                                     <div className="absolute -right-6 -top-8 h-20 w-20 rounded-full bg-cyan-300/20 blur-2xl" />
                                     <div className="relative flex items-center justify-between gap-3">
@@ -1211,7 +1256,9 @@ export default function App() {
                                         <span className="rounded-full bg-white/10 px-2 py-1">风速 {weatherData ? `${Math.round(weatherData.windSpeed)} km/h` : '--'}</span>
                                     </div>
                                 </div>
+                                )}
 
+                                {flags.showGeoLab && (
                                 <div className="rounded-xl border border-cyan-200/25 bg-gradient-to-r from-cyan-500/15 to-indigo-500/15 p-3">
                                     <p className="text-sm text-white font-medium">空间分析实验室（GIS + WebGL）</p>
                                     <p className="mt-1 text-xs text-white/75 leading-relaxed">
@@ -1225,11 +1272,15 @@ export default function App() {
                                         进入空间实验室
                                     </button>
                                 </div>
+                                )}
 
                                 {[
                                     { icon: User, label: '性别', value: authorData?.profile?.gender || '男' },
                                     { icon: Calendar, label: '年龄', value: authorData?.profile?.age || '24' },
                                     { icon: Phone, label: '联系电话', value: authorData?.profile?.phone || '13043428526' },
+                                    ...(authorData?.profile?.email ? [{ icon: Mail, label: '邮箱', value: authorData.profile.email }] : []),
+                                    ...(authorData?.profile?.wechat ? [{ icon: MessageCircle, label: '微信', value: authorData.profile.wechat }] : []),
+                                    ...(authorData?.profile?.blogUrl ? [{ icon: Globe, label: '个人博客', value: authorData.profile.blogUrl }] : []),
                                     { icon: GraduationCap, label: '学历', value: authorData?.profile?.education || '本科' },
                                     { icon: MapPin, label: '户籍', value: authorData?.profile?.location || '江西 · 汉族' },
                                     { icon: Target, label: '意向城市', value: authorData?.profile?.preferredCity || '全国' },
@@ -1560,6 +1611,10 @@ export default function App() {
                                 <span>{authorData?.profile?.phone || '13043428526'}</span>
                             </motion.div>
                         </MagneticButton>
+
+                        <div className="mt-8 sm:mt-12 pt-8 sm:pt-12">
+                            <DualLeadForm />
+                        </div>
 
                         <div className="mt-8 sm:mt-12 pt-8 sm:pt-12 border-t border-white/10">
                             <div className="flex items-center justify-center gap-3 text-white/70 mb-6">

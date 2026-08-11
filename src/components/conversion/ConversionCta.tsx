@@ -9,14 +9,14 @@ type ConversionCtaProps = {
 
 const targets = [
   {
-    href: "/for-hr",
-    title: "招聘方入口",
-    description: "快速判断岗位匹配度、代表项目和面试沟通方式。",
+    href: "/author#contact",
+    title: "面试邀约",
+    description: "在作者页联系区直接提交岗位信息和沟通方式。",
   },
   {
-    href: "/for-clients",
-    title: "合作入口",
-    description: "查看案例、服务范围和项目沟通表单。",
+    href: "/author#contact",
+    title: "合作需求",
+    description: "在作者页联系区直接提交项目类型、预算和周期。",
   },
 ];
 

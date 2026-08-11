@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, User, Wrench } from "lucide-react";
+import { BookOpen, MessageSquare, User, Wrench } from "lucide-react";
 
 const navItems = [
-  { href: "/author", label: "作者", icon: User, match: (path: string) => path.startsWith("/author") },
+  { href: "/author", label: "作者", icon: User, match: (path: string) => path === "/" || path.startsWith("/author") },
   { href: "/blog", label: "博客", icon: BookOpen, match: (path: string) => path.startsWith("/blog") },
-  { href: "/projects", label: "项目", icon: Wrench, match: (path: string) => path.startsWith("/projects") || path.startsWith("/guestbook") || path.startsWith("/geo-lab") },
+  { href: "/projects", label: "项目", icon: Wrench, match: (path: string) => path.startsWith("/projects") || path.startsWith("/geo-lab") },
+  { href: "/guestbook", label: "留言", icon: MessageSquare, match: (path: string) => path.startsWith("/guestbook") },
 ];
 
 export default function MobileBottomNav() {

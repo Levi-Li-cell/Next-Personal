@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ExternalLink, Loader2, LogIn, LogOut, Settings, Sparkles, User } from "lucide-react";
+import { ExternalLink, Loader2, LogIn, LogOut, Settings, Sparkles } from "lucide-react";
 import { useSession, signOut } from "@/lib/auth/client";
 import {
   DropdownMenu,
@@ -17,12 +17,10 @@ import { useEffect, useState } from "react";
 import FrontendNotificationBell from "@/components/FrontendNotificationBell";
 
 const navItems = [
-  { id: "home", label: "首页", href: "/" },
-  { id: "for-hr", label: "招聘方", href: "/for-hr" },
-  { id: "for-clients", label: "合作", href: "/for-clients" },
   { id: "author", label: "作者", href: "/author" },
   { id: "blog", label: "博客", href: "/blog" },
   { id: "projects", label: "项目", href: "/projects" },
+  { id: "guestbook", label: "留言板", href: "/guestbook" },
 ];
 
 export default function TopNavbar() {
@@ -64,7 +62,7 @@ export default function TopNavbar() {
   }, [session.isPending, user]);
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
+    if (href === "/author") return pathname === "/" || pathname.startsWith("/author");
     return pathname.startsWith(href);
   };
 
@@ -179,12 +177,7 @@ export default function TopNavbar() {
                       <ExternalLink className="ml-auto h-3 w-3" />
                     </DropdownMenuItem>
                   )}
-                  <Link href="/dashboard">
-                    <DropdownMenuItem className="my-1 cursor-pointer rounded-lg focus:bg-white/10 focus:text-white">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>个人中心</span>
-                    </DropdownMenuItem>
-                  </Link>
+
                   <DropdownMenuItem
                     className="my-1 cursor-pointer rounded-lg text-red-400 focus:bg-red-500/20 focus:text-red-400"
                     onClick={() => signOut()}

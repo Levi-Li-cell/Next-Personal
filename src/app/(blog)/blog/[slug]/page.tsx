@@ -285,13 +285,13 @@ export default function BlogDetailPage() {
         />
         <div className="mt-4 flex flex-wrap gap-3">
           {post.ctaType !== "client" && (
-            <Link href="/for-hr" className="rounded-full bg-[#f3c96a] px-5 py-2.5 text-sm font-medium text-black">
-              招聘方入口
+            <Link href="/author#contact" className="rounded-full bg-[#f3c96a] px-5 py-2.5 text-sm font-medium text-black">
+              面试邀约
             </Link>
           )}
           {post.ctaType !== "hr" && (
-            <Link href="/for-clients" className="rounded-full border border-white/12 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/90">
-              合作入口
+            <Link href="/author#contact" className="rounded-full border border-white/12 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/90">
+              合作需求
             </Link>
           )}
         </div>

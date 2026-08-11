@@ -13,6 +13,7 @@ export const lead = pgTable("lead", {
   budgetRange: text("budget_range"),
   timeline: text("timeline"),
   sourcePage: text("source_page"),
+  sourceSection: text("source_section"), // direct | blog_cta | project_cta | guestbook_redirect | blog_comment
   message: text("message").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

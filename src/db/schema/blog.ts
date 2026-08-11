@@ -33,8 +33,8 @@ blogComment = pgTable("blog_comment", {
     .notNull()
     .references(() => blog.id, { onDelete: "cascade" }),
   userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => user.id, { onDelete: "set null" }),
+  guestName: text("guest_name"),
   parentId: text("parent_id").references(() => blogComment.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   status: text("status").notNull().default("approved"),

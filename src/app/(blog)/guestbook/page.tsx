@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { useSession } from "@/lib/auth/client";
+import { ConversionCta } from "@/components/conversion/ConversionCta";
 
 interface GuestbookMessage {
   id: string;
@@ -21,7 +21,6 @@ interface GuestbookMessage {
 }
 
 export default function GuestbookPage() {
-  const { data: session, isPending: sessionPending } = useSession();
   const [messages, setMessages] = useState<GuestbookMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +34,7 @@ export default function GuestbookPage() {
   const [form, setForm] = useState({
     name: "",
     contact: "",
+    messageType: "咨询",
     content: "",
   });
 
@@ -72,18 +72,23 @@ export default function GuestbookPage() {
       const response = await fetch("/api/guestbook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, content: form.messageType !== "咨询" ? `[${form.messageType}] ${form.content}` : form.content }),
       });
       const data = await response.json();
 
         if (data.success) {
-          setForm({ name: "", contact: "", content: "" });
           await fetchMessages(1);
           toast.success(
             data.data?.status === "flagged"
               ? "留言已提交，但被标记为风险内容，前台会附带风险提醒"
-              : "留言成功，感谢你的建议与鼓励"
+              : form.messageType === "合作意向"
+                ? "留言已提交。如果是合作或招聘需求，建议直接填写联系表单获取快速回复 →"
+                : "留言成功，感谢你的建议与鼓励"
           );
+          if (form.messageType === "合作意向") {
+            setTimeout(() => window.open("/author#contact", "_self"), 1500);
+          }
+          setForm({ name: "", contact: "", messageType: "咨询", content: "" });
         } else {
         toast.error(data.error || "留言失败");
       }
@@ -112,7 +117,6 @@ export default function GuestbookPage() {
             <CardTitle className="text-white">发布留言</CardTitle>
           </CardHeader>
           <CardContent>
-            {session?.user?.id ? (
               <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-white">昵称</Label>
@@ -134,6 +138,21 @@ export default function GuestbookPage() {
                   placeholder="微信 / 邮箱 / 电话"
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/60"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="messageType" className="text-white">留言类型</Label>
+                <select
+                  id="messageType"
+                  value={form.messageType}
+                  onChange={(e) => setForm((prev) => ({ ...prev, messageType: e.target.value }))}
+                  className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white"
+                >
+                  <option value="咨询">咨询</option>
+                  <option value="建议">建议</option>
+                  <option value="合作意向">合作意向</option>
+                  <option value="其他">其他</option>
+                </select>
               </div>
 
               <div className="space-y-2">
@@ -166,11 +185,6 @@ export default function GuestbookPage() {
                 )}
               </Button>
               </form>
-            ) : (
-              <div className="text-white/70 text-sm">
-                {sessionPending ? "正在检查登录状态..." : <>请先 <a href="/signin" className="text-purple-300 underline">登录</a> 后留言</>}
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -250,6 +264,12 @@ export default function GuestbookPage() {
           )}
         </div>
       </div>
+
+      <ConversionCta
+        eyebrow="Next Step"
+        title="如果是合作或招聘需求，可以直接填写联系表单"
+        description="留言板适合交流建议，正式合作和面试邀约请通过联系表单提交，方便统一跟进。"
+      />
     </div>
   );
 }

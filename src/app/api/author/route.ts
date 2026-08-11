@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { authorProfile, authorSkill, authorExperience, authorEducation, authorHonor } from "@/db/schema/author";
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, sql } from "drizzle-orm";
 import { DEFAULT_AUTHOR_PHOTOS } from "@/lib/author-defaults";
+
+async function ensureColumns() {
+  await db.execute(sql`ALTER TABLE author_profile ADD COLUMN IF NOT EXISTS wechat text`);
+  await db.execute(sql`ALTER TABLE author_profile ADD COLUMN IF NOT EXISTS blog_url text`);
+}
 
 // GET /api/author - 获取所有作者信息（公开API）
 export async function GET() {
@@ -21,6 +26,8 @@ export async function GET() {
     githubUrl: "",
     linkedinUrl: "",
     email: "",
+    wechat: "",
+    blogUrl: "",
     hobbies: ["台球", "乒乓球", "羽毛球", "篮球", "骑行", "平面设计", "绘画"],
     photos: DEFAULT_AUTHOR_PHOTOS,
   };
@@ -131,6 +138,7 @@ export async function GET() {
   ];
 
   try {
+    await ensureColumns();
     // 并行获取所有数据
     const [profiles, skills, experiences, education, honors] = await Promise.all([
       db.select().from(authorProfile).orderBy(desc(authorProfile.createdAt)).limit(1),

@@ -9,14 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { Loader2, Send, Reply, Trash2 } from "lucide-react";
 
 interface Comment {
   id: string;
   content: string;
   createdAt: Date;
-  userId: string;
+  userId: string | null;
+  guestName: string | null;
   replies?: Comment[];
 }
 
@@ -31,16 +31,12 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [commentContent, setCommentContent] = useState("");
+  const [commentName, setCommentName] = useState("");
   const [replyContent, setReplyContent] = useState("");
+  const [replyName, setReplyName] = useState("");
 
   // 获取评论列表
   useEffect(() => {
-    if (!session?.user?.id) {
-      setComments([]);
-      setLoading(false);
-      return;
-    }
-
     async function fetchComments() {
       try {
         const response = await fetch(`/api/blog/${slug}/comments`);
@@ -51,43 +47,43 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
             replies: comment.replies || [],
           }));
           setComments(normalizedComments);
-        } else {
-          toast.error("获取评论失败");
         }
       } catch (error) {
         console.error("获取评论失败:", error);
-        toast.error("获取评论失败");
       } finally {
         setLoading(false);
       }
     }
 
     fetchComments();
-  }, [slug, session?.user?.id]);
+  }, [slug]);
+
+  const getDisplayName = (comment: Comment) => {
+    if (comment.guestName) return comment.guestName;
+    return "用户";
+  };
 
   // 提交评论
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentContent.trim()) return;
-    if (!session) {
-      toast.error("请先登录");
-      return;
-    }
 
     setSubmitting(true);
     try {
       const response = await fetch(`/api/blog/${slug}/comments`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content: commentContent }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: commentContent,
+          guestName: !session?.user?.id ? commentName.trim() || "匿名访客" : undefined,
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setComments([{ ...data.comment, replies: data.comment?.replies || [] }, ...comments]);
         setCommentContent("");
+        setCommentName("");
         toast.success("评论成功");
       } else {
         const error = await response.json();
@@ -104,24 +100,21 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
   // 提交回复
   const handleSubmitReply = async (parentId: string) => {
     if (!replyContent.trim()) return;
-    if (!session) {
-      toast.error("请先登录");
-      return;
-    }
 
     setSubmitting(true);
     try {
       const response = await fetch(`/api/blog/${slug}/comments`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content: replyContent, parentId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: replyContent,
+          parentId,
+          guestName: !session?.user?.id ? replyName.trim() || "匿名访客" : undefined,
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        // 更新评论列表，添加回复
         const updatedComments = comments.map(comment => {
           if (comment.id === parentId) {
             return {
@@ -133,6 +126,7 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
         });
         setComments(updatedComments);
         setReplyContent("");
+        setReplyName("");
         setReplyingTo(null);
         toast.success("回复成功");
       } else {
@@ -148,17 +142,10 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
   };
 
   const handleDeleteComment = async (commentId: string, parentId?: string | null) => {
-    if (!session) {
-      toast.error("请先登录");
-      return;
-    }
-
     try {
       const response = await fetch(`/api/blog/${slug}/comments`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commentId }),
       });
 
@@ -206,164 +193,176 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
           <CardTitle className="text-xl font-semibold text-white">发表评论</CardTitle>
         </CardHeader>
         <CardContent>
-          {session ? (
-            <form onSubmit={handleSubmitComment} className="space-y-4">
+          <form onSubmit={handleSubmitComment} className="space-y-4">
+            {!session?.user?.id && (
               <div className="space-y-2">
-                <Label htmlFor="comment" className="text-white">评论内容</Label>
-                <Textarea
-                  id="comment"
-                  value={commentContent}
-                  onChange={(e) => setCommentContent(e.target.value)}
-                  placeholder="写下你的评论..."
-                  rows={4}
-                  className="bg-white/5 border-white/10 text-white"
+                <Label htmlFor="commentName" className="text-white">昵称（可选）</Label>
+                <Input
+                  id="commentName"
+                  value={commentName}
+                  onChange={(e) => setCommentName(e.target.value)}
+                  placeholder='不填则显示"匿名访客"'
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/60"
                 />
               </div>
-              <Button
-                type="submit"
-                disabled={submitting || !commentContent.trim()}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    提交中...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    发表评论
-                  </>
-                )}
-              </Button>
-            </form>
-          ) : (
-            <p className="text-white/60">请 <a href="/signin" className="text-purple-400 hover:underline">登录</a> 后发表评论</p>
-          )}
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="comment" className="text-white">评论内容</Label>
+              <Textarea
+                id="comment"
+                value={commentContent}
+                onChange={(e) => setCommentContent(e.target.value)}
+                placeholder="写下你的评论..."
+                rows={4}
+                className="bg-white/5 border-white/10 text-white"
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={submitting || !commentContent.trim()}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  提交中...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  发表评论
+                </>
+              )}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
       {/* 评论列表 */}
       <div className="space-y-6">
         <h3 className="text-xl font-semibold text-white">评论 ({comments.length})</h3>
-        {!session ? (
-          <p className="text-white/60">仅登录用户可查看和参与评论，请 <a href="/signin" className="text-purple-400 hover:underline">登录</a>。</p>
-        ) : null}
-        {session ? (
-          comments.length === 0 ? (
-            <p className="text-white/60">暂无评论，快来发表第一条评论吧！</p>
-          ) : (
-            comments.map((comment) => (
-            <div key={comment.id} className="space-y-4">
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="p-6">
-                  <div className="flex gap-4">
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={session?.user?.image || ""} />
-                      <AvatarFallback>{session?.user?.name?.charAt(0) || "U"}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-white">{session?.user?.name || "用户"}</h4>
-                        <span className="text-sm text-white/60">
-                          {new Date(comment.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-white/80">{comment.content}</p>
-                      <div className="flex items-center gap-2">
+        {comments.length === 0 ? (
+          <p className="text-white/60">暂无评论，快来发表第一条评论吧！</p>
+        ) : (
+          comments.map((comment) => (
+          <div key={comment.id} className="space-y-4">
+            <Card className="bg-white/5 border-white/10">
+              <CardContent className="p-6">
+                <div className="flex gap-4">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={undefined} />
+                    <AvatarFallback>{getDisplayName(comment).charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-white">{getDisplayName(comment)}</h4>
+                      <span className="text-sm text-white/60">
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-white/80">{comment.content}</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                        className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                      >
+                        <Reply className="w-4 h-4" />
+                        回复
+                      </button>
+                      {session?.user?.id && session.user.id === comment.userId && (
                         <button
-                          onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                          className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                          onClick={() => handleDeleteComment(comment.id, null)}
+                          className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1"
                         >
-                          <Reply className="w-4 h-4" />
-                          回复
+                          <Trash2 className="w-4 h-4" />
+                          删除
                         </button>
-                        {session?.user?.id === comment.userId && (
-                          <button
-                            onClick={() => handleDeleteComment(comment.id, null)}
-                            className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            删除
-                          </button>
-                        )}
-                      </div>
-
-                      {/* 回复表单 */}
-                      {replyingTo === comment.id && (
-                        <div className="mt-4 space-y-3">
-                          <Textarea
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="写下你的回复..."
-                            rows={2}
-                            className="bg-white/5 border-white/10 text-white"
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => handleSubmitReply(comment.id)}
-                              disabled={submitting || !replyContent.trim()}
-                              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                            >
-                              {submitting ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                  提交中...
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="w-4 h-4 mr-2" />
-                                  回复
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              onClick={() => {
-                                setReplyingTo(null);
-                                setReplyContent("");
-                              }}
-                              className="text-white/60 hover:text-white hover:bg-white/10"
-                            >
-                              取消
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 回复列表 */}
-                      {(comment.replies?.length || 0) > 0 && (
-                        <div className="mt-4 pl-4 border-l-2 border-white/10 space-y-3">
-                          {(comment.replies || []).map((reply) => (
-                            <div key={reply.id} className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <h5 className="font-medium text-white/80">{session?.user?.name || "用户"}</h5>
-                                <span className="text-xs text-white/60">
-                                  {new Date(reply.createdAt).toLocaleString()}
-                                </span>
-                              </div>
-                              <p className="text-white/70">{reply.content}</p>
-                              {session?.user?.id === reply.userId && (
-                                <button
-                                  onClick={() => handleDeleteComment(reply.id, comment.id)}
-                                  className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                  删除
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
                       )}
                     </div>
+
+                    {/* 回复表单 */}
+                    {replyingTo === comment.id && (
+                      <div className="mt-4 space-y-3">
+                        {!session?.user?.id && (
+                          <Input
+                            value={replyName}
+                            onChange={(e) => setReplyName(e.target.value)}
+                            placeholder="昵称（可选）"
+                            className="bg-white/5 border-white/10 text-white placeholder:text-white/60"
+                          />
+                        )}
+                        <Textarea
+                          value={replyContent}
+                          onChange={(e) => setReplyContent(e.target.value)}
+                          placeholder="写下你的回复..."
+                          rows={2}
+                          className="bg-white/5 border-white/10 text-white"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleSubmitReply(comment.id)}
+                            disabled={submitting || !replyContent.trim()}
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                          >
+                            {submitting ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                提交中...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4 mr-2" />
+                                回复
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              setReplyingTo(null);
+                              setReplyContent("");
+                              setReplyName("");
+                            }}
+                            className="text-white/60 hover:text-white hover:bg-white/10"
+                          >
+                            取消
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 回复列表 */}
+                    {(comment.replies?.length || 0) > 0 && (
+                      <div className="mt-4 pl-4 border-l-2 border-white/10 space-y-3">
+                        {(comment.replies || []).map((reply) => (
+                          <div key={reply.id} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h5 className="font-medium text-white/80">{getDisplayName(reply)}</h5>
+                              <span className="text-xs text-white/60">
+                                {new Date(reply.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-white/70">{reply.content}</p>
+                            {session?.user?.id && session.user.id === reply.userId && (
+                              <button
+                                onClick={() => handleDeleteComment(reply.id, comment.id)}
+                                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                删除
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-            ))
-          )
-        ) : null}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          ))
+        )}
       </div>
     </div>
   );

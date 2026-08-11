@@ -17,6 +17,8 @@ export const authorProfile = pgTable("author_profile", {
   githubUrl: text("github_url"),
   linkedinUrl: text("linkedin_url"),
   email: text("email"),
+  wechat: text("wechat"),
+  blogUrl: text("blog_url"),
   hobbies: json("hobbies").$type<string[]>().default([]),
   photos: json("photos").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
