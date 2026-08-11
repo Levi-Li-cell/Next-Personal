@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, MessageSquare, User, Wrench } from "lucide-react";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 const navItems = [
   { href: "/author", label: "作者", icon: User, match: (path: string) => path === "/" || path.startsWith("/author") },
@@ -13,11 +14,12 @@ const navItems = [
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const { flags } = useFeatureFlags();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/85 backdrop-blur md:hidden">
       <div className="grid grid-cols-4 gap-1 px-2 py-2">
-        {navItems.map((item) => {
+        {navItems.filter((item) => item.href !== "/author" || flags.showAuthorPage).map((item) => {
           const active = item.match(pathname);
           const Icon = item.icon;
 

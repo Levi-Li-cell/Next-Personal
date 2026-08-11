@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import FrontendNotificationBell from "@/components/FrontendNotificationBell";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 const navItems = [
   { id: "author", label: "作者", href: "/author" },
@@ -31,6 +32,7 @@ export default function TopNavbar() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
+  const { flags } = useFeatureFlags();
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -111,7 +113,7 @@ export default function TopNavbar() {
           </Link>
 
           <div className="hidden items-center gap-2 md:flex">
-            {navItems.map((item, index) => (
+            {navItems.filter((item) => item.href !== "/author" || flags.showAuthorPage).map((item, index) => (
               <Link key={item.id} href={item.href}>
                 <motion.div
                   className="relative cursor-pointer rounded-full px-4 py-2 transition-all"

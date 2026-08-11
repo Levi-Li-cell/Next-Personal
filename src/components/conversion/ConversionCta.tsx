@@ -31,7 +31,7 @@ export function ConversionCta({ eyebrow, title, description }: ConversionCtaProp
       <div className="grid gap-4 md:grid-cols-2">
         {targets.map((target) => (
           <Link
-            key={target.href}
+            key={`${target.href}-${target.title}`}
             href={target.href}
             className="group rounded-[1.5rem] border border-white/8 bg-black/18 p-5 transition-transform duration-200 hover:-translate-y-1 hover:border-[#f3c96a]/40"
           >

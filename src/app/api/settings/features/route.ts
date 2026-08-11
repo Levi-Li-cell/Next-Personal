@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth/get-session";
@@ -8,6 +8,8 @@ const DEFAULT_FLAGS: Record<string, boolean> = {
   showWeatherWidget: false,
   showSnakeGame: false,
   showGeoLab: false,
+  showAuthorPage: false,
+  enable3DTools: false,
 };
 
 async function ensureTable() {

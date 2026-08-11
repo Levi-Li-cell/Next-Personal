@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 
@@ -7,6 +7,8 @@ export type FeatureFlags = {
   showWeatherWidget: boolean;
   showSnakeGame: boolean;
   showGeoLab: boolean;
+  showAuthorPage: boolean;
+  enable3DTools: boolean;
 };
 
 const DEFAULT_FLAGS: FeatureFlags = {
@@ -14,6 +16,8 @@ const DEFAULT_FLAGS: FeatureFlags = {
   showWeatherWidget: false,
   showSnakeGame: false,
   showGeoLab: false,
+  showAuthorPage: false,
+  enable3DTools: false,
 };
 
 export function useFeatureFlags() {

@@ -16,6 +16,8 @@ const FEATURE_LABELS: { key: string; label: string; description: string }[] = [
   { key: "showWeatherWidget", label: "天气组件", description: "在作者页显示实时天气信息和城市查询" },
   { key: "showSnakeGame", label: "3D 贪吃蛇", description: "在作者页显示游戏入口和 /snake3d 路由" },
   { key: "showGeoLab", label: "空间实验室", description: "在作者页显示空间分析实验室入口和 /geo-lab 路由" },
+  { key: "showAuthorPage", label: "作者页", description: "显示 /author 作者主页入口与路由，默认隐藏" },
+  { key: "enable3DTools", label: "3D 管理员模式", description: "启用 3D 简历左下角编辑工具（贴纸/运镜/资料）" },
 ];
 
 export default function SettingsPage() {

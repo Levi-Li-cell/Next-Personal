@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { ArrowRight, ExternalLink, Folder, Github, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ConversionCta } from "@/components/conversion/ConversionCta";
 
@@ -29,6 +29,33 @@ interface ProjectResponse {
     totalPages: number;
   };
 }
+
+function ExternalIconLink({ href, label, children }: { href: string; label: string; children: ReactNode }) {
+  return (
+    <span
+      role="link"
+      tabIndex={0}
+      aria-label={label}
+      title={label}
+      className="inline-flex cursor-pointer items-center text-white/70 hover:text-white"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        window.open(href, "_blank", "noopener,noreferrer");
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.stopPropagation();
+          window.open(href, "_blank", "noopener,noreferrer");
+        }
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -121,14 +148,14 @@ export default function ProjectsPage() {
                     </div>
                     <div className="flex gap-3">
                       {project.githubUrl && (
-                        <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white" onClick={(event) => event.stopPropagation()}>
+                        <ExternalIconLink href={project.githubUrl} label="GitHub 仓库">
                           <Github className="h-5 w-5" />
-                        </a>
+                        </ExternalIconLink>
                       )}
                       {project.demoUrl && (
-                        <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white" onClick={(event) => event.stopPropagation()}>
+                        <ExternalIconLink href={project.demoUrl} label="在线演示">
                           <ExternalLink className="h-5 w-5" />
-                        </a>
+                        </ExternalIconLink>
                       )}
                       <ArrowRight className="h-5 w-5 text-[#f3c96a] opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>
