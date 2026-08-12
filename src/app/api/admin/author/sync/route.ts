@@ -181,8 +181,8 @@ export async function POST() {
         school: "南昌交通学院",
         major: "智能科技",
         degree: "本科",
-        startDate: "2020.9",
-        endDate: "2024.6",
+        startDate: "2021.9",
+        endDate: "2025.9",
         description: "主修课程",
         achievements: [
           "HTML5 程序设计",

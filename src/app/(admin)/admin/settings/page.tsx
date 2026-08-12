@@ -10,14 +10,15 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 const FEATURE_LABELS: { key: string; label: string; description: string }[] = [
+  { key: "showAuthorPage", label: "作者页面", description: "显示 /author 作者主页及所有导航入口；关闭时启用路由守卫并默认隐藏" },
+  { key: "enable3DTools", label: "首页编辑器", description: "显示首页 3D 编辑工具，包括贴纸、运镜和资料编辑；默认隐藏" },
   { key: "showSponsorPage", label: "赞助页", description: "显示作者页赞助入口和 /sponsor 路由" },
   { key: "showWeatherWidget", label: "天气组件", description: "在作者页显示实时天气信息和城市查询" },
   { key: "showSnakeGame", label: "3D 贪吃蛇", description: "在作者页显示游戏入口和 /snake3d 路由" },
   { key: "showGeoLab", label: "空间实验室", description: "在作者页显示空间分析实验室入口和 /geo-lab 路由" },
-  { key: "showAuthorPage", label: "作者页", description: "显示 /author 作者主页入口与路由，默认隐藏" },
-  { key: "enable3DTools", label: "3D 管理员模式", description: "启用 3D 简历左下角编辑工具（贴纸/运镜/资料）" },
 ];
 
 export default function SettingsPage() {
@@ -116,16 +117,16 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">系统设置</h1>
-        <p className="text-muted-foreground">管理系统配置和偏好设置</p>
+        <h1 className="text-2xl font-bold tracking-tight">前台显隐与系统设置</h1>
+        <p className="text-muted-foreground">控制作者页面、首页编辑器及其他前台功能</p>
       </div>
 
       <div className="grid gap-6">
         {/* 功能开关 */}
         <Card>
           <CardHeader>
-            <CardTitle>功能开关</CardTitle>
-            <CardDescription>控制前台页面功能模块的显示与隐藏，默认全部隐藏</CardDescription>
+            <CardTitle>前台显隐开关</CardTitle>
+            <CardDescription>开关保存后立即控制对应页面或功能，作者页面与首页编辑器默认隐藏</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {flagsLoading ? (
@@ -141,19 +142,11 @@ export default function SettingsPage() {
                       <p className="font-medium">{item.label}</p>
                       <p className="text-sm text-muted-foreground">{item.description}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleFlag(item.key)}
-                      className={`relative h-6 w-11 rounded-full transition-colors ${
-                        flags[item.key] ? "bg-emerald-500" : "bg-gray-300"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                          flags[item.key] ? "translate-x-5" : "translate-x-0.5"
-                        }`}
-                      />
-                    </button>
+                    <Switch
+                      checked={Boolean(flags[item.key])}
+                      onCheckedChange={() => toggleFlag(item.key)}
+                      aria-label={`${item.label}显隐开关`}
+                    />
                   </div>
                 ))}
                 <Button onClick={saveFlags} disabled={flagsSaving}>

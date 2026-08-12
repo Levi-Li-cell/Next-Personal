@@ -4,6 +4,9 @@ import { authorProfile, authorSkill, authorExperience, authorEducation, authorHo
 import { asc, desc, sql } from "drizzle-orm";
 import { DEFAULT_AUTHOR_PHOTOS } from "@/lib/author-defaults";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function ensureColumns() {
   await db.execute(sql`ALTER TABLE author_profile ADD COLUMN IF NOT EXISTS wechat text`);
   await db.execute(sql`ALTER TABLE author_profile ADD COLUMN IF NOT EXISTS blog_url text`);
@@ -13,11 +16,47 @@ async function ensureColumns() {
  * 检测 UTF-8 字节被当作 Latin-1 解码导致的乱码。
  * 正常中文文本不会出现连续的 Latin-1 Supplement 字符（U+00C0-U+00FF）。
  */
+function mojibakeScore(text: string): number {
+  const suspicious = text.match(/[\u0080-\u009f]|[ÃÂâæåäçèéïð]/g);
+  return suspicious?.length || 0;
+}
+
+function decodeLatin1AsUtf8(text: string): string | null {
+  const codePoints = Array.from(text, (char) => char.charCodeAt(0));
+  if (codePoints.some((code) => code > 255)) return null;
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(codePoints));
+  } catch {
+    return null;
+  }
+}
+
+/** 修复 UTF-8 被错误按 Latin-1 解码一次或多次的字符串。 */
+function repairMojibake(text: string): string {
+  let current = text;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const currentScore = mojibakeScore(current);
+    if (!currentScore) break;
+    const decoded = decodeLatin1AsUtf8(current);
+    if (!decoded || mojibakeScore(decoded) >= currentScore) break;
+    current = decoded;
+  }
+  return current;
+}
+
+function repairData<T>(value: T): T {
+  if (typeof value === "string") return repairMojibake(value) as T;
+  if (Array.isArray(value)) return value.map((item) => repairData(item)) as T;
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, repairData(item)]),
+    ) as T;
+  }
+  return value;
+}
+
 function isMojibake(text: unknown): boolean {
-  if (typeof text !== "string" || !text) return false;
-  if (/[\u4e00-\u9fa5]/.test(text)) return false;
-  const suspicious = text.match(/[\u00C0-\u00FF]{2,}/g);
-  return !!suspicious && suspicious.length >= 1;
+  return typeof text === "string" && mojibakeScore(text) > 0;
 }
 
 /** 检查从数据库返回的任何文本字段是否存在乱码 */
@@ -180,14 +219,15 @@ export async function GET() {
     ]);
 
     const profile = profiles[0] || fallbackProfile;
+    const repaired = repairData({ profile, skills, experiences, education, honors });
 
     // 检测数据库返回的数据是否存在乱码，若是则整体回退到 fallback
     const mojibakeDetected = hasMojibakeInData({
-      profile: profile as Record<string, unknown>,
-      skills: skills as Record<string, unknown>[],
-      experiences: experiences as Record<string, unknown>[],
-      education: education as Record<string, unknown>[],
-      honors: honors as Record<string, unknown>[],
+      profile: repaired.profile as Record<string, unknown>,
+      skills: repaired.skills as Record<string, unknown>[],
+      experiences: repaired.experiences as Record<string, unknown>[],
+      education: repaired.education as Record<string, unknown>[],
+      honors: repaired.honors as Record<string, unknown>[],
     });
 
     if (mojibakeDetected) {
@@ -208,12 +248,14 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        profile,
-        skills,
-        experiences,
-        education,
-        honors,
+        profile: repaired.profile,
+        skills: repaired.skills,
+        experiences: repaired.experiences,
+        education: repaired.education,
+        honors: repaired.honors,
       },
+    }, {
+      headers: { "Cache-Control": "no-store, max-age=0" },
     });
   } catch (error) {
     console.error("获取作者信息失败:", error);

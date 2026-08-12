@@ -62,11 +62,11 @@ const menuItems: MenuItem[] = [
   { title: "知识库管理", url: "/admin/knowledge", icon: BookOpen },
   { title: "赞助记录", url: "/admin/sponsors", icon: HandCoins },
   { title: "可视化大屏", url: "/admin/visual", icon: Monitor },
+  { title: "前台显隐", url: "/admin/settings", icon: Settings },
   {
     title: "系统设置",
     icon: Settings,
     children: [
-      { title: "基础设置", url: "/admin/settings" },
       { title: "通知邮箱", url: "/admin/settings/notify" },
       { title: "个人资料", url: "/admin/settings/profile" },
     ],

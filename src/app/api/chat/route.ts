@@ -3,8 +3,14 @@ import OpenAI from "openai";
 import { db } from "@/db";
 import { chatMessages } from "@/db/schema/chat";
 import { blog } from "@/db/schema/blog";
+import {
+  authorEducation,
+  authorExperience,
+  authorProfile,
+  authorSkill,
+} from "@/db/schema/author";
 import { getSystemPrompt } from "@/lib/knowledge";
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
 export const runtime = "nodejs";
@@ -183,6 +189,87 @@ function modelCandidates(): string[] {
   return Array.from(new Set([primaryModel, ...fallbackModels].filter(Boolean)));
 }
 
+function firstSentence(value?: string | null): string {
+  return (value || "").split(/[。；;\n]/)[0]?.trim() || "";
+}
+
+async function buildAuthorFallback(question: string): Promise<string> {
+  try {
+    const [profiles, experiences, education, skills] = await Promise.all([
+      db.select().from(authorProfile).orderBy(desc(authorProfile.createdAt)).limit(1),
+      db.select().from(authorExperience).orderBy(asc(authorExperience.sortOrder)),
+      db.select().from(authorEducation).orderBy(asc(authorEducation.sortOrder)).limit(1),
+      db.select().from(authorSkill).orderBy(asc(authorSkill.sortOrder)).limit(30),
+    ]);
+
+    const profile = profiles[0];
+    const school = education[0];
+    const name = profile?.name || "李伟";
+    const title = profile?.title || profile?.preferredPosition || "全栈工程师";
+    const normalized = question.replace(/\s+/g, "").toLowerCase();
+    const featuredJobs = experiences.filter((job) =>
+      job.company.includes("幻云") || job.company.includes("零度象限"),
+    );
+    const jobs = (featuredJobs.length ? featuredJobs : experiences).slice(0, 3);
+
+    if (/后端|服务端|接口|数据库|spring|java|node|独立完成|独立开发/.test(normalized)) {
+      const backendSkills = skills
+        .map((skill) => skill.name)
+        .filter((name) => /Java(?!Script)|Spring|Node\.js|Next\.js API|PostgreSQL|Flyway|MySQL|Redis|RESTful|Swagger|Apifox/i.test(name))
+        .slice(0, 5);
+      const evidence = backendSkills.length
+        ? backendSkills.join("、")
+        : "Next.js API Routes、Node.js、PostgreSQL 与接口联调";
+      if (/能否|是否|可不可以|独立|胜任/.test(normalized)) {
+        return `可以。${name}能够独立完成中小型项目或 MVP 的接口设计、数据建模、认证权限、核心业务、联调与部署；实际使用过${evidence}。对于复杂高并发或大型分布式系统，他也能在团队协作下快速推进。`;
+      }
+      return `${name}具备独立交付中小型项目后端的能力，覆盖接口设计、数据库建模、认证权限、业务实现、联调和部署。相关技术包括${evidence}，并已在个人博客、题力榜等真实项目中落地。`;
+    }
+
+    if (/项目|作品|做过|经验/.test(normalized)) {
+      const projects = jobs
+        .map((job) => {
+          const project = firstSentence(job.description);
+          const duty = firstSentence(job.achievements?.[0]);
+          return `${job.company}：${project}${duty ? `；${duty}` : ""}`;
+        })
+        .filter(Boolean)
+        .slice(0, 3);
+      return projects.length
+        ? `${name}的代表项目包括：\n${projects.map((item) => `- ${item}`).join("\n")}`
+        : `${name}的项目资料正在补充，可先了解他的技术能力与工作经历。`;
+    }
+
+    if (/教育|学校|学历|专业|毕业/.test(normalized) && school) {
+      return `${name}本科就读于${school.school}，专业为${school.major}，时间为${school.startDate} - ${school.endDate}。`;
+    }
+
+    if (/技能|技术|技术栈|擅长|能力/.test(normalized)) {
+      const names = skills.map((skill) => skill.name).filter(Boolean).slice(0, 6);
+      return `${name}的核心能力包括${names.join("、")}，具备前后端协作、多端开发和项目落地经验。`;
+    }
+
+    if (/兴趣|爱好/.test(normalized)) {
+      const hobbies = Array.isArray(profile?.hobbies) ? profile.hobbies.filter(Boolean) : [];
+      return hobbies.length
+        ? `${name}的兴趣包括${hobbies.slice(0, 7).join("、")}。`
+        : `${name}注重持续学习，也关注设计与运动。`;
+    }
+
+    if (/为什么|适合|优势|录用|岗位|面试/.test(normalized)) {
+      const companyNames = Array.from(new Set(jobs.map((job) => job.company))).slice(0, 2);
+      const skillNames = skills.map((skill) => skill.name).filter(Boolean).slice(0, 3);
+      return `${name}适合全栈开发岗位：有${companyNames.join("、")}的实际项目经历，掌握${skillNames.join("、")}，能够独立推进需求落地并配合团队交付。`;
+    }
+
+    const experienceSummary = Array.from(new Set(jobs.map((job) => job.company))).slice(0, 2).join("、");
+    return `${name}是一名${title}，${school ? `本科就读于${school.school}` : "具备本科背景"}，曾在${experienceSummary || "互联网项目团队"}参与真实项目开发，方向覆盖前端、多端应用与后端协作。`;
+  } catch (error) {
+    console.error("Author fallback failed:", error);
+    return "AI 服务当前繁忙。您可以继续查看首页中的教育、工作经历、兴趣和专业技能。";
+  }
+}
+
 export async function POST(req: NextRequest) {
   let sessionId = "";
   try {
@@ -233,14 +320,14 @@ export async function POST(req: NextRequest) {
     const apiKey = (process.env.OPENAI_API_KEY || "").trim();
     const baseURL = (process.env.OPENAI_BASE_URL || "https://api.deepseek.com").trim().replace(/\/+$/, "");
     if (!apiKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "AI 服务暂未配置，请稍后重试。",
-          sessionId,
+      return new Response(await buildAuthorFallback(trimmedMessage), {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-Session-Id": sessionId,
+          "X-Chat-Degraded": "1",
+          "Cache-Control": "no-cache, no-transform",
         },
-        { status: 503 },
-      );
+      });
     }
 
     const client = new OpenAI({ apiKey, baseURL });
@@ -334,9 +421,8 @@ export async function POST(req: NextRequest) {
           }
         } catch (streamError) {
           console.error("Stream error:", streamError);
-          const errorMsg =
-            streamError instanceof Error ? streamError.message : "流式响应出错";
-          controller.enqueue(encoder.encode(`\n[错误] ${errorMsg}`));
+          const fallbackText = await buildAuthorFallback(trimmedMessage);
+          controller.enqueue(encoder.encode(fallbackText));
           controller.close();
         }
       },

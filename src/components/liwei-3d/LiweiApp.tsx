@@ -12,6 +12,7 @@ import StickerEditor from './editor/StickerEditor'
 import DirectorEditor from './director/DirectorEditor'
 import ProfileEditor from './profile/ProfileEditor'
 import ToolsMenu from './tools/ToolsMenu'
+import HomeChatAssistant from './ui/HomeChatAssistant'
 import { selectProfile, useProfileStore, type ProfileData } from './profile/store'
 import { useStore } from './store'
 
@@ -198,6 +199,7 @@ export default function LiweiApp({ adminMode = false }: { adminMode?: boolean })
       {adminMode && <ToolsMenu />}
 
       <NoiseOverlay />
+      <HomeChatAssistant />
 
       {/* 可滚动内容 */}
       <main className="content">
