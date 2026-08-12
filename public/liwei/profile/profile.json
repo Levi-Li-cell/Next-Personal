@@ -2,19 +2,19 @@
   "version": 1,
   "mode": "custom",
   "custom": {
-    "name": "levi 李伟",
+    "name": "LEVI",
     "role": "Creative Technologist",
-    "portfolio": "Portfolio - 2026",
+    "portfolio": "PRODUCT",
     "footer": "Code · Art · Play",
-    "location": "Based in Shenzhen",
+    "location": "Based in Xiamen",
     "about": {
       "zh": {
         "title": "About Levi",
-        "paragraph": "我是 Sen——一个游走在代码与艺术之间的创意技术人。我常年和 Coding、创意、有趣的交互 & 设计、CG 创作等打交道，喜欢研究并组合不同领域的技能，来创造并探索更多可能性。"
+        "paragraph": "我是 Levi，一个游走在逻辑与美学之间的创意技术人。我常与代码、交互和视觉打交道，喜欢融合不同领域的工具与思维，热衷于打造有温度的创意体验、动态设计和数字艺术，持续探寻未知的边界。"
       },
       "en": {
         "title": "About Levi",
-        "paragraph": "I'm Sen - a creative technologist living where code meets art. I spend my days around coding, creativity, playful interaction & design, and CG work. I love studying and combining skills across different fields - to create, and to explore more possibilities."
+        "paragraph": "I'm Levi, a creative technologist wandering between logic and aesthetics. I work with code, interaction, and visuals — blending tools and mindsets across disciplines. I'm passionate about crafting warm creative experiences, motion design, and digital art, continually exploring unknown boundaries."
       }
     },
     "facts": []
