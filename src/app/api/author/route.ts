@@ -9,6 +9,37 @@ async function ensureColumns() {
   await db.execute(sql`ALTER TABLE author_profile ADD COLUMN IF NOT EXISTS blog_url text`);
 }
 
+/**
+ * 检测 UTF-8 字节被当作 Latin-1 解码导致的乱码。
+ * 正常中文文本不会出现连续的 Latin-1 Supplement 字符（U+00C0-U+00FF）。
+ */
+function isMojibake(text: unknown): boolean {
+  if (typeof text !== "string" || !text) return false;
+  if (/[\u4e00-\u9fa5]/.test(text)) return false;
+  const suspicious = text.match(/[\u00C0-\u00FF]{2,}/g);
+  return !!suspicious && suspicious.length >= 1;
+}
+
+/** 检查从数据库返回的任何文本字段是否存在乱码 */
+function hasMojibakeInData(data: {
+  profile: Record<string, unknown> | undefined;
+  skills: Record<string, unknown>[];
+  experiences: Record<string, unknown>[];
+  education: Record<string, unknown>[];
+  honors: Record<string, unknown>[];
+}): boolean {
+  const { profile, skills, experiences, education, honors } = data;
+  const checks: unknown[] = [];
+  if (profile) {
+    checks.push(profile.name, profile.title, profile.bio, profile.location);
+  }
+  for (const e of education) checks.push(e.school, e.major, e.degree);
+  for (const e of experiences) checks.push(e.company, e.position, e.description);
+  for (const h of honors) checks.push(h.title, h.issuer);
+  for (const s of skills) checks.push(s.name, s.category);
+  return checks.some(isMojibake);
+}
+
 // GET /api/author - 获取所有作者信息（公开API）
 export async function GET() {
   const fallbackProfile = {
@@ -111,7 +142,7 @@ export async function GET() {
       major: "智能科技",
       degree: "本科",
       startDate: "2021.9",
-      endDate: "2025.6",
+      endDate: "2025.9",
       description: "主修课程",
       achievements: [
         "HTML5 程序设计",
@@ -149,6 +180,30 @@ export async function GET() {
     ]);
 
     const profile = profiles[0] || fallbackProfile;
+
+    // 检测数据库返回的数据是否存在乱码，若是则整体回退到 fallback
+    const mojibakeDetected = hasMojibakeInData({
+      profile: profile as Record<string, unknown>,
+      skills: skills as Record<string, unknown>[],
+      experiences: experiences as Record<string, unknown>[],
+      education: education as Record<string, unknown>[],
+      honors: honors as Record<string, unknown>[],
+    });
+
+    if (mojibakeDetected) {
+      console.warn("检测到数据库中文乱码，回退到 fallback 数据");
+      return NextResponse.json({
+        success: true,
+        data: {
+          profile: fallbackProfile,
+          skills: fallbackSkills,
+          experiences: fallbackExperiences,
+          education: fallbackEducation,
+          honors: fallbackHonors,
+        },
+        degraded: true,
+      });
+    }
 
     return NextResponse.json({
       success: true,
