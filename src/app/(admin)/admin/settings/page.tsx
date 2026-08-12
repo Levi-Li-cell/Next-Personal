@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 
 const FEATURE_LABELS: { key: string; label: string; description: string }[] = [
   { key: "showAuthorPage", label: "作者页面", description: "显示 /author 作者主页及所有导航入口；关闭时启用路由守卫并默认隐藏" },
+  { key: "allowPublicAuthorPage", label: "普通用户访问作者页", description: "开启后，访客和普通用户可看到作者页入口并访问 /author；关闭时仅管理员可访问" },
   { key: "enable3DTools", label: "首页编辑器", description: "显示首页 3D 编辑工具，包括贴纸、运镜和资料编辑；默认隐藏" },
   { key: "showSponsorPage", label: "赞助页", description: "显示作者页赞助入口和 /sponsor 路由" },
   { key: "showWeatherWidget", label: "天气组件", description: "在作者页显示实时天气信息和城市查询" },

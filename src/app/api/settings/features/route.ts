@@ -2,6 +2,7 @@
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth/get-session";
+import { isAdminRequest } from "@/lib/require-admin";
 
 const DEFAULT_FLAGS: Record<string, boolean> = {
   showSponsorPage: false,
@@ -9,6 +10,7 @@ const DEFAULT_FLAGS: Record<string, boolean> = {
   showSnakeGame: false,
   showGeoLab: false,
   showAuthorPage: false,
+  allowPublicAuthorPage: false,
   enable3DTools: false,
 };
 
@@ -61,7 +63,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !(await isAdminRequest())) {
       return NextResponse.json({ success: false, error: "未授权" }, { status: 401 });
     }
 

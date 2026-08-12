@@ -2113,3 +2113,158 @@
   .home-ai-trigger i { display: none; }
   .home-ai-panel { height: min(520px, calc(100vh - 118px)); }
 }
+
+/* Additional narrow-screen safeguards for the live homepage. Keep the 3D scene
+   intact, but give text and controls a predictable mobile reading column. */
+@media (max-width: 640px) {
+  .liwei-3d .hero {
+    min-height: 92svh;
+    padding: 0 18px 12svh;
+  }
+
+  .liwei-3d .about {
+    width: 100%;
+    padding: 0;
+  }
+
+  .liwei-3d .about-title {
+    font-size: clamp(34px, 12vw, 58px);
+    line-height: 1.06;
+  }
+
+  .liwei-3d .about-body,
+  .liwei-3d .profile-facts {
+    max-width: 100%;
+  }
+
+  .liwei-3d .about-body {
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .liwei-3d .resume {
+    padding: 14svh 18px 12svh;
+  }
+
+  .liwei-3d .resume-title,
+  .liwei-3d .timeline {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .liwei-3d .resume-title {
+    font-size: clamp(34px, 11vw, 52px);
+  }
+
+  .liwei-3d .timeline {
+    margin-top: 8svh;
+  }
+
+  .liwei-3d .tl-entry {
+    padding-left: 25px;
+    padding-bottom: 18svh;
+  }
+
+  .liwei-3d .tl-body {
+    min-width: 0;
+    padding: 16px 17px;
+    border-radius: 10px;
+  }
+
+  .liwei-3d .tl-period {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    overflow-wrap: anywhere;
+  }
+
+  .liwei-3d .tl-place {
+    font-size: clamp(20px, 7vw, 30px);
+    overflow-wrap: anywhere;
+  }
+
+  .liwei-3d .tl-role,
+  .liwei-3d .tl-points li {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .liwei-3d .wk-card {
+    gap: 24px;
+    padding: 46px 20px 42px;
+  }
+
+  .liwei-3d .wk-card-cover {
+    width: min(100%, 280px);
+    border-radius: 8px;
+  }
+
+  .liwei-3d .wk-card-title {
+    font-size: clamp(25px, 8.5vw, 36px);
+    overflow-wrap: anywhere;
+  }
+
+  .liwei-3d .wk-project-summary,
+  .liwei-3d .wk-detail-desc,
+  .liwei-3d .wk-md {
+    font-size: 13px;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+  }
+
+  .liwei-3d .wk-detail {
+    inset: 10px 10px max(10px, env(safe-area-inset-bottom));
+    border-radius: 12px;
+  }
+
+  .liwei-3d .wk-detail-banner {
+    height: 30svh;
+    min-height: 150px;
+  }
+
+  .liwei-3d .wk-detail-close {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .liwei-3d .wk-detail-article {
+    padding: 28px 20px 42px;
+  }
+
+  .home-ai {
+    left: max(12px, env(safe-area-inset-left));
+    bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+
+  .home-ai-panel {
+    width: calc(100vw - 24px);
+    height: min(500px, calc(100svh - 96px));
+  }
+
+  .home-ai-messages {
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+}
+
+@media (max-width: 380px) {
+  .liwei-3d .hero {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .liwei-3d .resume {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .liwei-3d .tl-entry {
+    padding-left: 21px;
+  }
+
+  .liwei-3d .tl-body {
+    padding: 14px;
+  }
+}

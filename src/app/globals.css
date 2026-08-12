@@ -1,5 +1,14 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
+/* ===== 首页设计令牌：与 3D 简历首页风格统一 ===== */
+@theme {
+  --color-ink: #f4f1ea;
+  --color-deep: #0a0e16;
+  --color-accent: #f3c96a;
+  --color-peach: #ffd9b3;
+  --color-sage: #6f906f;
+}
+
 
 @custom-variant dark (&:is(.dark *));
 
@@ -203,6 +212,216 @@ html {
 }
 
 /* 打印样式 - 简历导出PDF */
+
+/* 前台页面统一主题：深蓝黑底 + 米白墨色 + 首页字体 */
+.site-theme {
+  --color-ink: #1b2024;
+  --color-deep: #f4f1ea;
+  --color-accent: #c8892f;
+  --color-peach: #b86445;
+  --color-sage: #4f765b;
+  background-color: #f4f1ea;
+  color: #1b2024;
+  font-family: 'Helvetica Neue', 'Chiron GoRound TC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+/* Shared front-end language: the homepage uses a quiet editorial/industrial
+   system. These rules apply to the ordinary routes while leaving print resume
+   paper and the dedicated 3D scene untouched. */
+.site-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    linear-gradient(rgba(27, 32, 36, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 32, 36, 0.045) 1px, transparent 1px),
+    #f4f1ea;
+  background-size: 52px 52px;
+}
+
+.site-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgba(243, 201, 106, 0.14), transparent 34%, rgba(111, 144, 111, 0.1));
+}
+
+.site-main {
+  position: relative;
+  z-index: 1;
+}
+
+.site-theme .container {
+  width: min(1180px, calc(100% - 40px));
+}
+
+.site-theme h1,
+.site-theme h2,
+.site-theme h3 {
+  letter-spacing: 0.01em;
+}
+
+.site-theme h1 span.bg-gradient-to-r {
+  background-image: linear-gradient(100deg, #b56e22 0%, #c8892f 48%, #1b2024 100%);
+}
+
+.site-theme .rounded-2xl,
+.site-theme .rounded-\[1\.75rem\] {
+  border-radius: 10px;
+}
+
+.site-theme .rounded-xl {
+  border-radius: 8px;
+}
+
+.site-theme .border-ink\/14,
+.site-theme .border-ink\/12,
+.site-theme .border-ink\/10 {
+  border-color: rgba(27, 32, 36, 0.16);
+}
+
+.site-theme .bg-ink\/5 {
+  background-color: rgba(27, 32, 36, 0.045);
+}
+
+.site-theme .backdrop-blur-sm,
+.site-theme .backdrop-blur-md,
+.site-theme .backdrop-blur-xl {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.site-theme button,
+.site-theme a {
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+
+.site-theme button.bg-accent,
+.site-theme a.bg-accent,
+.site-theme button.bg-gradient-to-r,
+.site-theme a.bg-gradient-to-r {
+  border: 1px solid rgba(140, 88, 28, 0.42);
+  border-radius: 3px;
+  box-shadow: 0 8px 20px rgba(75, 53, 28, 0.12);
+}
+
+.site-theme input,
+.site-theme textarea,
+.site-theme select,
+.site-theme [data-slot="select-trigger"] {
+  border-radius: 3px;
+  border-color: rgba(27, 32, 36, 0.2);
+  background-color: rgba(255, 255, 255, 0.52);
+}
+
+.site-theme input:focus,
+.site-theme textarea:focus,
+.site-theme select:focus,
+.site-theme [data-slot="select-trigger"]:focus-visible {
+  border-color: rgba(243, 201, 106, 0.75);
+  box-shadow: 0 0 0 2px rgba(243, 201, 106, 0.12);
+}
+
+.site-theme .prose {
+  color: rgba(27, 32, 36, 0.82);
+}
+
+.site-theme .prose :where(h1, h2, h3, h4) {
+  font-family: 'Cormorant Upright', 'Chiron GoRound TC', 'PingFang SC', serif;
+  letter-spacing: 0.01em;
+}
+
+.site-theme .prose :where(code):not(:where([class~="not-prose"] *)) {
+  border: 1px solid rgba(27, 32, 36, 0.14);
+  border-radius: 3px;
+  background: rgba(27, 32, 36, 0.06);
+}
+
+.site-theme .author-route {
+  --color-ink: #f4f1ea;
+  --color-deep: #0a0e16;
+  --color-accent: #f3c96a;
+  --color-peach: #ffd9b3;
+  --color-sage: #6f906f;
+  background: #0a0e16 !important;
+  color: #f4f1ea;
+}
+
+.site-theme .author-route [class*="blur-3xl"] {
+  opacity: 0.18;
+}
+
+.site-theme .author-route [class*="border-white"],
+.site-theme .geo-lab-route [class*="border-white"] {
+  border-color: rgba(244, 241, 234, 0.16);
+}
+
+.site-theme .geo-lab-route {
+  --color-ink: #f4f1ea;
+  --color-deep: #0a0e16;
+  --color-accent: #f3c96a;
+  --color-peach: #ffd9b3;
+  --color-sage: #6f906f;
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background:
+    linear-gradient(rgba(244, 241, 234, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 241, 234, 0.025) 1px, transparent 1px),
+    #0a0e16 !important;
+  background-size: 52px 52px;
+}
+
+.site-theme .geo-lab-route > * {
+  position: relative;
+  z-index: 1;
+}
+
+.site-theme .geo-lab-route [class*="rounded-2xl"],
+.site-theme .geo-lab-route [class*="rounded-xl"] {
+  border-radius: 8px;
+}
+
+.site-theme .author-route .text-ink,
+.site-theme .geo-lab-route .text-ink {
+  color: #f4f1ea;
+}
+
+.site-theme .author-route .border-ink\/14,
+.site-theme .author-route .border-ink\/12,
+.site-theme .geo-lab-route .border-ink\/14,
+.site-theme .geo-lab-route .border-ink\/12 {
+  border-color: rgba(244, 241, 234, 0.16);
+}
+
+.site-theme .author-route .bg-ink\/5,
+.site-theme .geo-lab-route .bg-ink\/5 {
+  background-color: rgba(244, 241, 234, 0.045);
+}
+
+@media (max-width: 640px) {
+  .site-theme .container {
+    width: min(100% - 28px, 680px);
+  }
+
+  .site-main {
+    padding-top: 82px !important;
+  }
+
+  .site-theme h1 {
+    font-size: clamp(32px, 10vw, 48px);
+    line-height: 1.12;
+  }
+
+  .site-theme .rounded-2xl,
+  .site-theme .rounded-\[1\.75rem\] {
+    border-radius: 8px;
+  }
+}
+
 @media print {
   .no-print {
     display: none !important;

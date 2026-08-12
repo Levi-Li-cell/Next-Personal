@@ -7,6 +7,7 @@ export const DEFAULT_FEATURE_FLAGS: Record<string, boolean> = {
   showSnakeGame: false,
   showGeoLab: false,
   showAuthorPage: false,
+  allowPublicAuthorPage: false,
   enable3DTools: false,
 };
 

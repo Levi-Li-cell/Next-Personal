@@ -5,6 +5,7 @@ import CardNav from "@/components/CardNav";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useScrollGuard } from "@/hooks/useScrollGuard";
 import { buildSiteNavItems } from "@/lib/site-nav";
+import { useSession } from "@/lib/auth/client";
 import "@/components/liwei-3d/styles.css";
 
 const LiweiApp = dynamic(() => import("@/components/liwei-3d/LiweiApp"), {
@@ -17,16 +18,19 @@ const LiweiApp = dynamic(() => import("@/components/liwei-3d/LiweiApp"), {
 });
 
 export default function HomePage() {
-  const { flags, loading } = useFeatureFlags();
+  const { flags } = useFeatureFlags();
+  const { data: session } = useSession();
   useScrollGuard();
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role?.toLowerCase() === "admin";
+  const canAccessAuthorPage = flags.showAuthorPage && (flags.allowPublicAuthorPage || isAdmin);
 
   return (
     <>
       <div className="liwei-3d">
-        <LiweiApp adminMode={flags.enable3DTools} />
+        <LiweiApp adminMode={flags.enable3DTools && isAdmin} />
       </div>
       <CardNav
-        items={buildSiteNavItems(flags)}
+        items={buildSiteNavItems(flags, canAccessAuthorPage)}
         ctaLabel="联系我"
         ctaHref="/guestbook"
         brandHref="/"
