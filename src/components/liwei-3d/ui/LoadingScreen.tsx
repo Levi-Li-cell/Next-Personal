@@ -8,6 +8,10 @@ import { useProgress } from '@react-three/drei'
 // 用 CSS 过渡 + setTimeout 控制淡出/卸载（不依赖 rAF，后台/离屏也可靠）。
 export default function LoadingScreen() {
   const { progress } = useProgress()
+  const [warmStart] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('liwei_3d_assets_loaded') === '1'
+  })
   // reached：进度是否到过 100%（单向 false→true，避免分批加载的抖动）
   const [reached, setReached] = useState(false)
   const [hiding, setHiding] = useState(false) // 开始淡出
@@ -17,19 +21,33 @@ export default function LoadingScreen() {
   peak.current = Math.max(peak.current, Math.min(Math.max(progress, 0), 100))
 
   useEffect(() => {
-    if (progress >= 100) setReached(true)
+    if (progress >= 100) {
+      setReached(true)
+      localStorage.setItem('liwei_3d_assets_loaded', '1')
+    }
   }, [progress])
+
+  // Repeat visits can reveal cached content while Three.js reparses the model.
+  useEffect(() => {
+    if (!warmStart) return
+    const hideTimer = setTimeout(() => setHiding(true), 60)
+    const removeTimer = setTimeout(() => setRemoved(true), 360)
+    return () => {
+      clearTimeout(hideTimer)
+      clearTimeout(removeTimer)
+    }
+  }, [warmStart])
 
   // 到过 100% 后：停留片刻 → 淡出 → 卸载（一次性，锁定不受后续进度变化影响）
   useEffect(() => {
     if (!reached) return
-    const t1 = setTimeout(() => setHiding(true), 400)
-    const t2 = setTimeout(() => setRemoved(true), 1100)
+    const t1 = setTimeout(() => setHiding(true), warmStart ? 40 : 250)
+    const t2 = setTimeout(() => setRemoved(true), warmStart ? 340 : 850)
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
     }
-  }, [reached])
+  }, [reached, warmStart])
 
   if (removed) return null
 

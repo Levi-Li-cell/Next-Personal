@@ -3,8 +3,11 @@ import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { WORKS } from '../data/works'
+import { readClientCache, writeClientCache } from '@/lib/client-cache'
 
 const EASE = [0.22, 1, 0.36, 1] as const
+const PROJECT_CACHE_KEY = 'liwei_home_projects_v1'
+const PROJECT_CACHE_MAX_AGE = 30 * 60 * 1000
 
 interface ProjectItem {
   id: string
@@ -145,8 +148,11 @@ function ProjectDetail({
 
 export default function Works({ lang, innerRef }: { lang: 'en' | 'zh'; innerRef: Ref<HTMLElement> }) {
   const labels = WORKS[lang]
-  const [projects, setProjects] = useState<ProjectItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [projects, setProjects] = useState<ProjectItem[]>(() =>
+    readClientCache<ProjectItem[]>(PROJECT_CACHE_KEY, PROJECT_CACHE_MAX_AGE) || []
+  )
+  const hadCachedProjects = useRef(Boolean(projects.length))
+  const [loading, setLoading] = useState(() => !readClientCache<ProjectItem[]>(PROJECT_CACHE_KEY, PROJECT_CACHE_MAX_AGE))
   const [error, setError] = useState(false)
   const [active, setActive] = useState<ProjectItem | null>(null)
   const galleryRef = useRef<HTMLDivElement>(null)
@@ -160,11 +166,13 @@ export default function Works({ lang, innerRef }: { lang: 'en' | 'zh'; innerRef:
         if (!response.ok || !payload.success || payload.degraded || !Array.isArray(payload.data)) {
           throw new Error('projects unavailable')
         }
-        setProjects(payload.data as ProjectItem[])
+        const nextProjects = payload.data as ProjectItem[]
+        setProjects(nextProjects)
+        writeClientCache(PROJECT_CACHE_KEY, nextProjects)
       })
       .catch((reason) => {
         if (reason instanceof DOMException && reason.name === 'AbortError') return
-        setError(true)
+        if (!hadCachedProjects.current) setError(true)
       })
       .finally(() => setLoading(false))
     return () => controller.abort()

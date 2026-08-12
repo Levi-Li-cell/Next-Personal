@@ -90,8 +90,8 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   load: async () => {
     set({ busy: true, status: '加载运镜配置...' })
     try {
-      const url = `${LIWEI_ASSET_BASE}director/camera-overrides.json?t=${Date.now()}`
-      const response = await fetch(url)
+      const url = `${LIWEI_ASSET_BASE}director/camera-overrides.json`
+      const response = await fetch(url, { cache: 'no-cache' })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const config = normalizeConfig(await response.json())
       set({ config, status: config.keyframes.length ? '' : '当前没有额外运镜关键帧' })

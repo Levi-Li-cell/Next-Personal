@@ -652,8 +652,8 @@ export default function Scene() {
     loadDirector()
   }, [loadDirector])
   useEffect(() => {
-    const url = `${LIWEI_ASSET_BASE}models/model-selection.json?t=${Date.now()}`
-    fetch(url)
+    const url = `${LIWEI_ASSET_BASE}models/model-selection.json`
+    fetch(url, { cache: 'no-cache' })
       .then((response) => (response.ok ? response.json() : null))
       .then((config) => {
         if (typeof config?.selected === 'string' && /^[\w. -]+\.glb$/i.test(config.selected)) {

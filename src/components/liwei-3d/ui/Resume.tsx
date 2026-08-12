@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FOCUS_POINTS } from '../data/focusPoints'
+import { readClientCache, writeClientCache } from '@/lib/client-cache'
 
 type Lang = 'en' | 'zh'
 
@@ -46,6 +47,8 @@ interface ResumeEntry {
 }
 
 const POINT_ORDER = FOCUS_POINTS
+const AUTHOR_CACHE_KEY = 'liwei_home_author_v1'
+const AUTHOR_CACHE_MAX_AGE = 30 * 60 * 1000
 const EASE = [0.22, 1, 0.36, 1] as const
 const containerV = {
   hidden: {},
@@ -159,7 +162,10 @@ function Entry({ entry, index }: { entry: ResumeEntry; index: number }) {
 }
 
 export default function Resume({ lang }: { lang: Lang }) {
-  const [author, setAuthor] = useState<AuthorData | null>(null)
+  const [author, setAuthor] = useState<AuthorData | null>(() =>
+    readClientCache<AuthorData>(AUTHOR_CACHE_KEY, AUTHOR_CACHE_MAX_AGE)
+  )
+  const hadCachedAuthor = useRef(Boolean(author))
   const [error, setError] = useState(false)
 
   useEffect(() => {
@@ -168,11 +174,13 @@ export default function Resume({ lang }: { lang: Lang }) {
       .then(async (response) => {
         const payload = await response.json()
         if (!response.ok || !payload.success || !payload.data?.profile) throw new Error('author unavailable')
-        setAuthor(payload.data as AuthorData)
+        const nextAuthor = payload.data as AuthorData
+        setAuthor(nextAuthor)
+        writeClientCache(AUTHOR_CACHE_KEY, nextAuthor)
       })
       .catch((reason) => {
         if (reason instanceof DOMException && reason.name === 'AbortError') return
-        setError(true)
+        if (!hadCachedAuthor.current) setError(true)
       })
     return () => controller.abort()
   }, [])

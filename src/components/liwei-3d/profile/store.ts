@@ -89,7 +89,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   load: async () => {
     set({ busy: true })
     try {
-      const response = await fetch(`${LIWEI_ASSET_BASE}profile/profile.json?t=${Date.now()}`)
+      const response = await fetch(`${LIWEI_ASSET_BASE}profile/profile.json`, { cache: 'no-cache' })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       set({ config: normalize(await response.json()), status: '' })
     } catch (error) {
