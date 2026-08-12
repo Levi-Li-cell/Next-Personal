@@ -513,26 +513,26 @@ export default function Snake3DPage() {
     <div className="container mx-auto px-6 py-10">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/author" className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20">
+          <Link href="/author" className="inline-flex items-center gap-2 rounded-lg bg-ink/10 px-3 py-2 text-sm text-ink hover:bg-ink/20">
             <ArrowLeft className="h-4 w-4" /> 返回作者页
           </Link>
           <button
             type="button"
             onClick={() => setTheme((prev) => (prev === "forest" ? "desert" : "forest"))}
-            className="inline-flex items-center gap-2 rounded-lg bg-orange-500/20 px-3 py-2 text-sm text-orange-100 hover:bg-orange-500/30"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent/20 px-3 py-2 text-sm text-accent hover:bg-accent/30"
           >
             切换主题: {THEMES[theme].label}
           </button>
         </div>
-        <div className="flex items-center gap-3 text-white">
-          <span className="rounded-md bg-cyan-500/20 px-3 py-1 text-sm">得分: {score}</span>
-          <span className="rounded-md bg-amber-500/20 px-3 py-1 text-sm text-amber-200">最高: {highScore}</span>
-          <span className="rounded-md bg-violet-500/20 px-3 py-1 text-sm text-violet-200">速度 Lv.{speedLevel}</span>
+        <div className="flex items-center gap-3 text-ink">
+          <span className="rounded-md bg-accent/20 px-3 py-1 text-sm">得分: {score}</span>
+          <span className="rounded-md bg-peach/20 px-3 py-1 text-sm text-peach">最高: {highScore}</span>
+          <span className="rounded-md bg-sage/20 px-3 py-1 text-sm text-[#c9e0c9]">速度 Lv.{speedLevel}</span>
           {started && !gameOver ? (
             <button
               type="button"
               onClick={togglePause}
-              className="inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20"
+              className="inline-flex items-center gap-2 rounded-md bg-ink/10 px-3 py-1.5 text-sm hover:bg-ink/20"
             >
               {paused ? "继续" : "暂停"}
             </button>
@@ -541,26 +541,26 @@ export default function Snake3DPage() {
           <button
             type="button"
             onClick={restart}
-            className="inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20"
+            className="inline-flex items-center gap-2 rounded-md bg-ink/10 px-3 py-1.5 text-sm hover:bg-ink/20"
           >
             <RotateCcw className="h-4 w-4" /> 重新开始
           </button>
         </div>
       </div>
 
-      <div className="relative rounded-2xl border border-white/10 bg-black/40 p-3">
+      <div className="relative rounded-2xl border border-ink/14 bg-deep/40 p-3">
         <div ref={mountRef} className="h-[70vh] min-h-[420px] w-full rounded-xl overflow-hidden" />
 
         {!started && !gameOver ? (
-          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-black/55 backdrop-blur-sm">
-            <div className="max-w-md rounded-2xl border border-white/20 bg-black/50 p-6 text-white">
+          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-deep/55 backdrop-blur-sm">
+            <div className="max-w-md rounded-2xl border border-ink/20 bg-deep/50 p-6 text-ink">
               <p className="text-xl font-semibold">Snake 3D 挑战开始</p>
-              <p className="mt-3 text-sm text-white/80">目标：吃到更多食物并持续生存。每 5 分会提速，撞到边界、路障或自身都会结束。</p>
-              <p className="mt-2 text-sm text-white/70">操作：方向键 / WASD。空格键可暂停与继续。</p>
+              <p className="mt-3 text-sm text-ink/80">目标：吃到更多食物并持续生存。每 5 分会提速，撞到边界、路障或自身都会结束。</p>
+              <p className="mt-2 text-sm text-ink/70">操作：方向键 / WASD。空格键可暂停与继续。</p>
               <button
                 type="button"
                 onClick={startGame}
-                className="mt-4 rounded-lg bg-emerald-500/80 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
+                className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90"
               >
                 开始游戏
               </button>
@@ -569,21 +569,21 @@ export default function Snake3DPage() {
         ) : null}
 
         {started && paused && !gameOver ? (
-          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-black/45">
-            <div className="rounded-xl border border-white/20 bg-black/60 px-5 py-3 text-white">已暂停，按空格或按钮继续</div>
+          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-deep/45">
+            <div className="rounded-xl border border-ink/20 bg-deep/60 px-5 py-3 text-ink">已暂停，按空格或按钮继续</div>
           </div>
         ) : null}
 
         {gameOver ? (
-          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-black/55 backdrop-blur-sm">
-            <div className="max-w-sm rounded-2xl border border-red-300/30 bg-black/60 p-6 text-white">
+          <div className="absolute inset-3 flex items-center justify-center rounded-xl bg-deep/55 backdrop-blur-sm">
+            <div className="max-w-sm rounded-2xl border border-red-300/30 bg-deep/60 p-6 text-ink">
               <p className="text-xl font-semibold text-red-300">游戏结束</p>
-              <p className="mt-3 text-sm text-white/85">本局得分: {lastScore}</p>
-              <p className="mt-1 text-sm text-white/70">历史最高: {highScore}</p>
+              <p className="mt-3 text-sm text-ink/85">本局得分: {lastScore}</p>
+              <p className="mt-1 text-sm text-ink/70">历史最高: {highScore}</p>
               <button
                 type="button"
                 onClick={restart}
-                className="mt-4 rounded-lg bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
+                className="mt-4 rounded-lg bg-ink/15 px-4 py-2 text-sm font-medium text-ink hover:bg-ink/25"
               >
                 再来一局
               </button>
@@ -592,7 +592,7 @@ export default function Snake3DPage() {
         ) : null}
       </div>
 
-      <p className="mt-3 text-sm text-white/70">操作方式：键盘方向键 / WASD，空格暂停。每 5 分会自动提速，撞到自身、路障或边界都会结束游戏。</p>
+      <p className="mt-3 text-sm text-ink/70">操作方式：键盘方向键 / WASD，空格暂停。每 5 分会自动提速，撞到自身、路障或边界都会结束游戏。</p>
     </div>
   );
 }

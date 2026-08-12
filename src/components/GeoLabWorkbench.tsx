@@ -316,7 +316,7 @@ function ThreePreview({ dataset, fallbackDataset }: { dataset: AnyFeatureCollect
     };
   }, [dataset, fallbackDataset]);
 
-  return <div ref={mountRef} className="h-[320px] w-full overflow-hidden rounded-2xl border border-white/10" />;
+  return <div ref={mountRef} className="h-[320px] w-full overflow-hidden rounded-2xl border border-ink/14" />;
 }
 
 function MapLibrePreview({ dataset, layerVisibility }: { dataset: AnyFeatureCollection; layerVisibility: LayerVisibility }) {
@@ -462,7 +462,7 @@ function MapLibrePreview({ dataset, layerVisibility }: { dataset: AnyFeatureColl
     }
   }, [layerVisibility]);
 
-  return <div ref={mapWrapRef} className="h-[360px] w-full overflow-hidden rounded-2xl border border-white/10" />;
+  return <div ref={mapWrapRef} className="h-[360px] w-full overflow-hidden rounded-2xl border border-ink/14" />;
 }
 
 export default function GeoLabWorkbench() {
@@ -664,7 +664,7 @@ export default function GeoLabWorkbench() {
   };
 
   return (
-    <div className="min-h-screen bg-black px-4 py-6 sm:px-6 lg:px-10">
+    <div className="geo-lab-route min-h-screen bg-deep px-4 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-7xl space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -672,12 +672,12 @@ export default function GeoLabWorkbench() {
           className="rounded-3xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/20 via-slate-900 to-indigo-500/20 p-6"
         >
           <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Spatial Capability Demo</p>
-          <h1 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">空间分析实验室</h1>
-          <p className="mt-2 max-w-3xl text-sm text-white/75 sm:text-base">
+          <h1 className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">空间分析实验室</h1>
+          <p className="mt-2 max-w-3xl text-sm text-ink/75 sm:text-base">
             使用 Turf.js 做缓冲区/相交/点面判断/最近点分析，支持 GeoJSON、Shapefile(.zip)、GML 导入，结果可导出，并通过 MapLibre + Three.js 进行 2D/3D 可视化。
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-xl bg-white/10 px-3 py-2 text-xs text-white/80">脚本状态：{demoStep}</span>
+            <span className="inline-flex items-center rounded-xl bg-ink/10 px-3 py-2 text-xs text-ink/80">脚本状态：{demoStep}</span>
             <button
               type="button"
               onClick={() => void runDemoScript()}
@@ -691,7 +691,7 @@ export default function GeoLabWorkbench() {
               type="button"
               onClick={stopDemoScript}
               disabled={!isDemoRunning}
-              className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-2 rounded-xl bg-ink/10 px-4 py-2 text-sm text-ink hover:bg-ink/15 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Pause className="h-4 w-4" />
               暂停脚本
@@ -700,9 +700,9 @@ export default function GeoLabWorkbench() {
         </motion.div>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 lg:col-span-2">
+          <div className="rounded-2xl border border-ink/14 bg-ink/[0.04] p-4 lg:col-span-2">
             <div className="mb-3 flex items-center justify-between">
-              <p className="flex items-center gap-2 text-sm font-medium text-white">
+              <p className="flex items-center gap-2 text-sm font-medium text-ink">
                 <Upload className="h-4 w-4 text-cyan-300" /> 数据接入
               </p>
               <button
@@ -712,13 +712,13 @@ export default function GeoLabWorkbench() {
                   setAnalysisResult(null);
                   appendLog("已切换回示例数据集");
                 }}
-                className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"
+                className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-ink/80 hover:bg-ink/10"
               >
                 加载示例
               </button>
             </div>
 
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-cyan-300/30 bg-cyan-500/5 px-4 py-3 text-sm text-white/80 hover:bg-cyan-500/10">
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-cyan-300/30 bg-cyan-500/5 px-4 py-3 text-sm text-ink/80 hover:bg-cyan-500/10">
               <FileJson className="h-4 w-4 text-cyan-300" />
               <span>{busy ? "正在导入..." : "上传 GeoJSON / ZIP(Shapefile) / GML"}</span>
               <input
@@ -734,28 +734,28 @@ export default function GeoLabWorkbench() {
             </label>
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl bg-white/5 p-3">
-                <p className="text-xs text-white/60">要素总数</p>
-                <p className="mt-1 text-lg text-white">{overview.count}</p>
+              <div className="rounded-xl bg-ink/5 p-3">
+                <p className="text-xs text-ink/60">要素总数</p>
+                <p className="mt-1 text-lg text-ink">{overview.count}</p>
               </div>
-              <div className="rounded-xl bg-white/5 p-3 sm:col-span-2">
-                <p className="text-xs text-white/60">几何类型</p>
-                <p className="mt-1 text-sm text-white/90">{Object.entries(overview.typeStat).map(([k, v]) => `${k}:${v}`).join(" / ")}</p>
+              <div className="rounded-xl bg-ink/5 p-3 sm:col-span-2">
+                <p className="text-xs text-ink/60">几何类型</p>
+                <p className="mt-1 text-sm text-ink/90">{Object.entries(overview.typeStat).map(([k, v]) => `${k}:${v}`).join(" / ")}</p>
               </div>
-              <div className="rounded-xl bg-white/5 p-3">
-                <p className="text-xs text-white/60">边界框</p>
-                <p className="mt-1 text-xs text-white/90">[{overview.bboxValue.map((v) => v.toFixed(3)).join(", ")}]</p>
+              <div className="rounded-xl bg-ink/5 p-3">
+                <p className="text-xs text-ink/60">边界框</p>
+                <p className="mt-1 text-xs text-ink/90">[{overview.bboxValue.map((v) => v.toFixed(3)).join(", ")}]</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="flex items-center gap-2 text-sm font-medium text-white">
+          <div className="rounded-2xl border border-ink/14 bg-ink/[0.04] p-4">
+            <p className="flex items-center gap-2 text-sm font-medium text-ink">
               <Sparkles className="h-4 w-4 text-fuchsia-300" /> 操作日志
             </p>
-            <div className="mt-3 h-[180px] space-y-2 overflow-auto rounded-xl bg-black/25 p-3">
+            <div className="mt-3 h-[180px] space-y-2 overflow-auto rounded-xl bg-deep/25 p-3">
               {logs.map((log) => (
-                <p key={log} className="text-xs text-white/80">
+                <p key={log} className="text-xs text-ink/80">
                   {log}
                 </p>
               ))}
@@ -764,20 +764,20 @@ export default function GeoLabWorkbench() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 lg:col-span-2">
-            <p className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
+          <div className="rounded-2xl border border-ink/14 bg-ink/[0.04] p-4 lg:col-span-2">
+            <p className="mb-3 flex items-center gap-2 text-sm font-medium text-ink">
               <FlaskConical className="h-4 w-4 text-emerald-300" /> 空间分析工具（Turf.js）
             </p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl bg-white/5 p-3">
-                <p className="text-xs text-white/70">Buffer (km)</p>
+              <div className="rounded-xl bg-ink/5 p-3">
+                <p className="text-xs text-ink/70">Buffer (km)</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {[0.3, 0.6, 0.8, 1.2].map((v) => (
                     <button
                       key={v}
                       type="button"
                       onClick={() => setBufferKm(v)}
-                      className={`rounded-md px-2 py-0.5 text-[11px] ${Math.abs(bufferKm - v) < 0.05 ? "bg-cyan-400/30 text-cyan-100" : "bg-white/10 text-white/70"}`}
+                      className={`rounded-md px-2 py-0.5 text-[11px] ${Math.abs(bufferKm - v) < 0.05 ? "bg-cyan-400/30 text-cyan-100" : "bg-ink/10 text-ink/70"}`}
                     >
                       {v}km
                     </button>
@@ -800,8 +800,8 @@ export default function GeoLabWorkbench() {
                   执行缓冲区
                 </button>
               </div>
-              <div className="rounded-xl bg-white/5 p-3">
-                <p className="text-xs text-white/70">Intersect</p>
+              <div className="rounded-xl bg-ink/5 p-3">
+                <p className="text-xs text-ink/70">Intersect</p>
                 <button
                   type="button"
                   onClick={runIntersect}
@@ -810,8 +810,8 @@ export default function GeoLabWorkbench() {
                   执行相交
                 </button>
               </div>
-              <div className="rounded-xl bg-white/5 p-3">
-                <p className="text-xs text-white/70">Point in Polygon</p>
+              <div className="rounded-xl bg-ink/5 p-3">
+                <p className="text-xs text-ink/70">Point in Polygon</p>
                 <button
                   type="button"
                   onClick={runPointInPolygon}
@@ -820,8 +820,8 @@ export default function GeoLabWorkbench() {
                   点面判断
                 </button>
               </div>
-              <div className="rounded-xl bg-white/5 p-3">
-                <p className="text-xs text-white/70">Nearest + Distance</p>
+              <div className="rounded-xl bg-ink/5 p-3">
+                <p className="text-xs text-ink/70">Nearest + Distance</p>
                 <button
                   type="button"
                   onClick={runNearestAndDistance}
@@ -833,8 +833,8 @@ export default function GeoLabWorkbench() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
+          <div className="rounded-2xl border border-ink/14 bg-ink/[0.04] p-4">
+            <p className="mb-3 flex items-center gap-2 text-sm font-medium text-ink">
               <Download className="h-4 w-4 text-amber-300" /> 结果输出
             </p>
             <button
@@ -844,34 +844,34 @@ export default function GeoLabWorkbench() {
             >
               导出当前结果 GeoJSON
             </button>
-            <p className="mt-3 text-xs text-white/65">导出优先使用分析结果图层；若无分析结果，则导出当前原始数据。</p>
+            <p className="mt-3 text-xs text-ink/65">导出优先使用分析结果图层；若无分析结果，则导出当前原始数据。</p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="rounded-2xl border border-ink/14 bg-ink/[0.04] p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="flex items-center gap-2 text-sm font-medium text-white">
+            <p className="flex items-center gap-2 text-sm font-medium text-ink">
               <Radar className="h-4 w-4 text-cyan-300" /> 2D 可视化预览（MapLibre）
             </p>
             <div className="flex flex-wrap gap-1">
               <button
                 type="button"
                 onClick={() => setResultMode("auto")}
-                className={`rounded-md px-2 py-1 text-[11px] ${resultMode === "auto" ? "bg-indigo-400/30 text-indigo-100" : "bg-white/10 text-white/75"}`}
+                className={`rounded-md px-2 py-1 text-[11px] ${resultMode === "auto" ? "bg-indigo-400/30 text-indigo-100" : "bg-ink/10 text-ink/75"}`}
               >
                 自动图层
               </button>
               <button
                 type="button"
                 onClick={() => setResultMode("raw")}
-                className={`rounded-md px-2 py-1 text-[11px] ${resultMode === "raw" ? "bg-indigo-400/30 text-indigo-100" : "bg-white/10 text-white/75"}`}
+                className={`rounded-md px-2 py-1 text-[11px] ${resultMode === "raw" ? "bg-indigo-400/30 text-indigo-100" : "bg-ink/10 text-ink/75"}`}
               >
                 原始数据
               </button>
               <button
                 type="button"
                 onClick={() => setResultMode("analysis")}
-                className={`rounded-md px-2 py-1 text-[11px] ${resultMode === "analysis" ? "bg-indigo-400/30 text-indigo-100" : "bg-white/10 text-white/75"}`}
+                className={`rounded-md px-2 py-1 text-[11px] ${resultMode === "analysis" ? "bg-indigo-400/30 text-indigo-100" : "bg-ink/10 text-ink/75"}`}
               >
                 分析结果
               </button>
@@ -894,7 +894,7 @@ export default function GeoLabWorkbench() {
                       [item.key]: !prev[item.key as keyof LayerVisibility],
                     }))
                   }
-                  className={`rounded-md px-2 py-1 text-[11px] ${active ? "bg-emerald-400/30 text-emerald-100" : "bg-white/10 text-white/75"}`}
+                  className={`rounded-md px-2 py-1 text-[11px] ${active ? "bg-emerald-400/30 text-emerald-100" : "bg-ink/10 text-ink/75"}`}
                 >
                   {item.label}图层
                 </button>
@@ -904,8 +904,8 @@ export default function GeoLabWorkbench() {
           <MapLibrePreview dataset={displayLayer} layerVisibility={layerVisibility} />
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <p className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
+        <div className="rounded-2xl border border-ink/14 bg-ink/[0.04] p-4">
+          <p className="mb-3 flex items-center gap-2 text-sm font-medium text-ink">
             <Layers3 className="h-4 w-4 text-violet-300" /> WebGL 3D 预览（Three.js 面挤出）
           </p>
           <ThreePreview dataset={displayLayer} fallbackDataset={dataset} />
