@@ -76,11 +76,18 @@ function experiencePoints(item?: Experience, lang: Lang = 'zh') {
   if (!item) return []
   const duties = cleanList(item.responsibilities)
   const achievements = cleanList(item.achievements)
-  const detail = duties[0] || achievements[0]
-  return [
-    item.description?.trim() || '',
-    detail ? `${lang === 'zh' ? '职责' : 'Role'}：${detail}` : '',
-  ].filter(Boolean)
+  const points = [item.description?.trim() || ''].filter(Boolean)
+  if (duties.length > 0) {
+    // 有多条职责时，每条作为独立 point 展示（用于同公司多项目场景）
+    if (duties.length > 1) {
+      points.push(...duties)
+    } else {
+      points.push(`${lang === 'zh' ? '职责' : 'Role'}：${duties[0]}`)
+    }
+  } else if (achievements.length > 0) {
+    points.push(`${lang === 'zh' ? '职责' : 'Role'}：${achievements[0]}`)
+  }
+  return points
 }
 
 function groupHobbies(hobbies: string[], lang: Lang) {

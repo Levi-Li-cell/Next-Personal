@@ -140,10 +140,14 @@ export async function GET() {
     {
       id: "e2",
       company: "厦门零度象限有限公司",
-      position: "前端工程师",
+      position: "全栈工程师",
       startDate: "2025.8",
       endDate: "2025.12",
-      description: "项目：幼师麦穗圈小程序",
+      description: "在职期间负责两个项目：幼师麦穗圈小程序、OMG测评平台",
+      responsibilities: [
+        "【项目一】幼师麦穗圈小程序 — 负责前端开发与迭代，主导整体前端架构与核心模块开发",
+        "【项目二】OMG测评平台 — 负责洋葱式架构、首页框架、登录注册、消息通知、测评模板动态渲染与公共请求模块",
+      ],
       achievements: [
         "负责首页信息流、资源分类筛选、登录授权、积分成长、评论互动与公共请求封装模块开发",
         "完成资源详情页动态渲染与富文本处理，结合 Swiper 实现轮播与活动 banner，优化首屏性能",
@@ -151,26 +155,13 @@ export async function GET() {
         "基于 Pinia 完成用户信息缓存、权限控制、收藏状态同步等全局状态管理",
         "完成 PC/iOS Web/Android Web 多端适配与兼容性优化",
         "参与后台管理系统前端开发与 RBAC 权限控制，实现用户管理、内容审核、数据统计等模块",
-      ],
-      techStack: ["Uniapp", "Vue3", "Swiper", "Axios", "Pinia", "Swagger", "Gemini API"],
-      sortOrder: "2",
-    },
-    {
-      id: "e3",
-      company: "厦门零度象限有限公司",
-      position: "前端工程师",
-      startDate: "2025.8",
-      endDate: "2025.12",
-      description: "项目：OMG测评平台（公开网址：OMGREVIEW）",
-      achievements: [
-        "负责洋葱式架构、首页框架、登录注册、消息通知、测评模板动态渲染与公共请求模块",
         "负责 Swagger 接口测试、异常处理与鉴权逻辑，保障前后端交互稳定",
         "使用虚拟列表与懒加载处理视频测评大数据渲染场景",
         "完成接口合并、渐进式加载、组件懒加载、资源压缩与云存储优化",
         "参与技术选型与多端方案评估，制定项目目录结构并推进落地",
       ],
-      techStack: ["Uniapp", "Vue3", "Swiper", "Axios", "Pinia", "Swagger", "RESTful API"],
-      sortOrder: "3",
+      techStack: ["Uniapp", "Vue3", "Swiper", "Axios", "Pinia", "Swagger", "Gemini API", "RESTful API"],
+      sortOrder: "2",
     },
   ];
 
