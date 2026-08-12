@@ -3,6 +3,8 @@ import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { project } from "@/db/schema/project";
 
+export const revalidate = 60;
+
 const fallbackProjects = [
   {
     id: "fallback-project-1",
@@ -52,6 +54,8 @@ export async function GET(request: NextRequest) {
         total: Number(countResult[0]?.count || 0),
         totalPages: Math.ceil(Number(countResult[0]?.count || 0) / limit),
       },
+    }, {
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
     });
   } catch (error) {
     console.error("Failed to fetch projects:", error);

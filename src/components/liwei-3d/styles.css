@@ -1840,7 +1840,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000000;
+  background: linear-gradient(180deg, #6f906f 0%, #dbd3b5 100%);
   opacity: 1;
   transition: opacity 0.6s ease;
 

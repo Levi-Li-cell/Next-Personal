@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { LIWEI_ASSET_BASE } from '../constants'
-import { Suspense, useMemo, useRef, useEffect, type MutableRefObject } from 'react'
+import { Suspense, useMemo, useRef, useEffect, useState, type MutableRefObject } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { EffectComposer, Bloom, DepthOfField, SMAA } from '@react-three/postprocessing'
@@ -582,10 +582,18 @@ function Post2({
   dofBokehRef: MutableRefObject<number>
   dofRangeRef: MutableRefObject<number>
 }) {
+  const [lowPower, setLowPower] = useState(false)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px), (prefers-reduced-motion: reduce)')
+    const update = () => setLowPower(media.matches)
+    update()
+    media.addEventListener?.('change', update)
+    return () => media.removeEventListener?.('change', update)
+  }, [])
   const post = {
-    bloomIntensity: 0.6,
+    bloomIntensity: lowPower ? 0.35 : 0.6,
     bloomThreshold: 0.82,
-    dof: true,
+    dof: !lowPower,
     startBokeh: 7.4,
     startRange: 2.0,
     focusBokeh: 11.0,
@@ -633,7 +641,7 @@ function Post2({
         luminanceThreshold={post.bloomThreshold}
         luminanceSmoothing={0.3}
       />
-      <SMAA />
+      {!lowPower && <SMAA />}
     </EffectComposer>
   )
 }

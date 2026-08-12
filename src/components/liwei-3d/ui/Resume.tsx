@@ -177,7 +177,7 @@ export default function Resume({ lang }: { lang: Lang }) {
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch('/api/author', { cache: 'no-store', signal: controller.signal })
+    fetch('/api/author', { signal: controller.signal })
       .then(async (response) => {
         const payload = await response.json()
         if (!response.ok || !payload.success || !payload.data?.profile) throw new Error('author unavailable')
