@@ -163,7 +163,13 @@ export default function LiweiApp({ adminMode = false }: { adminMode?: boolean })
           shadows={lowPower ? false : { type: THREE.PCFShadowMap }}
           dpr={lowPower ? [0.75, 1] : [1, 1.5]}
           camera={{ position: [0, 5, 19], fov: 39, near: 0.1, far: 500 }}
-          gl={{ antialias: false, stencil: false, depth: true, toneMapping: THREE.ACESFilmicToneMapping }}
+          gl={{
+            antialias: false,
+            stencil: false,
+            depth: true,
+            preserveDrawingBuffer: true,
+            toneMapping: THREE.ACESFilmicToneMapping,
+          }}
         >
           <color attach="background" args={['#0a0e16']} />
           <Suspense fallback={null}>
