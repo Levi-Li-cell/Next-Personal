@@ -88,24 +88,24 @@ export default function BlogPage() {
   const highlightText = (text: string, searchTerm: string) => {
     if (!searchTerm) return text;
     const regex = new RegExp(`(${searchTerm})`, "gi");
-    return text.replace(regex, '<mark class="bg-[#f3c96a]/20 px-1 text-[#f3c96a]">$1</mark>');
+    return text.replace(regex, '<mark class="bg-accent/20 px-1 text-accent">$1</mark>');
   };
 
   return (
     <div className="container mx-auto px-6 py-12">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
-        <div className="mb-6 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(243,201,106,0.12),rgba(255,255,255,0.04))] p-6">
-          <p className="text-xs uppercase tracking-[0.28em] text-[#f3c96a]">Proof Layer</p>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-white/68">
+        <div className="mb-6 rounded-[1.75rem] border border-ink/14 bg-[linear-gradient(135deg,rgba(243,201,106,0.12),rgba(255,255,255,0.04))] p-6">
+          <p className="text-xs uppercase tracking-[0.28em] text-accent">Proof Layer</p>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-ink/68">
             博客页继续保留，但职责更明确了：给 HR 看思考深度，给甲方看方案拆解能力。每篇文章都是专业能力的证明，而不是单纯归档。
           </p>
         </div>
         <h1 className="mb-4 text-4xl font-bold md:text-5xl">
-          <span className="bg-gradient-to-r from-[#f3c96a] via-[#ff8b5d] to-[#9ac6ff] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-accent via-peach to-ink bg-clip-text text-transparent">
             博客文章
           </span>
         </h1>
-        <p className="text-lg text-white/60">保留技术文章、方案拆解和项目复盘，作为专业度与表达能力的证据。</p>
+        <p className="text-lg text-ink/60">保留技术文章、方案拆解和项目复盘，作为专业度与表达能力的证据。</p>
       </motion.div>
 
       {!loading && !error && (
@@ -118,16 +118,16 @@ export default function BlogPage() {
               }}
               className="relative w-full md:w-72"
             >
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
               <Input
                 placeholder="搜索文章标题或摘要"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="border-white/10 bg-white/5 pl-10"
+                className="border-ink/14 bg-ink/5 pl-10"
               />
             </form>
             <div className="flex items-center gap-4">
-              <div className="text-sm text-white/60">
+              <div className="text-sm text-ink/60">
                 显示 {total === 0 ? 0 : (page - 1) * limit + 1} - {Math.min(page * limit, total)} / 共 {total} 篇
               </div>
               <Select
@@ -137,10 +137,10 @@ export default function BlogPage() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="w-32 border-white/10 bg-white/5">
+                <SelectTrigger className="w-32 border-ink/14 bg-ink/5">
                   <SelectValue placeholder="每页数量" />
                 </SelectTrigger>
-                <SelectContent className="border-white/10 bg-zinc-900 text-white">
+                <SelectContent className="border-ink/14 bg-zinc-900 text-ink">
                   <SelectItem value="3">3 篇</SelectItem>
                   <SelectItem value="6">6 篇</SelectItem>
                   <SelectItem value="12">12 篇</SelectItem>
@@ -150,15 +150,15 @@ export default function BlogPage() {
             </div>
           </div>
 
-          <div className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/60">
-            <Info className="mt-0.5 h-4 w-4 text-[#f3c96a]" />
+          <div className="flex items-start gap-2 rounded-lg border border-ink/14 bg-ink/5 px-3 py-2 text-xs text-ink/60">
+            <Info className="mt-0.5 h-4 w-4 text-accent" />
             <p>建议优先看与岗位、业务方向相关的文章。搜索会匹配标题和摘要，分类筛选用于快速定位主题。</p>
           </div>
 
           {categories.length > 0 && (
             <div className="flex flex-wrap gap-2">
               <Badge
-                className={`cursor-pointer px-4 py-2 ${selectedCategory === "" ? "bg-[#f3c96a]/20 text-[#f3c96a]" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+                className={`cursor-pointer px-4 py-2 ${selectedCategory === "" ? "bg-accent/20 text-accent" : "bg-ink/10 text-ink/80 hover:bg-ink/20"}`}
                 onClick={() => {
                   setSelectedCategory("");
                   setPage(1);
@@ -170,7 +170,7 @@ export default function BlogPage() {
               {categories.map((category) => (
                 <Badge
                   key={category}
-                  className={`cursor-pointer px-4 py-2 ${selectedCategory === category ? "bg-[#f3c96a]/20 text-[#f3c96a]" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+                  className={`cursor-pointer px-4 py-2 ${selectedCategory === category ? "bg-accent/20 text-accent" : "bg-ink/10 text-ink/80 hover:bg-ink/20"}`}
                   onClick={() => {
                     setSelectedCategory(category === selectedCategory ? "" : category);
                     setPage(1);
@@ -187,19 +187,19 @@ export default function BlogPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 animate-spin text-[#f3c96a]" />
-          <span className="ml-3 text-white/60">加载中...</span>
+          <Loader2 className="h-10 w-10 animate-spin text-accent" />
+          <span className="ml-3 text-ink/60">加载中...</span>
         </div>
       ) : error ? (
         <div className="rounded-lg border border-red-500/30 bg-red-500/20 p-6 text-center">
           <p className="text-red-300">{error}</p>
-          <button onClick={() => window.location.reload()} className="mt-4 rounded-md bg-[#f3c96a] px-4 py-2 text-black">
+          <button onClick={() => window.location.reload()} className="mt-4 rounded-md bg-accent px-4 py-2 text-black">
             重试
           </button>
         </div>
       ) : blogPosts.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="text-white/60">{search || selectedCategory ? "没有找到匹配的文章" : "暂无博客文章"}</p>
+          <p className="text-ink/60">{search || selectedCategory ? "没有找到匹配的文章" : "暂无博客文章"}</p>
         </div>
       ) : (
         <div className="columns-1 gap-6 [column-fill:_balance] md:columns-2 lg:columns-3">
@@ -210,32 +210,32 @@ export default function BlogPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.06 }}
                 whileHover={{ y: -5 }}
-                className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition-all hover:border-[#f3c96a]/40"
+                className="group overflow-hidden rounded-2xl border border-ink/14 bg-ink/5 backdrop-blur-sm transition-all hover:border-accent/40"
               >
                 {post.coverImage && (
-                  <div className="overflow-hidden border-b border-white/10">
+                  <div className="overflow-hidden border-b border-ink/14">
                     <img src={post.coverImage} alt={post.title} className="h-40 w-full object-cover object-top" />
                   </div>
                 )}
                 <div className="p-6">
-                  <div className="mb-3 flex items-center gap-2 text-sm text-[#f3c96a]">
+                  <div className="mb-3 flex items-center gap-2 text-sm text-accent">
                     <BookOpen className="h-4 w-4" />
                     <span>{post.category}</span>
                   </div>
                   <h2
-                    className="mb-3 text-xl font-semibold text-white transition-colors group-hover:text-[#f3c96a]"
+                    className="mb-3 text-xl font-semibold text-ink transition-colors group-hover:text-accent"
                     dangerouslySetInnerHTML={{ __html: highlightText(post.title, search) }}
                   />
                   <p
-                    className="mb-4 line-clamp-3 text-sm text-white/60"
+                    className="mb-4 line-clamp-3 text-sm text-ink/60"
                     dangerouslySetInnerHTML={{ __html: highlightText(post.excerpt || "", search) }}
                   />
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-white/40">
+                    <div className="flex items-center gap-2 text-sm text-ink/40">
                       <Calendar className="h-4 w-4" />
                       <span>{new Date(post.createdAt).toLocaleDateString("zh-CN")}</span>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-[#f3c96a] opacity-0 transition-opacity group-hover:opacity-100" />
+                    <ArrowRight className="h-4 w-4 text-accent opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
                 </div>
               </motion.article>
@@ -252,7 +252,7 @@ export default function BlogPage() {
               size="icon"
               disabled={page === 1}
               onClick={() => setPage((current) => Math.max(1, current - 1))}
-              className="h-10 w-10 text-white/60 hover:bg-white/10 hover:text-white"
+              className="h-10 w-10 text-ink/60 hover:bg-ink/10 hover:text-ink"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -261,13 +261,13 @@ export default function BlogPage() {
                 key={pageNum}
                 variant={page === pageNum ? "default" : "ghost"}
                 onClick={() => setPage(pageNum)}
-                className={page === pageNum ? "h-10 w-10 bg-[#f3c96a] text-black hover:bg-[#f3c96a]" : "h-10 w-10 text-white/60 hover:bg-white/10 hover:text-white"}
+                className={page === pageNum ? "h-10 w-10 bg-accent text-black hover:bg-accent" : "h-10 w-10 text-ink/60 hover:bg-ink/10 hover:text-ink"}
               >
                 {pageNum}
               </Button>
             ))}
             {totalPages > 5 && (
-              <Button variant="ghost" className="h-10 w-10 text-white/60 hover:bg-white/10 hover:text-white">
+              <Button variant="ghost" className="h-10 w-10 text-ink/60 hover:bg-ink/10 hover:text-ink">
                 <ChevronDown className="h-4 w-4" />
               </Button>
             )}
@@ -276,7 +276,7 @@ export default function BlogPage() {
               size="icon"
               disabled={page === totalPages}
               onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-              className="h-10 w-10 text-white/60 hover:bg-white/10 hover:text-white"
+              className="h-10 w-10 text-ink/60 hover:bg-ink/10 hover:text-ink"
             >
               <ArrowRight className="h-4 w-4" />
             </Button>

@@ -56,12 +56,12 @@ export default function SponsorPage() {
   return (
     <div className="container mx-auto px-6 py-12">
       <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto">
-        <Link href="/author" className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-6">
+        <Link href="/author" className="inline-flex items-center gap-2 text-ink/70 hover:text-ink mb-6">
           <ArrowLeft className="w-4 h-4" />
           返回作者页
         </Link>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+        <div className="rounded-2xl border border-ink/14 bg-ink/5 p-8">
           {paymentStatus === "success" ? (
             <div className="mb-5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-emerald-200 text-sm flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" />
@@ -76,18 +76,18 @@ export default function SponsorPage() {
           ) : null}
 
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-              <Coffee className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-peach flex items-center justify-center">
+              <Coffee className="w-6 h-6 text-ink" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">请作者喝杯奶茶</h1>
-              <p className="text-white/60">你的支持会用于持续创作与开源分享</p>
+              <h1 className="text-3xl font-bold text-ink">请作者喝杯奶茶</h1>
+              <p className="text-ink/60">你的支持会用于持续创作与开源分享</p>
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 mt-8">
-            <div className="rounded-xl border border-white/10 bg-black/30 p-5">
-              <h2 className="text-white font-semibold mb-3">推荐打赏金额</h2>
+            <div className="rounded-xl border border-ink/14 bg-deep/30 p-5">
+              <h2 className="text-ink font-semibold mb-3">推荐打赏金额</h2>
               <div className="flex flex-wrap gap-2">
                 {presetAmounts.map((amount) => (
                   <button
@@ -96,28 +96,28 @@ export default function SponsorPage() {
                     onClick={() => setSelectedAmount(amount)}
                     className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                       selectedAmount === amount
-                        ? "bg-orange-500 text-white"
-                        : "bg-orange-500/20 text-orange-300 hover:bg-orange-500/30"
+                        ? "bg-accent text-black"
+                        : "bg-accent/20 text-accent hover:bg-accent/30"
                     }`}
                   >
                     RMB {amount}
                   </button>
                 ))}
               </div>
-              <p className="text-white/60 text-sm mt-4">
+              <p className="text-ink/60 text-sm mt-4">
                 支付方式：Stripe Checkout（国际卡支付）。
               </p>
             </div>
 
-            <div className="rounded-xl border border-dashed border-white/20 bg-black/30 p-5 flex flex-col items-center justify-center gap-3">
-              <div className="text-white/70 text-sm text-center">
-                当前金额：<span className="text-orange-300 font-semibold">RMB {selectedAmount}</span>
+            <div className="rounded-xl border border-dashed border-ink/20 bg-deep/30 p-5 flex flex-col items-center justify-center gap-3">
+              <div className="text-ink/70 text-sm text-center">
+                当前金额：<span className="text-accent font-semibold">RMB {selectedAmount}</span>
               </div>
               <Button
                 type="button"
                 onClick={createCheckout}
                 disabled={paying || sessionPending || !session?.user?.id}
-                className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600"
+                className="w-full bg-gradient-to-r from-accent to-peach text-black hover:from-accent/90 hover:to-peach/90"
               >
                 {paying ? (
                   <>
@@ -130,13 +130,13 @@ export default function SponsorPage() {
                   "请先登录后赞助"
                 )}
               </Button>
-              <p className="text-white/40 text-xs text-center">
+              <p className="text-ink/40 text-xs text-center">
                 点击后将跳转到 Stripe 安全收银台
               </p>
             </div>
           </div>
 
-          <div className="mt-8 flex items-center gap-2 text-pink-300">
+          <div className="mt-8 flex items-center gap-2 text-peach">
             <Heart className="w-4 h-4" />
             <span className="text-sm">感谢支持，祝你每天都能写出优雅的代码。</span>
           </div>

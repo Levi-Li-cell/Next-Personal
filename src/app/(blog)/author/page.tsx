@@ -691,7 +691,7 @@ export default function App() {
     };
 
     return (
-        <div ref={containerRef} className={`relative min-h-screen bg-black overflow-x-hidden ${isMobile ? '' : 'cursor-none'}`}>
+        <div ref={containerRef} className={`author-route relative min-h-screen bg-black overflow-x-hidden ${isMobile ? '' : 'cursor-none'}`}>
             {/* Custom Cursor */}
             {!isMobile && <CustomCursor mouseX={mouseX} mouseY={mouseY} smoothMouseX={smoothMouseX} smoothMouseY={smoothMouseY} />}
 

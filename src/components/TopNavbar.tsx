@@ -33,6 +33,7 @@ export default function TopNavbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const { flags } = useFeatureFlags();
+  const canAccessAuthorPage = flags.showAuthorPage && (flags.allowPublicAuthorPage || isAdmin);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -113,7 +114,7 @@ export default function TopNavbar() {
           </Link>
 
           <div className="hidden items-center gap-2 md:flex">
-            {navItems.filter((item) => item.href !== "/author" || flags.showAuthorPage).map((item, index) => (
+            {navItems.filter((item) => item.href !== "/author" || canAccessAuthorPage).map((item, index) => (
               <Link key={item.id} href={item.href}>
                 <motion.div
                   className="relative cursor-pointer rounded-full px-4 py-2 transition-all"

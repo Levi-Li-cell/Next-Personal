@@ -160,7 +160,7 @@ export default function Works({ lang, innerRef }: { lang: 'en' | 'zh'; innerRef:
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch('/api/projects?status=published&limit=20', { cache: 'no-store', signal: controller.signal })
+    fetch('/api/projects?status=published&limit=20', { signal: controller.signal })
       .then(async (response) => {
         const payload = await response.json()
         if (!response.ok || !payload.success || payload.degraded || !Array.isArray(payload.data)) {

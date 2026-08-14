@@ -90,14 +90,14 @@ export default function ResumePage() {
   const { profile } = data;
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-deep text-ink">
       {/* 工具栏 - 打印时隐藏 */}
-      <div className="no-print sticky top-0 z-50 bg-gray-800 text-white px-4 py-3 flex items-center justify-between">
+      <div className="no-print sticky top-0 z-50 border-b border-ink/10 bg-deep/90 px-4 py-3 text-ink backdrop-blur-md flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => window.history.back()}
-          className="text-white hover:bg-white/10"
+          className="text-ink hover:bg-ink/10"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           返回
@@ -106,7 +106,7 @@ export default function ResumePage() {
         <Button
           size="sm"
           onClick={() => window.print()}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-accent text-black hover:bg-accent/90"
         >
           <Printer className="w-4 h-4 mr-2" />
           打印 / 导出PDF

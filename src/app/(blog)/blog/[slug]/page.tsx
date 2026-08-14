@@ -158,7 +158,7 @@ export default function BlogDetailPage() {
       <div className="container mx-auto px-6 py-12">
         <div className="flex items-center justify-center py-20">
           <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-[#f3c96a]" />
-          <span className="ml-3 text-white/60">加载中...</span>
+          <span className="ml-3 text-ink/60">加载中...</span>
         </div>
       </div>
     );
@@ -169,7 +169,7 @@ export default function BlogDetailPage() {
       <div className="container mx-auto px-6 py-12">
         <div className="rounded-lg border border-red-500/30 bg-red-500/20 p-6 text-center">
           <p className="text-red-300">{error || "文章不存在"}</p>
-          <button onClick={() => router.push("/blog")} className="mt-4 rounded-md bg-[#f3c96a] px-4 py-2 text-black">
+          <button onClick={() => router.push("/blog")} className="mt-4 rounded-md bg-accent px-4 py-2 text-black">
             返回博客列表
           </button>
         </div>
@@ -179,13 +179,13 @@ export default function BlogDetailPage() {
 
   return (
     <div className="container mx-auto px-6 py-12">
-      <motion.button initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-8 flex items-center gap-2 text-white/60 hover:text-white" onClick={() => router.push("/blog")}>
+      <motion.button initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-8 flex items-center gap-2 text-ink/60 hover:text-ink" onClick={() => router.push("/blog")}>
         <ArrowLeft className="h-5 w-5" />
         <span>返回博客列表</span>
       </motion.button>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-3xl">
-        <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-white/60">
+        <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-ink/60">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             <span>{post.category}</span>
@@ -196,17 +196,17 @@ export default function BlogDetailPage() {
           </div>
         </div>
 
-        <h1 className="mb-6 text-3xl font-bold leading-tight text-white md:text-4xl">{post.title}</h1>
+        <h1 className="mb-6 text-3xl font-bold leading-tight text-ink md:text-4xl">{post.title}</h1>
 
         {post.coverImage && (
-          <div className="mb-8 overflow-hidden rounded-xl border border-white/10">
+          <div className="mb-8 overflow-hidden rounded-xl border border-ink/14">
             <button type="button" className="block w-full cursor-zoom-in" onClick={() => openImageViewer(post.coverImage!)}>
               <img src={post.coverImage} alt={post.title} className="block h-auto w-full object-top" />
             </button>
           </div>
         )}
 
-        <div className="prose prose-invert mb-12 max-w-none text-white prose-a:text-[#9ac6ff] prose-blockquote:text-white/85 prose-code:text-white prose-headings:text-white prose-li:text-white prose-p:text-white prose-strong:text-white">
+        <div className="prose prose-invert mb-12 max-w-none text-ink prose-a:text-accent prose-blockquote:text-ink/85 prose-code:text-ink prose-headings:text-ink prose-li:text-ink prose-p:text-ink prose-strong:text-ink">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -214,7 +214,7 @@ export default function BlogDetailPage() {
                 if (!src || typeof src !== "string") return null;
                 return (
                   <button type="button" className="my-4 block w-full cursor-zoom-in" onClick={() => openImageViewer(src)}>
-                    <img src={src} alt={alt || "博客图片"} className="block w-full rounded-lg border border-white/10 object-top" />
+                    <img src={src} alt={alt || "博客图片"} className="block w-full rounded-lg border border-ink/14 object-top" />
                   </button>
                 );
               },
@@ -227,19 +227,19 @@ export default function BlogDetailPage() {
         {post.tags.length > 0 && (
           <div className="mb-8 flex flex-wrap gap-2">
             {post.tags.map((tag) => (
-              <span key={tag} className="rounded-full bg-[#f3c96a]/14 px-3 py-1 text-xs text-[#f3c96a]">
+              <span key={tag} className="rounded-full bg-accent/14 px-3 py-1 text-xs text-accent">
                 {tag}
               </span>
             ))}
           </div>
         )}
 
-        <div className="mb-12 flex items-center gap-6 text-white/60">
+        <div className="mb-12 flex items-center gap-6 text-ink/60">
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4" />
             <span>{post.viewCount} 阅读</span>
           </div>
-          <button onClick={handleLike} disabled={isLiking} className={`flex items-center gap-2 ${liked ? "text-[#f3c96a]" : "text-white/60 hover:text-white"}`}>
+          <button onClick={handleLike} disabled={isLiking} className={`flex items-center gap-2 ${liked ? "text-accent" : "text-ink/60 hover:text-ink"}`}>
             <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
             <span>{likeCount} 点赞</span>
           </button>
@@ -254,7 +254,7 @@ export default function BlogDetailPage() {
 
       {relatedPosts.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mx-auto mt-16 max-w-3xl">
-          <h2 className="mb-6 text-2xl font-bold text-white">相关文章</h2>
+          <h2 className="mb-6 text-2xl font-bold text-ink">相关文章</h2>
           <div className="space-y-6">
             {relatedPosts.map((relatedPost, index) => (
               <motion.div
@@ -262,12 +262,12 @@ export default function BlogDetailPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.08 * index }}
-                className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-[#f3c96a]/40"
+                className="cursor-pointer rounded-xl border border-ink/14 bg-ink/5 p-4 transition-all hover:border-accent/40"
                 onClick={() => router.push(`/blog/${relatedPost.slug}`)}
               >
-                <h3 className="mb-2 text-lg font-semibold text-white transition-colors hover:text-[#f3c96a]">{relatedPost.title}</h3>
-                <p className="mb-3 line-clamp-2 text-sm text-white/60">{relatedPost.excerpt}</p>
-                <div className="flex items-center justify-between text-sm text-white/40">
+                <h3 className="mb-2 text-lg font-semibold text-ink transition-colors hover:text-accent">{relatedPost.title}</h3>
+                <p className="mb-3 line-clamp-2 text-sm text-ink/60">{relatedPost.excerpt}</p>
+                <div className="flex items-center justify-between text-sm text-ink/40">
                   <span>{relatedPost.category}</span>
                   <span>{new Date(relatedPost.createdAt).toLocaleDateString("zh-CN")}</span>
                 </div>
@@ -285,12 +285,12 @@ export default function BlogDetailPage() {
         />
         <div className="mt-4 flex flex-wrap gap-3">
           {post.ctaType !== "client" && (
-            <Link href="/author#contact" className="rounded-full bg-[#f3c96a] px-5 py-2.5 text-sm font-medium text-black">
+            <Link href="/author#contact" className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-black">
               面试邀约
             </Link>
           )}
           {post.ctaType !== "hr" && (
-            <Link href="/author#contact" className="rounded-full border border-white/12 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/90">
+            <Link href="/author#contact" className="rounded-full border border-ink/12 bg-ink/5 px-5 py-2.5 text-sm font-medium text-ink/90">
               合作需求
             </Link>
           )}
@@ -298,8 +298,8 @@ export default function BlogDetailPage() {
       </div>
 
       {activeImageIndex !== null && galleryImages.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-          <button type="button" className="absolute right-4 top-4 rounded-md bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20" onClick={() => setActiveImageIndex(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-deep/90 p-4">
+          <button type="button" className="absolute right-4 top-4 rounded-md bg-ink/10 px-3 py-2 text-sm text-ink hover:bg-ink/20" onClick={() => setActiveImageIndex(null)}>
             关闭
           </button>
           <img src={galleryImages[activeImageIndex]} alt={`图片 ${activeImageIndex + 1}`} className="max-h-[85vh] max-w-[90vw] rounded-lg" />

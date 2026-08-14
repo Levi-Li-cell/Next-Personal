@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { authorProfile, authorSkill, authorExperience, authorEducation, authorHonor } from "@/db/schema/author";
-import { asc, desc, sql } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
 import { DEFAULT_AUTHOR_PHOTOS } from "@/lib/author-defaults";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-async function ensureColumns() {
-  await db.execute(sql`ALTER TABLE author_profile ADD COLUMN IF NOT EXISTS wechat text`);
-  await db.execute(sql`ALTER TABLE author_profile ADD COLUMN IF NOT EXISTS blog_url text`);
-}
+export const revalidate = 60;
 
 /**
  * 检测 UTF-8 字节被当作 Latin-1 解码导致的乱码。
@@ -199,7 +193,6 @@ export async function GET() {
   ];
 
   try {
-    await ensureColumns();
     // 并行获取所有数据
     const [profiles, skills, experiences, education, honors] = await Promise.all([
       db.select().from(authorProfile).orderBy(desc(authorProfile.createdAt)).limit(1),
@@ -246,7 +239,7 @@ export async function GET() {
         honors: repaired.honors,
       },
     }, {
-      headers: { "Cache-Control": "no-store, max-age=0" },
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
     });
   } catch (error) {
     console.error("获取作者信息失败:", error);

@@ -11,7 +11,10 @@ import "@/components/liwei-3d/styles.css";
 const LiweiApp = dynamic(() => import("@/components/liwei-3d/LiweiApp"), {
   ssr: false,
   loading: () => (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0e16] text-[#f4f1ea]">
+    <div
+      className="flex min-h-screen items-center justify-center text-[#1b2024]"
+      style={{ background: "linear-gradient(180deg, #6f906f 0%, #dbd3b5 100%)" }}
+    >
       3D 简历加载中…
     </div>
   ),

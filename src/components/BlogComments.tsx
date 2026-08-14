@@ -188,39 +188,39 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
   return (
     <div className="mt-12 space-y-6">
       {/* 评论表单 */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-ink/5 border-ink/14">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-white">发表评论</CardTitle>
+          <CardTitle className="text-xl font-semibold text-ink">发表评论</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmitComment} className="space-y-4">
             {!session?.user?.id && (
               <div className="space-y-2">
-                <Label htmlFor="commentName" className="text-white">昵称（可选）</Label>
+                <Label htmlFor="commentName" className="text-ink">昵称（可选）</Label>
                 <Input
                   id="commentName"
                   value={commentName}
                   onChange={(e) => setCommentName(e.target.value)}
                   placeholder='不填则显示"匿名访客"'
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/60"
+                  className="bg-ink/5 border-ink/14 text-ink placeholder:text-ink/60"
                 />
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="comment" className="text-white">评论内容</Label>
+              <Label htmlFor="comment" className="text-ink">评论内容</Label>
               <Textarea
                 id="comment"
                 value={commentContent}
                 onChange={(e) => setCommentContent(e.target.value)}
                 placeholder="写下你的评论..."
                 rows={4}
-                className="bg-white/5 border-white/10 text-white"
+                className="bg-ink/5 border-ink/14 text-ink"
               />
             </div>
             <Button
               type="submit"
               disabled={submitting || !commentContent.trim()}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              className="bg-gradient-to-r from-accent to-peach text-black hover:from-accent/90 hover:to-peach/90"
             >
               {submitting ? (
                 <>
@@ -240,13 +240,13 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
 
       {/* 评论列表 */}
       <div className="space-y-6">
-        <h3 className="text-xl font-semibold text-white">评论 ({comments.length})</h3>
+        <h3 className="text-xl font-semibold text-ink">评论 ({comments.length})</h3>
         {comments.length === 0 ? (
-          <p className="text-white/60">暂无评论，快来发表第一条评论吧！</p>
+          <p className="text-ink/60">暂无评论，快来发表第一条评论吧！</p>
         ) : (
           comments.map((comment) => (
           <div key={comment.id} className="space-y-4">
-            <Card className="bg-white/5 border-white/10">
+            <Card className="bg-ink/5 border-ink/14">
               <CardContent className="p-6">
                 <div className="flex gap-4">
                   <Avatar className="w-10 h-10">
@@ -255,16 +255,16 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
                   </Avatar>
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-white">{getDisplayName(comment)}</h4>
-                      <span className="text-sm text-white/60">
+                      <h4 className="font-medium text-ink">{getDisplayName(comment)}</h4>
+                      <span className="text-sm text-ink/60">
                         {new Date(comment.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <p className="text-white/80">{comment.content}</p>
+                    <p className="text-ink/80">{comment.content}</p>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                        className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                        className="text-sm text-accent hover:text-accent/80 flex items-center gap-1"
                       >
                         <Reply className="w-4 h-4" />
                         回复
@@ -288,7 +288,7 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
                             value={replyName}
                             onChange={(e) => setReplyName(e.target.value)}
                             placeholder="昵称（可选）"
-                            className="bg-white/5 border-white/10 text-white placeholder:text-white/60"
+                            className="bg-ink/5 border-ink/14 text-ink placeholder:text-ink/60"
                           />
                         )}
                         <Textarea
@@ -296,13 +296,13 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
                           onChange={(e) => setReplyContent(e.target.value)}
                           placeholder="写下你的回复..."
                           rows={2}
-                          className="bg-white/5 border-white/10 text-white"
+                          className="bg-ink/5 border-ink/14 text-ink"
                         />
                         <div className="flex gap-2">
                           <Button
                             onClick={() => handleSubmitReply(comment.id)}
                             disabled={submitting || !replyContent.trim()}
-                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                            className="bg-gradient-to-r from-accent to-peach text-black hover:from-accent/90 hover:to-peach/90"
                           >
                             {submitting ? (
                               <>
@@ -323,7 +323,7 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
                               setReplyContent("");
                               setReplyName("");
                             }}
-                            className="text-white/60 hover:text-white hover:bg-white/10"
+                            className="text-ink/60 hover:text-ink hover:bg-ink/10"
                           >
                             取消
                           </Button>
@@ -333,16 +333,16 @@ export default function BlogComments({ slug }: BlogCommentsProps) {
 
                     {/* 回复列表 */}
                     {(comment.replies?.length || 0) > 0 && (
-                      <div className="mt-4 pl-4 border-l-2 border-white/10 space-y-3">
+                      <div className="mt-4 pl-4 border-l-2 border-ink/14 space-y-3">
                         {(comment.replies || []).map((reply) => (
                           <div key={reply.id} className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <h5 className="font-medium text-white/80">{getDisplayName(reply)}</h5>
-                              <span className="text-xs text-white/60">
+                              <h5 className="font-medium text-ink/80">{getDisplayName(reply)}</h5>
+                              <span className="text-xs text-ink/60">
                                 {new Date(reply.createdAt).toLocaleString()}
                               </span>
                             </div>
-                            <p className="text-white/70">{reply.content}</p>
+                            <p className="text-ink/70">{reply.content}</p>
                             {session?.user?.id && session.user.id === reply.userId && (
                               <button
                                 onClick={() => handleDeleteComment(reply.id, comment.id)}

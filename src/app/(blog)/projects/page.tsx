@@ -37,7 +37,7 @@ function ExternalIconLink({ href, label, children }: { href: string; label: stri
       tabIndex={0}
       aria-label={label}
       title={label}
-      className="inline-flex cursor-pointer items-center text-white/70 hover:text-white"
+      className="inline-flex cursor-pointer items-center text-ink/70 hover:text-ink"
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -90,35 +90,35 @@ export default function ProjectsPage() {
   return (
     <div className="container mx-auto px-6 py-12">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
-        <div className="mb-6 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(243,201,106,0.12),rgba(255,255,255,0.04))] p-6">
-          <p className="text-xs uppercase tracking-[0.28em] text-[#f3c96a]">Case Proof</p>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-white/68">
+        <div className="mb-6 rounded-[1.75rem] border border-ink/14 bg-[linear-gradient(135deg,rgba(243,201,106,0.12),rgba(255,255,255,0.04))] p-6">
+          <p className="text-xs uppercase tracking-[0.28em] text-accent">Case Proof</p>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-ink/68">
             项目页继续保留，但定位已经变成“交付能力证据库”。招聘方看复杂度和技术栈，甲方看方案与结果。
           </p>
         </div>
         <h1 className="mb-4 text-4xl font-bold md:text-5xl">
-          <span className="bg-gradient-to-r from-[#f3c96a] via-[#ff8b5d] to-[#9ac6ff] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-accent via-peach to-ink bg-clip-text text-transparent">
             项目作品
           </span>
         </h1>
-        <p className="text-lg text-white/60">保留项目案例与技术信息，把它们升级成真正的业务转化证据。</p>
+        <p className="text-lg text-ink/60">保留项目案例与技术信息，把它们升级成真正的业务转化证据。</p>
       </motion.div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 animate-spin text-[#f3c96a]" />
-          <span className="ml-3 text-white/60">加载中...</span>
+          <Loader2 className="h-10 w-10 animate-spin text-accent" />
+          <span className="ml-3 text-ink/60">加载中...</span>
         </div>
       ) : error ? (
         <div className="rounded-lg border border-red-500/30 bg-red-500/20 p-6 text-center">
           <p className="text-red-300">{error}</p>
-          <button onClick={() => window.location.reload()} className="mt-4 rounded-md bg-[#f3c96a] px-4 py-2 text-black">
+          <button onClick={() => window.location.reload()} className="mt-4 rounded-md bg-accent px-4 py-2 text-black">
             重试
           </button>
         </div>
       ) : projects.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="text-white/60">暂无项目</p>
+          <p className="text-ink/60">暂无项目</p>
         </div>
       ) : (
         <div className="columns-1 gap-6 [column-fill:_balance] md:columns-2 lg:columns-3">
@@ -129,10 +129,10 @@ export default function ProjectsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.06 }}
                 whileHover={{ y: -5 }}
-                className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition-all hover:border-[#f3c96a]/40"
+                className="group overflow-hidden rounded-2xl border border-ink/14 bg-ink/5 backdrop-blur-sm transition-all hover:border-accent/40"
               >
                 {project.coverImage && (
-                  <div className="overflow-hidden border-b border-white/10">
+                  <div className="overflow-hidden border-b border-ink/14">
                     <img src={project.coverImage} alt={project.title} className="h-40 w-full object-cover object-top" />
                   </div>
                 )}
@@ -144,7 +144,7 @@ export default function ProjectsPage() {
                           <Folder className="h-6 w-6 text-black" />
                         </div>
                       )}
-                      {!project.coverImage && <h2 className="flex-grow text-xl font-semibold text-white transition-colors group-hover:text-[#f3c96a]">{project.title}</h2>}
+                      {!project.coverImage && <h2 className="flex-grow text-xl font-semibold text-ink transition-colors group-hover:text-accent">{project.title}</h2>}
                     </div>
                     <div className="flex gap-3">
                       {project.githubUrl && (
@@ -157,14 +157,14 @@ export default function ProjectsPage() {
                           <ExternalLink className="h-5 w-5" />
                         </ExternalIconLink>
                       )}
-                      <ArrowRight className="h-5 w-5 text-[#f3c96a] opacity-0 transition-opacity group-hover:opacity-100" />
+                      <ArrowRight className="h-5 w-5 text-accent opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>
                   </div>
-                  {project.coverImage && <h2 className="mb-3 text-xl font-semibold text-white transition-colors group-hover:text-[#f3c96a]">{project.title}</h2>}
-                  <p className="mb-4 text-sm leading-7 text-white/65">{project.description}</p>
+                  {project.coverImage && <h2 className="mb-3 text-xl font-semibold text-ink transition-colors group-hover:text-accent">{project.title}</h2>}
+                  <p className="mb-4 text-sm leading-7 text-ink/65">{project.description}</p>
                   <div className="flex flex-wrap gap-2">
                     {project.techStack.map((tech) => (
-                      <span key={tech} className="rounded-full bg-[#f3c96a]/14 px-3 py-1 text-xs text-[#f3c96a]">
+                      <span key={tech} className="rounded-full bg-accent/14 px-3 py-1 text-xs text-accent">
                         {tech}
                       </span>
                     ))}

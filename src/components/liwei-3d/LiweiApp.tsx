@@ -1,4 +1,5 @@
 // @ts-nocheck
+import dynamic from 'next/dynamic'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion'
@@ -8,13 +9,14 @@ import NoiseOverlay from './ui/NoiseOverlay'
 import Resume from './ui/Resume'
 import Works from './ui/Works'
 import LoadingScreen from './ui/LoadingScreen'
-import StickerEditor from './editor/StickerEditor'
-import DirectorEditor from './director/DirectorEditor'
-import ProfileEditor from './profile/ProfileEditor'
-import ToolsMenu from './tools/ToolsMenu'
-import HomeChatAssistant from './ui/HomeChatAssistant'
 import { selectProfile, useProfileStore, type ProfileData } from './profile/store'
 import { useStore } from './store'
+
+const StickerEditor = dynamic(() => import('./editor/StickerEditor'), { ssr: false })
+const DirectorEditor = dynamic(() => import('./director/DirectorEditor'), { ssr: false })
+const ProfileEditor = dynamic(() => import('./profile/ProfileEditor'), { ssr: false })
+const ToolsMenu = dynamic(() => import('./tools/ToolsMenu'), { ssr: false })
+const HomeChatAssistant = dynamic(() => import('./ui/HomeChatAssistant'), { ssr: false })
 
 function Backdrop() {
   // 点击空白处收起详情
@@ -101,12 +103,30 @@ function LangToggle({ lang, onToggle }: { lang: Lang; onToggle: () => void }) {
 
 export default function LiweiApp({ adminMode = false }: { adminMode?: boolean }) {
   const [lang, setLang] = useState<Lang>('zh')
+  const [lowPower, setLowPower] = useState(false)
+  const [assistantReady, setAssistantReady] = useState(false)
   const profileConfig = useProfileStore((state) => state.config)
   const loadProfile = useProfileStore((state) => state.load)
   const profile = selectProfile(profileConfig)
   useEffect(() => {
     loadProfile()
   }, [loadProfile])
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px), (prefers-reduced-motion: reduce)')
+    const update = () => setLowPower(media.matches)
+    update()
+    media.addEventListener?.('change', update)
+    return () => media.removeEventListener?.('change', update)
+  }, [])
+  useEffect(() => {
+    const loadAssistant = () => setAssistantReady(true)
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(loadAssistant, { timeout: 2500 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const id = window.setTimeout(loadAssistant, 1200)
+    return () => window.clearTimeout(id)
+  }, [])
   const { scrollY } = useScroll()
   // 作品区蒙层：以作品区顶部从视口底进入到视口中部的进度，驱动 3D 渐暗 + 模糊
   const worksRef = useRef(null)
@@ -140,10 +160,16 @@ export default function LiweiApp({ adminMode = false }: { adminMode?: boolean })
       {/* 固定的 3D 背景 */}
       <div className="scene-bg">
         <Canvas
-          shadows={{ type: THREE.PCFShadowMap }}
-          dpr={[1, 1.5]}
+          shadows={lowPower ? false : { type: THREE.PCFShadowMap }}
+          dpr={lowPower ? [0.75, 1] : [1, 1.5]}
           camera={{ position: [0, 5, 19], fov: 39, near: 0.1, far: 500 }}
-          gl={{ antialias: false, stencil: false, depth: true, toneMapping: THREE.ACESFilmicToneMapping }}
+          gl={{
+            antialias: false,
+            stencil: false,
+            depth: true,
+            preserveDrawingBuffer: true,
+            toneMapping: THREE.ACESFilmicToneMapping,
+          }}
         >
           <color attach="background" args={['#0a0e16']} />
           <Suspense fallback={null}>
@@ -199,7 +225,7 @@ export default function LiweiApp({ adminMode = false }: { adminMode?: boolean })
       {adminMode && <ToolsMenu />}
 
       <NoiseOverlay />
-      <HomeChatAssistant />
+      {assistantReady && <HomeChatAssistant />}
 
       {/* 可滚动内容 */}
       <main className="content">
