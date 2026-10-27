@@ -12,7 +12,7 @@ import { useModelUrl, useStickerEditor, useMan } from '../editor/store'
 import { sampleDirector } from '../director/sample'
 import { useDirectorStore } from '../director/store'
 
-useGLTF.preload(`${LIWEI_ASSET_BASE}models/liwei.rigged.glb`)
+useGLTF.preload(`${LIWEI_ASSET_BASE}models/liwei.rigged.full.glb`)
 
 // 聚焦锚点（glb 内 focus-* 空对象），顺序对应履历节点；名单是唯一真源，见 data/focusPoints.ts
 const POINTS = FOCUS_POINTS as readonly string[]

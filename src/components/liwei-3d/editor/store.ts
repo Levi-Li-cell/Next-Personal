@@ -250,13 +250,15 @@ export const useStickerEditor = create<EditorState>((set, get) => ({
 
 type ModelUrlState = { url: string; file: string; selectFile: (file: string) => void; bump: () => void }
 export const useModelUrl = create<ModelUrlState>((set) => ({
-  url: `${LIWEI_ASSET_BASE}models/liwei.rigged.glb`,
-  file: 'liwei.rigged.glb',
+  url: `${LIWEI_ASSET_BASE}models/liwei.rigged.full.glb`,
+  file: 'liwei.rigged.full.glb',
+  // selectFile 用稳定 URL（无时间戳），浏览器/CDN 缓存才能跨会话生效；换文件内容时改文件名即可
   selectFile: (file) =>
     set({
       file,
-      url: `${LIWEI_ASSET_BASE}models/${encodeURIComponent(file)}?t=${Date.now()}`,
+      url: `${LIWEI_ASSET_BASE}models/${encodeURIComponent(file)}`,
     }),
+  // bump 供编辑器重传同名模型后强制刷新，时间戳只在这里加
   bump: () =>
     set((state) => ({
       url: `${LIWEI_ASSET_BASE}models/${encodeURIComponent(state.file)}?t=${Date.now()}`,
