@@ -20,6 +20,7 @@ const FEATURE_LABELS: { key: string; label: string; description: string }[] = [
   { key: "showWeatherWidget", label: "天气组件", description: "在作者页显示实时天气信息和城市查询" },
   { key: "showSnakeGame", label: "3D 贪吃蛇", description: "在作者页显示游戏入口和 /snake3d 路由" },
   { key: "showGeoLab", label: "空间实验室", description: "在作者页显示空间分析实验室入口和 /geo-lab 路由" },
+  { key: "showInteractiveGames", label: "互动小游戏", description: "在导航“互动”卡片显示入口，并开放 /games 瀑布流列表与作品详情路由；关闭时启用路由守卫" },
 ];
 
 export default function SettingsPage() {

@@ -73,9 +73,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: {
-    canonical: SITE_URL,
-  },
+  // 注：移除全局 alternates.canonical，因为它会向下继承到所有页面，
+  // 导致 /blog、/projects 等子页面 canonical 都指向根域名，被谷歌判定为重复内容。
+  // 各页面应在自身 metadata 中单独声明指向自己的 canonical。
   icons: {
     icon: [
       {
@@ -100,7 +100,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

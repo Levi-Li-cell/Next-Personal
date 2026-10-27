@@ -780,6 +780,7 @@ const clearChat = async () => {
                                     style={{
                                         display: 'flex',
                                         gap: '12px',
+                                        marginTop: msg.role === 'assistant' ? '12px' : 0,
                                         flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
                                         alignItems: 'flex-start'
                                     }}

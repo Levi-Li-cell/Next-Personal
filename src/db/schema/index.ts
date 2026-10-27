@@ -7,6 +7,7 @@ export * from "./photo";
 export * from "./sso-token";
 export * from "./author";
 export * from "./guestbook";
+export * from "./game";
 export * from "./notification";
 export * from "./lead";
 export * from "./self-evaluation";

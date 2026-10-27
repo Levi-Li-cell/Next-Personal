@@ -7,6 +7,7 @@ export type FeatureFlags = {
   showWeatherWidget: boolean;
   showSnakeGame: boolean;
   showGeoLab: boolean;
+  showInteractiveGames: boolean;
   showAuthorPage: boolean;
   allowPublicAuthorPage: boolean;
   enable3DTools: boolean;
@@ -17,6 +18,7 @@ const DEFAULT_FLAGS: FeatureFlags = {
   showWeatherWidget: false,
   showSnakeGame: false,
   showGeoLab: false,
+  showInteractiveGames: false,
   showAuthorPage: false,
   allowPublicAuthorPage: false,
   enable3DTools: false,

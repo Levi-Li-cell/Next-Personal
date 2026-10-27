@@ -9,6 +9,7 @@ const DEFAULT_FLAGS: Record<string, boolean> = {
   showWeatherWidget: false,
   showSnakeGame: false,
   showGeoLab: false,
+  showInteractiveGames: false,
   showAuthorPage: false,
   allowPublicAuthorPage: false,
   enable3DTools: false,

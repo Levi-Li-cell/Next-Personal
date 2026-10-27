@@ -32,6 +32,7 @@ export function buildSiteNavItems(flags: FeatureFlags, canAccessAuthorPage = fal
       links: [
         { label: "留言板", href: "/guestbook" },
         { label: "空间实验室", href: "/geo-lab" },
+        ...(flags.showInteractiveGames ? [{ label: "互动小游戏", href: "/games" }] : []),
         ...(flags.showSnakeGame ? [{ label: "3D 贪吃蛇", href: "/snake3d" }] : []),
         ...(flags.showSponsorPage ? [{ label: "赞助", href: "/sponsor" }] : []),
       ],
