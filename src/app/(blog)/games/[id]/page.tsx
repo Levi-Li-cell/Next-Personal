@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Download, Eye, Loader2, MessageSquare } from "lucide-react";
 import WorkCanvas from "@/components/games/WorkCanvas";
+import AbyssalWell from "@/components/abyssal/AbyssalWell";
 import StarRating from "@/components/games/StarRating";
 import GameComments from "@/components/games/GameComments";
 import { getVisitorVoterKey } from "@/lib/games-client";
@@ -32,6 +33,15 @@ interface MetricsResponse {
   data?: { viewCount: number; downloadCount: number; package?: Record<string, unknown> };
   error?: string;
 }
+
+/** 场景类型的中文名（侧边栏创作者行展示用） */
+const SCENE_TYPE_LABELS: Record<string, string> = {
+  "crystal-cluster": "晶体簇",
+  "wave-field": "波场",
+  "torus-knot": "环面纽结",
+  "orbiting-spheres": "轨道球",
+  "abyssal-well": "原生 WebGL2 引擎",
+};
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -185,14 +195,20 @@ export default function GameDetailPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-5">
         {/* 上排：左 = WebGL 交互画布，右 = 侧边栏 */}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="h-[420px] overflow-hidden rounded-2xl border border-ink/14 md:h-[540px]">
-            <WorkCanvas
-              sceneType={work.sceneType}
-              sceneConfig={work.sceneConfig}
-              controlsHint={work.controlsHint}
-              title={work.title}
-            />
-          </div>
+          {work.sceneType === "abyssal-well" ? (
+            <div className="overflow-hidden rounded-2xl border border-ink/14 bg-[#03060a]">
+              <AbyssalWell variant="embedded" />
+            </div>
+          ) : (
+            <div className="h-[420px] overflow-hidden rounded-2xl border border-ink/14 md:h-[540px]">
+              <WorkCanvas
+                sceneType={work.sceneType}
+                sceneConfig={work.sceneConfig}
+                controlsHint={work.controlsHint}
+                title={work.title}
+              />
+            </div>
+          )}
 
           <aside className="space-y-5">
             {/* 作品信息 */}
@@ -212,7 +228,7 @@ export default function GameDetailPage() {
                 </span>
                 <div>
                   <p className="text-sm font-medium text-ink">{work.author.name}</p>
-                  <p className="text-xs text-ink/45">创作者 · {work.sceneType}</p>
+                  <p className="text-xs text-ink/45">创作者 · {SCENE_TYPE_LABELS[work.sceneType] ?? work.sceneType}</p>
                 </div>
               </div>
             </Card>
@@ -237,15 +253,17 @@ export default function GameDetailPage() {
                   <p className="text-[11px] text-ink/45">讨论</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleDownload}
-                disabled={downloading}
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                下载场景工程包
-              </button>
+              {work.sceneType !== "abyssal-well" && (
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  下载场景工程包
+                </button>
+              )}
             </Card>
 
             {/* 评分系统 */}

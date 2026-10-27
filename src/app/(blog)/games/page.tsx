@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ArrowRight, Download, Eye, Gamepad2, Gem, MessageSquare, Orbit, Shell, Waves } from "lucide-react";
+import { ArrowRight, Download, Eye, Flame, Gamepad2, Gem, MessageSquare, Orbit, Shell, Waves } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import StarRating from "@/components/games/StarRating";
@@ -27,6 +27,7 @@ const SCENE_ICONS: Record<SceneType, typeof Gem> = {
   "wave-field": Waves,
   "torus-knot": Shell,
   "orbiting-spheres": Orbit,
+  "abyssal-well": Flame,
 };
 
 /** 由 slug 派生封面高度，制造瀑布流的高低差 */

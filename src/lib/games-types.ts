@@ -16,7 +16,9 @@ export type SceneType =
   | "crystal-cluster"
   | "wave-field"
   | "torus-knot"
-  | "orbiting-spheres";
+  | "orbiting-spheres"
+  /** 原生 WebGL2 外部引擎（iframe + AWP 协议承载），不走内置 Three.js 画布 */
+  | "abyssal-well";
 
 /** 场景配色与参数（宽松结构，由各场景自行消费） */
 export interface SceneConfig {
