@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Heart, Loader2, MessageCircleReply, Send } from "lucide-react";
+import { ChevronDown, Heart, Loader2, MessageCircleReply, Send } from "lucide-react";
 import { useSession } from "@/lib/auth/client";
 import { getVisitorVoterKey } from "@/lib/games-client";
 import type { CommentNode } from "@/lib/games-types";
@@ -12,6 +12,9 @@ interface GameCommentsProps {
   /** 评论发表成功后联动侧边栏“讨论”卡片 */
   onCommentCountChange?: (delta: number) => void;
 }
+
+/** 根评论分页大小：详情页首屏只拉一页，往下滚动按需加载 */
+const COMMENTS_PAGE_SIZE = 10;
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -41,7 +44,8 @@ function CommentAvatar({ name }: { name: string }) {
   );
 }
 
-function CommentItem({
+/** 单条评论渲染成本不低（头像/时间/点赞/回复树），memo 化后列表追加页不影响已有节点 */
+const CommentItem = memo(function CommentItem({
   comment,
   voterKey,
   onReply,
@@ -114,13 +118,17 @@ function CommentItem({
       </div>
     </div>
   );
-}
+});
 
-/** 评论区：输入框 + 一层回复树列表，支持点赞/回复，发表后联动“讨论”计数 */
+/** 评论区：输入框 + 一层回复树列表（根评论分页加载），支持点赞/回复，发表后联动“讨论”计数 */
 export default function GameComments({ workId, onCommentCountChange }: GameCommentsProps) {
   const { data: session } = useSession();
   const [comments, setComments] = useState<CommentNode[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [rootTotal, setRootTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [content, setContent] = useState("");
   const [guestName, setGuestName] = useState("");
@@ -132,15 +140,22 @@ export default function GameComments({ workId, onCommentCountChange }: GameComme
     setVoterKey(getVisitorVoterKey());
   }, []);
 
+  const applyPage = useCallback((data: { list: CommentNode[]; hasMore: boolean; rootTotal: number; page: number }, append: boolean) => {
+    setComments((prev) => (append ? [...prev, ...data.list] : data.list));
+    setHasMore(data.hasMore);
+    setRootTotal(data.rootTotal);
+    setPage(data.page);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     async function fetchComments() {
       try {
         const key = getVisitorVoterKey();
-        const response = await fetch(`/api/games/${workId}/comments?voter=${encodeURIComponent(key)}`);
+        const response = await fetch(`/api/games/${workId}/comments?voter=${encodeURIComponent(key)}&page=1&limit=${COMMENTS_PAGE_SIZE}`);
         const result = await response.json();
         if (!cancelled && result.success && result.data) {
-          setComments(result.data.list);
+          applyPage(result.data, false);
         }
       } catch (error) {
         console.error("获取评论失败:", error);
@@ -152,7 +167,26 @@ export default function GameComments({ workId, onCommentCountChange }: GameComme
     return () => {
       cancelled = true;
     };
-  }, [workId]);
+  }, [workId, applyPage]);
+
+  /** 追加下一页根评论（回复随根评论一并下发） */
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const key = getVisitorVoterKey();
+      const response = await fetch(`/api/games/${workId}/comments?voter=${encodeURIComponent(key)}&page=${page + 1}&limit=${COMMENTS_PAGE_SIZE}`);
+      const result = await response.json();
+      if (result.success && result.data) {
+        applyPage(result.data, true);
+      }
+    } catch (error) {
+      console.error("加载更多评论失败:", error);
+      toast.error("加载更多失败，请稍后重试");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [applyPage, hasMore, loadingMore, page, workId]);
 
   const submitComment = async (payload: { content: string; parentId?: string }) => {
     const body = {
@@ -332,22 +366,35 @@ export default function GameComments({ workId, onCommentCountChange }: GameComme
             还没有评论，来抢第一个沙发。
           </div>
         ) : (
-          <div className="space-y-6">
-            {comments.map((comment) => (
-              <CommentItem
-                key={comment.id}
-                comment={comment}
-                voterKey={voterKey}
-                onReply={(target) => {
-                  setReplyingTo(replyingTo === target.id ? null : target.id);
-                  setReplyContent("");
-                }}
-                onLike={handleLike}
-                replyingTo={replyingTo}
-                replyForm={replyForm(comment.id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="space-y-6">
+              {comments.map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  voterKey={voterKey}
+                  onReply={(target) => {
+                    setReplyingTo(replyingTo === target.id ? null : target.id);
+                    setReplyContent("");
+                  }}
+                  onLike={handleLike}
+                  replyingTo={replyingTo}
+                  replyForm={replyForm(comment.id)}
+                />
+              ))}
+            </div>
+            {hasMore && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink/16 py-3 text-sm text-ink/55 transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-60"
+              >
+                {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
+                加载更多评论（已显示 {comments.length}/{rootTotal} 条）
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

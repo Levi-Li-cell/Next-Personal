@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { interactiveWork } from "@/db/schema/game";
-import { computeRatingSummary, ensureGamesSeededOnce, ensureGameTablesOnce, resolveVoterKey, toWorkDetail } from "@/lib/games";
+import { computeRatingSummary, ensureGamesSeededOnce, ensureGameTablesOnce, getMyLike, resolveVoterKey, toWorkDetail } from "@/lib/games";
 import { getServerSession } from "@/lib/auth/get-session";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +28,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const voter = (new URL(request.url).searchParams.get("voter") || "");
     const { voterKey } = resolveVoterKey(session?.user?.id, voter);
 
-    const [rating] = await Promise.all([
+    const [rating, myLike] = await Promise.all([
       computeRatingSummary(work.id, voterKey),
+      getMyLike(work.id, voterKey),
       // 浏览量自增（详情打开即计一次）
       db
         .update(interactiveWork)
@@ -43,7 +44,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         work: toWorkDetail({ ...work, viewCount: work.viewCount + 1 }),
         stats: {
           viewCount: work.viewCount + 1,
-          downloadCount: work.downloadCount,
+          likeCount: work.likeCount,
+          myLike,
           commentCount: work.commentCount,
           rating,
         },

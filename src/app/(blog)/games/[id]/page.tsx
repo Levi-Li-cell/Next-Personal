@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Expand, Eye, Loader2, MessageSquare, Minimize } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Download, Expand, Eye, Heart, Loader2, MessageSquare, Minimize } from "lucide-react";
 import WorkCanvas, { type WorkCanvasHandle } from "@/components/games/WorkCanvas";
 import AbyssalWell, { type AbyssalWellHandle } from "@/components/abyssal/AbyssalWell";
 import StarRating from "@/components/games/StarRating";
@@ -30,7 +30,7 @@ interface RatingResponse {
 
 interface MetricsResponse {
   success: boolean;
-  data?: { viewCount: number; downloadCount: number; package?: Record<string, unknown> };
+  data?: { viewCount: number; package?: Record<string, unknown> };
   error?: string;
 }
 
@@ -57,6 +57,9 @@ export default function GameDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [likeSubmitting, setLikeSubmitting] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const isLongDescription = (work?.description?.length ?? 0) > 320 || (work?.description?.split(/\n+/).filter(Boolean).length ?? 0) > 6;
   const [voterKey, setVoterKey] = useState("guest:ssr");
   const gameRef = useRef<AbyssalWellHandle | null>(null);
   const workCanvasRef = useRef<WorkCanvasHandle | null>(null);
@@ -128,7 +131,7 @@ export default function GameDetailPage() {
     }
   };
 
-  /** 下载工程包：计数 +1 后把场景参数保存为 JSON */
+  /** 下载工程包：仅导出场景参数 JSON，不驱动任何统计（统计口径已改为“喜欢”） */
   const handleDownload = async () => {
     if (!work || downloading) return;
     setDownloading(true);
@@ -142,7 +145,6 @@ export default function GameDetailPage() {
       if (!response.ok || !result.success || !result.data) {
         throw new Error(result.error || "下载失败");
       }
-      setStats((prev) => (prev ? { ...prev, downloadCount: result.data!.downloadCount } : prev));
       if (result.data.package) {
         const blob = new Blob([JSON.stringify(result.data.package, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
@@ -157,6 +159,31 @@ export default function GameDetailPage() {
       toast.error(err instanceof Error ? err.message : "下载失败，请稍后重试");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  /** 喜欢/取消喜欢：乐观切换心形与计数，失败回滚 */
+  const handleToggleLike = async () => {
+    if (!work || !stats || likeSubmitting) return;
+    setLikeSubmitting(true);
+    const prev = { myLike: stats.myLike, likeCount: stats.likeCount };
+    setStats({ ...stats, myLike: !prev.myLike, likeCount: Math.max(0, prev.likeCount + (prev.myLike ? -1 : 1)) });
+    try {
+      const response = await fetch(`/api/games/${work.id}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voterKey }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.error || "操作失败");
+      }
+      setStats((current) => (current ? { ...current, myLike: result.data.liked, likeCount: result.data.likeCount } : current));
+    } catch (err) {
+      setStats((current) => (current ? { ...current, ...prev } : current));
+      toast.error(err instanceof Error ? err.message : "操作失败，请稍后重试");
+    } finally {
+      setLikeSubmitting(false);
     }
   };
 
@@ -269,11 +296,25 @@ export default function GameDetailPage() {
                   <p className="mt-1.5 text-lg font-bold tabular-nums text-ink">{stats.viewCount}</p>
                   <p className="text-[11px] text-ink/45">浏览</p>
                 </div>
-                <div className="rounded-xl bg-white/60 py-3">
-                  <Download className="mx-auto h-4 w-4 text-ink/45" aria-hidden="true" />
-                  <p className="mt-1.5 text-lg font-bold tabular-nums text-ink">{stats.downloadCount}</p>
-                  <p className="text-[11px] text-ink/45">下载</p>
-                </div>
+                {/* 喜欢：可点击的心形开关，按访客去重 */}
+                <button
+                  type="button"
+                  onClick={handleToggleLike}
+                  disabled={likeSubmitting}
+                  aria-pressed={stats.myLike}
+                  aria-label={stats.myLike ? "取消喜欢" : "喜欢"}
+                  className={`rounded-xl bg-white/60 py-3 transition-colors hover:bg-peach/10 disabled:opacity-70 ${
+                    stats.myLike ? "text-peach" : "text-ink"
+                  }`}
+                >
+                  {likeSubmitting ? (
+                    <Loader2 className="mx-auto h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Heart className={`mx-auto h-4 w-4 transition-colors ${stats.myLike ? "text-peach" : "text-ink/45"}`} fill={stats.myLike ? "currentColor" : "none"} aria-hidden="true" />
+                  )}
+                  <p className="mt-1.5 text-lg font-bold tabular-nums">{stats.likeCount}</p>
+                  <p className={`text-[11px] ${stats.myLike ? "text-peach" : "text-ink/45"}`}>{stats.myLike ? "已喜欢" : "喜欢"}</p>
+                </button>
                 <div className="rounded-xl bg-white/60 py-3">
                   <MessageSquare className="mx-auto h-4 w-4 text-ink/45" aria-hidden="true" />
                   <p className="mt-1.5 text-lg font-bold tabular-nums text-ink">{stats.commentCount}</p>
@@ -344,18 +385,50 @@ export default function GameDetailPage() {
           </aside>
         </div>
 
-        {/* 下排：左 = 作品描述，右 = 评论区 */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Card>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink/55">作品描述</h2>
-            <div className="mt-4 space-y-4">
-              {work.description.split(/\n+/).filter(Boolean).map((paragraph, index) => (
-                <p key={index} className="text-sm leading-7 text-ink/75">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-          </Card>
+          {/* 下排：左 = 作品描述，右 = 评论区 */}
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <Card>
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-ink/55">作品描述</h2>
+                <span className="text-xs text-ink/45">{work.description.length} 字</span>
+              </div>
+              <div className="relative mt-4">
+                <div
+                  className={`space-y-3.5 overflow-hidden transition-[max-height] duration-500 ${
+                    descExpanded ? "max-h-[2400px]" : "max-h-56"
+                  }`}
+                >
+                  {work.description.split(/\n+/).filter(Boolean).map((paragraph, index) => (
+                    <p key={index} className="text-sm leading-7 text-ink/75">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+                {!descExpanded && isLongDescription && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#f7f4ec] to-transparent" />
+                )}
+              </div>
+              {isLongDescription && (
+                <button
+                  type="button"
+                  onClick={() => setDescExpanded((value) => !value)}
+                  className="mt-3 inline-flex items-center gap-1 text-xs text-accent transition-colors hover:text-accent/80"
+                  aria-expanded={descExpanded}
+                >
+                  {descExpanded ? (
+                    <>
+                      收起描述
+                      <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    </>
+                  ) : (
+                    <>
+                      展开全文
+                      <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    </>
+                  )}
+                </button>
+              )}
+            </Card>
 
           <Card className="flex min-h-[320px] flex-col">
             <div className="flex items-baseline justify-between">

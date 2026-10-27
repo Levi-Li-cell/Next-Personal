@@ -23,7 +23,7 @@ export const interactiveWork = pgTable("interactive_work", {
   controlsHint: jsonb("controls_hint").$type<string[]>().default([]),
   status: text("status").notNull().default("published"),
   viewCount: integer("view_count").notNull().default(0),
-  downloadCount: integer("download_count").notNull().default(0),
+  likeCount: integer("like_count").notNull().default(0),
   commentCount: integer("comment_count").notNull().default(0),
   ratingSum: integer("rating_sum").notNull().default(0),
   ratingCount: integer("rating_count").notNull().default(0),
@@ -73,6 +73,21 @@ export const interactiveCommentLike = pgTable("interactive_comment_like", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   voterUnique: uniqueIndex("interactive_comment_like_unique").on(table.commentId, table.voterKey),
+})).enableRLS();
+
+/**
+ * 喜欢表：每个 voterKey 对同一作品仅一条记录（心形开关，可取消）。
+ * voterKey 语义与评分表一致："user:{userId}" 或 "guest:{visitorId}"。
+ * like_count 为 interactive_work 上的反范式冗余，切换喜欢时同步维护。
+ */
+export const interactiveLike = pgTable("interactive_like", {
+  id: text("id").primaryKey(),
+  workId: text("work_id").notNull().references(() => interactiveWork.id, { onDelete: "cascade" }),
+  voterKey: text("voter_key").notNull(),
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  voterUnique: uniqueIndex("interactive_like_work_voter_unique").on(table.workId, table.voterKey),
 })).enableRLS();
 
 export type InteractiveWorkType = typeof interactiveWork.$inferSelect;

@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
         controlsHint: body.controlsHint || [],
         status: body.status || "draft",
         viewCount: 0,
-        downloadCount: 0,
+        likeCount: 0,
         commentCount: 0,
         ratingSum: 0,
         ratingCount: 0,

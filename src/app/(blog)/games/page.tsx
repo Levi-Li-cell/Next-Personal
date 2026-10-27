@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ArrowRight, Download, Eye, Flame, Gamepad2, Gem, MessageSquare, Orbit, Shell, Waves } from "lucide-react";
+import { ArrowRight, Eye, Flame, Gamepad2, Gem, Heart, MessageSquare, Orbit, Shell, Waves } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import StarRating from "@/components/games/StarRating";
@@ -248,7 +248,7 @@ export default function GamesPage() {
                   </div>
                   <div className="mt-4 flex items-center gap-4 border-t border-ink/10 pt-3 text-xs text-ink/50">
                     <StatItem icon={<Eye className="h-3.5 w-3.5" />} value={work.viewCount} label="浏览" />
-                    <StatItem icon={<Download className="h-3.5 w-3.5" />} value={work.downloadCount} label="下载" />
+                    <StatItem icon={<Heart className="h-3.5 w-3.5" />} value={work.likeCount} label="喜欢" />
                     <StatItem icon={<MessageSquare className="h-3.5 w-3.5" />} value={work.commentCount} label="讨论" />
                     <ArrowRight className="ml-auto h-4 w-4 text-accent opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>

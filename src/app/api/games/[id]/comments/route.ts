@@ -26,7 +26,7 @@ function toNode(row: CommentRow, likedIds: Set<string>, replies: CommentNode[] =
   };
 }
 
-/** 评论列表：根评论倒序、回复正序的一层树；voter 用于回显点赞状态 */
+/** 评论列表：根评论倒序分页、回复正序的一层树；voter 用于回显点赞状态 */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await ensureGameTablesOnce();
@@ -37,22 +37,34 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ success: false, error: "作品不存在" }, { status: 404 });
     }
 
+    // 根评论分页：大数据量下首屏只取一页，避免全量拉取拖慢详情页
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50);
+    const offset = (page - 1) * limit;
+
     const session = await getServerSession();
-    const voter = new URL(request.url).searchParams.get("voter") || "";
+    const voter = searchParams.get("voter") || "";
     const { voterKey } = resolveVoterKey(session?.user?.id, voter);
 
-    const rootComments = await db
-      .select()
-      .from(interactiveComment)
-      .where(
-        and(
-          eq(interactiveComment.workId, id),
-          eq(interactiveComment.status, "approved"),
-          isNull(interactiveComment.parentId),
-        ),
-      )
-      .orderBy(desc(interactiveComment.createdAt));
+    const rootWhere = and(
+      eq(interactiveComment.workId, id),
+      eq(interactiveComment.status, "approved"),
+      isNull(interactiveComment.parentId),
+    );
 
+    const [rootComments, rootCountResult] = await Promise.all([
+      db
+        .select()
+        .from(interactiveComment)
+        .where(rootWhere)
+        .orderBy(desc(interactiveComment.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db.select({ count: sql<number>`count(*)` }).from(interactiveComment).where(rootWhere),
+    ]);
+
+    const rootTotal = Number(rootCountResult[0]?.count || 0);
     const rootIds = rootComments.map((row) => row.id);
     const replies = rootIds.length
       ? await db
@@ -90,13 +102,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       success: true,
       data: {
         workId: id,
-        total: rootComments.length + replies.length,
+        total: rootTotal + replies.length,
+        rootTotal,
+        page,
+        limit,
+        hasMore: page * limit < rootTotal,
         list,
       },
     });
   } catch (error) {
     console.error("获取互动评论失败:", error);
-    return NextResponse.json({ success: false, data: { workId: "", total: 0, list: [] }, degraded: true });
+    return NextResponse.json({ success: false, data: { workId: "", total: 0, rootTotal: 0, page: 1, limit: 10, hasMore: false, list: [] }, degraded: true });
   }
 }
 

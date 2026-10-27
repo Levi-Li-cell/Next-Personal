@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { interactiveComment, interactiveRating, interactiveWork } from "@/db/schema/game";
+import { interactiveComment, interactiveLike, interactiveRating, interactiveWork } from "@/db/schema/game";
 import { DEFAULT_GAME_SEEDS } from "@/lib/games-seed-data";
 import type { RatingDistribution, SceneConfig, SceneType } from "@/lib/games-types";
 import { nanoid } from "nanoid";
@@ -27,7 +27,7 @@ export const GAMES_SYNC_SQL = [
     controls_hint jsonb DEFAULT '[]'::jsonb,
     status text NOT NULL DEFAULT 'published',
     view_count integer NOT NULL DEFAULT 0,
-    download_count integer NOT NULL DEFAULT 0,
+    like_count integer NOT NULL DEFAULT 0,
     comment_count integer NOT NULL DEFAULT 0,
     rating_sum integer NOT NULL DEFAULT 0,
     rating_count integer NOT NULL DEFAULT 0,
@@ -36,6 +36,22 @@ export const GAMES_SYNC_SQL = [
     published_at timestamp DEFAULT now()
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS interactive_work_slug_unique ON interactive_work (slug)`,
+  // download → like 迁移：补 like_count 列；旧 download_count 存在时一次性回填并删除
+  `ALTER TABLE interactive_work ADD COLUMN IF NOT EXISTS like_count integer NOT NULL DEFAULT 0`,
+  `DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'interactive_work' AND column_name = 'download_count') THEN
+      UPDATE interactive_work SET like_count = GREATEST(like_count, download_count);
+      ALTER TABLE interactive_work DROP COLUMN download_count;
+    END IF;
+  END $$;`,
+  `CREATE TABLE IF NOT EXISTS interactive_like (
+    id text PRIMARY KEY,
+    work_id text NOT NULL,
+    voter_key text NOT NULL,
+    user_id text,
+    created_at timestamp DEFAULT now() NOT NULL
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS interactive_like_work_voter_unique ON interactive_like (work_id, voter_key)`,
   `CREATE TABLE IF NOT EXISTS interactive_rating (
     id text PRIMARY KEY,
     work_id text NOT NULL,
@@ -96,10 +112,21 @@ export const GAMES_SYNC_SQL = [
     ADD CONSTRAINT interactive_comment_like_comment_id_interactive_comment_id_fk
     FOREIGN KEY (comment_id) REFERENCES public.interactive_comment(id) ON DELETE cascade;
   EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+  `DO $$ BEGIN
+    ALTER TABLE interactive_like
+    ADD CONSTRAINT interactive_like_work_id_interactive_work_id_fk
+    FOREIGN KEY (work_id) REFERENCES public.interactive_work(id) ON DELETE cascade;
+  EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+  `DO $$ BEGIN
+    ALTER TABLE interactive_like
+    ADD CONSTRAINT interactive_like_user_id_user_id_fk
+    FOREIGN KEY (user_id) REFERENCES public.user(id) ON DELETE set null;
+  EXCEPTION WHEN duplicate_object THEN null; END $$;`,
   `ALTER TABLE interactive_work ENABLE ROW LEVEL SECURITY`,
   `ALTER TABLE interactive_rating ENABLE ROW LEVEL SECURITY`,
   `ALTER TABLE interactive_comment ENABLE ROW LEVEL SECURITY`,
   `ALTER TABLE interactive_comment_like ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE interactive_like ENABLE ROW LEVEL SECURITY`,
 ];
 
 export async function ensureGameTables() {
@@ -153,13 +180,13 @@ export async function ensureGamesSeeded() {
       tags: seed.tags,
       coverImage: null,
       coverGradient: seed.coverGradient,
-      sceneType: seed.sceneType,
-      sceneConfig: seed.sceneConfig as Record<string, unknown>,
-      controlsHint: seed.controlsHint,
-      status: "published",
-      viewCount: seed.viewCount,
-      downloadCount: seed.downloadCount,
-      commentCount: seed.comments.reduce((sum, item) => sum + 1 + (item.replies?.length || 0), 0),
+    sceneType: seed.sceneType,
+    sceneConfig: seed.sceneConfig as Record<string, unknown>,
+    controlsHint: seed.controlsHint,
+    status: "published",
+    viewCount: seed.viewCount,
+    likeCount: seed.likeCount,
+    commentCount: seed.comments.reduce((sum, item) => sum + 1 + (item.replies?.length || 0), 0),
       ratingSum,
       ratingCount,
     });
@@ -244,12 +271,53 @@ export function toWorkSummary(row: typeof interactiveWork.$inferSelect) {
     coverGradient: row.coverGradient,
     sceneType: row.sceneType as SceneType,
     viewCount: row.viewCount,
-    downloadCount: row.downloadCount,
+    likeCount: row.likeCount,
     commentCount: row.commentCount,
     ratingAverage: ratingCount > 0 ? Math.round((row.ratingSum / ratingCount) * 10) / 10 : 0,
     ratingCount,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
+}
+
+/** 当前访客是否已喜欢该作品（详情页心形回显） */
+export async function getMyLike(workId: string, voterKey: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: interactiveLike.id })
+    .from(interactiveLike)
+    .where(and(eq(interactiveLike.workId, workId), eq(interactiveLike.voterKey, voterKey)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * 切换喜欢：有记录则删除并减一，否则插入并加一。
+ * 唯一索引保证并发下不会重复插入；返回最新状态供前端直接消费。
+ */
+export async function toggleWorkLike(
+  workId: string,
+  voterKey: string,
+  userId: string | null,
+): Promise<{ liked: boolean; likeCount: number }> {
+  const [existing] = await db
+    .select({ id: interactiveLike.id })
+    .from(interactiveLike)
+    .where(and(eq(interactiveLike.workId, workId), eq(interactiveLike.voterKey, voterKey)))
+    .limit(1);
+
+  const liked = !existing;
+  if (existing) {
+    await db.delete(interactiveLike).where(eq(interactiveLike.id, existing.id));
+  } else {
+    await db.insert(interactiveLike).values({ id: nanoid(), workId, voterKey, userId }).onConflictDoNothing();
+  }
+
+  const [updated] = await db
+    .update(interactiveWork)
+    .set({ likeCount: sql`GREATEST(${interactiveWork.likeCount} + ${liked ? 1 : -1}, 0)` })
+    .where(eq(interactiveWork.id, workId))
+    .returning({ likeCount: interactiveWork.likeCount });
+
+  return { liked, likeCount: updated?.likeCount ?? 0 };
 }
 
 /** GROUP BY score 结果 → 完整分布（缺省补 0） */

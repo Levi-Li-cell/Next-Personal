@@ -55,7 +55,7 @@ export function getGameColumns({ onEdit, onDelete, onPublish }: GameTableProps):
       cell: (game) => (
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span>👁 {game.viewCount}</span>
-          <span>⬇ {game.downloadCount}</span>
+          <span>❤ {game.likeCount}</span>
           <span>💬 {game.commentCount}</span>
           {game.ratingCount > 0 && (
             <span className="text-amber-500">

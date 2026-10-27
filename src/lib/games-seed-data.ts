@@ -17,7 +17,7 @@ export interface GameSeedItem {
   sceneConfig: SceneConfig;
   controlsHint: string[];
   viewCount: number;
-  downloadCount: number;
+  likeCount: number;
   /** 评分分布 [1星数, 2星数, 3星数, 4星数, 5星数] */
   ratingDistribution: [number, number, number, number, number];
   comments: Array<{ guestName: string; content: string; likeCount: number; replies?: Array<{ guestName: string; content: string; likeCount: number }> }>;
@@ -51,7 +51,7 @@ export const DEFAULT_GAME_SEEDS: GameSeedItem[] = [
     },
     controlsHint: ["拖拽旋转视角", "滚轮缩放", "双击复位", "右上角切换渲染模式"],
     viewCount: 1286,
-    downloadCount: 96,
+    likeCount: 96,
     ratingDistribution: [0, 1, 3, 9, 14],
     comments: [
       {
@@ -94,7 +94,7 @@ export const DEFAULT_GAME_SEEDS: GameSeedItem[] = [
     },
     controlsHint: ["拖拽旋转视角", "滚轮缩放", "双击复位", "左上角查看实时 FPS"],
     viewCount: 942,
-    downloadCount: 71,
+    likeCount: 71,
     ratingDistribution: [0, 0, 4, 8, 9],
     comments: [
       { guestName: "海边的卡夫卡", content: "波峰扫过去的瞬间有被治愈到，适合当桌面。", likeCount: 8 },
@@ -126,7 +126,7 @@ export const DEFAULT_GAME_SEEDS: GameSeedItem[] = [
     },
     controlsHint: ["拖拽旋转视角", "滚轮缩放", "双击复位", "右上角切换渲染模式"],
     viewCount: 767,
-    downloadCount: 58,
+    likeCount: 58,
     ratingDistribution: [1, 1, 2, 7, 8],
     comments: [
       {
@@ -166,7 +166,7 @@ export const DEFAULT_GAME_SEEDS: GameSeedItem[] = [
     },
     controlsHint: ["拖拽旋转视角", "滚轮缩放", "双击复位", "俯视位可等待三星连线"],
     viewCount: 1103,
-    downloadCount: 84,
+    likeCount: 84,
     ratingDistribution: [0, 2, 4, 10, 11],
     comments: [
       { guestName: "轨道爱好者", content: "等到了三星连线！那个瞬间值得截图。", likeCount: 15 },
@@ -200,7 +200,7 @@ export const DEFAULT_GAME_SEEDS: GameSeedItem[] = [
     },
     controlsHint: ["拖拽旋转视角", "滚轮缩放", "双击复位", "左上角查看实时 FPS"],
     viewCount: 658,
-    downloadCount: 42,
+    likeCount: 42,
     ratingDistribution: [0, 1, 2, 6, 7],
     comments: [],
   },
@@ -233,7 +233,7 @@ export const DEFAULT_GAME_SEEDS: GameSeedItem[] = [
     },
     controlsHint: ["拖拽旋转视角", "滚轮缩放", "双击复位", "线框模式观察噪声倍频"],
     viewCount: 531,
-    downloadCount: 37,
+    likeCount: 37,
     ratingDistribution: [1, 0, 3, 5, 6],
     comments: [
       { guestName: "远山", content: "雾的距离压得很好，完全看不到地平线，沉浸感很强。", likeCount: 7 },

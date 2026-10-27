@@ -68,7 +68,7 @@ export interface WorkSummary extends Pick<
   "id" | "slug" | "title" | "tagline" | "tags" | "coverImage" | "coverGradient" | "sceneType"
 > {
   viewCount: number;
-  downloadCount: number;
+  likeCount: number;
   commentCount: number;
   ratingAverage: number;
   ratingCount: number;
@@ -110,7 +110,9 @@ export interface RatingSummary {
 /** 统计数据与评分（侧边栏数据统计卡片 + 评分卡片共享） */
 export interface InteractionStats {
   viewCount: number;
-  downloadCount: number;
+  likeCount: number;
+  /** 当前访客是否已点过喜欢（心形填充回显） */
+  myLike: boolean;
   commentCount: number;
   rating: RatingSummary;
 }
