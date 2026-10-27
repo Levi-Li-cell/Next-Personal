@@ -53,7 +53,13 @@ function WorkCover({ work }: { work: WorkSummary }) {
   if (work.coverImage) {
     return (
       <div className="overflow-hidden border-b border-ink/14">
-        <img src={work.coverImage} alt={work.title} className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <img
+          src={work.coverImage}
+          alt={work.title}
+          loading="lazy"
+          decoding="async"
+          className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
       </div>
     );
   }
@@ -212,12 +218,13 @@ export default function GamesPage() {
         </div>
       ) : (
         <div className="columns-1 gap-6 [column-fill:_balance] md:columns-2 lg:columns-3">
-          {works.map((work, index) => (
+          {works.map((work) => (
             <Link key={work.id} href={`/games/${work.slug}`} className="mb-6 block break-inside-avoid">
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(index * 0.05, 0.4) }}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "80px" }}
+                transition={{ duration: 0.3 }}
                 whileHover={{ y: -5 }}
                 className="group overflow-hidden rounded-2xl border border-ink/14 bg-ink/5 backdrop-blur-sm transition-colors hover:border-accent/40"
               >

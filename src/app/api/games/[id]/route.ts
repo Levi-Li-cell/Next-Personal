@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { interactiveWork } from "@/db/schema/game";
-import { computeRatingSummary, ensureGamesSeeded, ensureGameTables, resolveVoterKey, toWorkDetail } from "@/lib/games";
+import { computeRatingSummary, ensureGamesSeededOnce, ensureGameTablesOnce, resolveVoterKey, toWorkDetail } from "@/lib/games";
 import { getServerSession } from "@/lib/auth/get-session";
 
 export const dynamic = "force-dynamic";
@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 /** 作品详情：id 或 slug 均可；voter 用于回显当前访客的评分 */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await ensureGameTables();
-    await ensureGamesSeeded();
+    await ensureGameTablesOnce();
+    await ensureGamesSeededOnce();
 
     const { id } = await params;
     const [work] = await db

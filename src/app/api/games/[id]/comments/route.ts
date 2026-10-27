@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { interactiveComment, interactiveCommentLike, interactiveWork } from "@/db/schema/game";
-import { ensureGameTables, resolveVoterKey } from "@/lib/games";
+import { ensureGameTablesOnce, resolveVoterKey } from "@/lib/games";
 import { getServerSession } from "@/lib/auth/get-session";
 import { createAdminNotification } from "@/lib/notifications/admin-notify";
 import { nanoid } from "nanoid";
@@ -29,7 +29,7 @@ function toNode(row: CommentRow, likedIds: Set<string>, replies: CommentNode[] =
 /** 评论列表：根评论倒序、回复正序的一层树；voter 用于回显点赞状态 */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await ensureGameTables();
+    await ensureGameTablesOnce();
 
     const { id } = await params;
     const [work] = await db.select().from(interactiveWork).where(eq(interactiveWork.id, id)).limit(1);
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 /** 发表评论 / 回复：游客填 guestName，登录用户冗余 userId；成功后同步作品讨论数 */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await ensureGameTables();
+    await ensureGameTablesOnce();
 
     const { id } = await params;
     const session = await getServerSession();

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { interactiveWork } from "@/db/schema/game";
-import { ensureGameTables } from "@/lib/games";
+import { ensureGameTablesOnce } from "@/lib/games";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await ensureGameTables();
+    await ensureGameTablesOnce();
 
     const { id } = await params;
     const body = await request.json().catch(() => ({}));

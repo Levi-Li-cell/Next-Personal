@@ -46,8 +46,15 @@ export default function BlogPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
+  // 搜索防抖：输入框即时回显高亮用 search，请求节流用 debouncedSearch，避免每键一次查询
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     async function fetchBlogPosts() {
@@ -59,7 +66,7 @@ export default function BlogPage() {
           limit: limit.toString(),
         });
 
-        if (search) params.append("search", search);
+        if (debouncedSearch) params.append("search", debouncedSearch);
         if (selectedCategory) params.append("category", selectedCategory);
 
         const response = await fetch(`/api/blog?${params.toString()}`);
@@ -83,7 +90,7 @@ export default function BlogPage() {
     }
 
     fetchBlogPosts();
-  }, [limit, page, search, selectedCategory]);
+  }, [limit, page, debouncedSearch, selectedCategory]);
 
   const highlightText = (text: string, searchTerm: string) => {
     if (!searchTerm) return text;
@@ -203,18 +210,25 @@ export default function BlogPage() {
         </div>
       ) : (
         <div className="columns-1 gap-6 [column-fill:_balance] md:columns-2 lg:columns-3">
-          {blogPosts.map((post, index) => (
+          {blogPosts.map((post) => (
             <Link key={post.id} href={`/blog/${post.slug}`} className="mb-6 block break-inside-avoid">
               <motion.article
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.06 }}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "80px" }}
+                transition={{ duration: 0.3 }}
                 whileHover={{ y: -5 }}
                 className="group overflow-hidden rounded-2xl border border-ink/14 bg-ink/5 backdrop-blur-sm transition-all hover:border-accent/40"
               >
                 {post.coverImage && (
                   <div className="overflow-hidden border-b border-ink/14">
-                    <img src={post.coverImage} alt={post.title} className="h-40 w-full object-cover object-top" />
+                    <img
+                      src={post.coverImage}
+                      alt={post.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-40 w-full object-cover object-top"
+                    />
                   </div>
                 )}
                 <div className="p-6">

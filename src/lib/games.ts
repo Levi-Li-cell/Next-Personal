@@ -108,6 +108,30 @@ export async function ensureGameTables() {
   }
 }
 
+/**
+ * ensure 结果的进程内缓存：DDL 建表/补列是幂等的，但 18 条语句串行执行
+ * 会给每个 API 请求平添一整个 RTT 链路（远程库上即秒级延迟）。
+ * 表结构在一个进程生命周期内只需保证一次；失败时清空缓存允许重试。
+ */
+let gamesTablesReady: Promise<void> | null = null;
+export function ensureGameTablesOnce(): Promise<void> {
+  gamesTablesReady ??= ensureGameTables().catch((error) => {
+    gamesTablesReady = null;
+    throw error;
+  });
+  return gamesTablesReady;
+}
+
+let gamesSeeded: Promise<void> | null = null;
+/** 同 ensureGamesSeeded，但每个进程只真正查一次 count（空表才灌种子） */
+export function ensureGamesSeededOnce(): Promise<void> {
+  gamesSeeded ??= ensureGamesSeeded().catch((error) => {
+    gamesSeeded = null;
+    throw error;
+  });
+  return gamesSeeded;
+}
+
 /** 作品表为空时自动灌入种子（含评分明细与演示评论，保证图表与均分一致） */
 export async function ensureGamesSeeded() {
   const countResult = await db.select({ count: sql<number>`count(*)` }).from(interactiveWork);

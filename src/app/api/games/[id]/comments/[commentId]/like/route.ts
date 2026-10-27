@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { interactiveComment, interactiveCommentLike } from "@/db/schema/game";
-import { ensureGameTables, resolveVoterKey } from "@/lib/games";
+import { ensureGameTablesOnce, resolveVoterKey } from "@/lib/games";
 import { getServerSession } from "@/lib/auth/get-session";
 import { nanoid } from "nanoid";
 
@@ -14,7 +14,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string; commentId: string }> },
 ) {
   try {
-    await ensureGameTables();
+    await ensureGameTablesOnce();
 
     const { id, commentId } = await params;
     const body = await request.json().catch(() => ({}));

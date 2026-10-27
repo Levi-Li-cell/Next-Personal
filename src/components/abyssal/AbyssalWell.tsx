@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Expand, Gamepad2, Minimize, MousePointerClick } from "lucide-react";
 
 import { AbyssalHostBridge } from "@/lib/awp";
@@ -20,7 +20,21 @@ import RendererInspector from "@/components/abyssal/RendererInspector";
 const AW_GAME_VERSION = "2";
 const AW_GAME_SRC = `/games/abyssal-well.html?v=${AW_GAME_VERSION}`;
 
-export default function AbyssalWell({ variant = "page" }: { variant?: "page" | "embedded" }) {
+/** 父组件可通过 ref 调用全屏切换（按钮由宿主页面渲染在全屏元素之外） */
+export interface AbyssalWellHandle {
+  toggleFullscreen: () => void;
+}
+
+interface AbyssalWellProps {
+  variant?: "page" | "embedded";
+  /** 全屏状态变化时通知宿主（宿主用它切换自家按钮图标） */
+  onFullscreenChange?: (isFullscreen: boolean) => void;
+}
+
+const AbyssalWell = forwardRef<AbyssalWellHandle, AbyssalWellProps>(function AbyssalWell(
+  { variant = "page", onFullscreenChange },
+  ref,
+) {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
   // 桥接实例惰性创建（构造器不触碰 window，SSR 安全），effect 只负责挂载订阅
@@ -56,10 +70,14 @@ export default function AbyssalWell({ variant = "page" }: { variant?: "page" | "
   // 全屏时 iframe 必须撑满舞台：固定高度会让引擎保持进入前的小画布，
   // 内部 window 的 resize 事件会随尺寸变化触发，游戏自行重算整数倍缩放
   useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const onFsChange = () => {
+      const active = !!document.fullscreenElement;
+      setIsFullscreen(active);
+      onFullscreenChange?.(active);
+    };
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
-  }, []);
+  }, [onFullscreenChange]);
 
   /** iframe 内的键盘操作需要文档焦点；覆盖层在首次点击后让位 */
   const focusGame = useCallback(() => {
@@ -73,6 +91,8 @@ export default function AbyssalWell({ variant = "page" }: { variant?: "page" | "
     if (document.fullscreenElement) void document.exitFullscreen();
     else void el.requestFullscreen().catch(() => {});
   }, []);
+
+  useImperativeHandle(ref, () => ({ toggleFullscreen }), [toggleFullscreen]);
 
   const embedded = variant === "embedded";
 
@@ -129,15 +149,19 @@ export default function AbyssalWell({ variant = "page" }: { variant?: "page" | "
             allow="fullscreen"
             tabIndex={0}
           />
-          {/* 全屏切换：悬浮在舞台右上角，普通与全屏状态均可用 */}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "退出全屏 (Esc)" : "全屏"}
-            className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-md border border-[#0f2a30] bg-[#04090e]/85 text-[#9fc4bd] backdrop-blur-sm transition-colors hover:border-[#1d4a4a] hover:text-[#6fe0c6]"
-          >
-            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
-          </button>
+          {/* 全屏切换按钮：embedded 模式下，非全屏时完全隐藏（按钮由宿主详情页放在返回行）；
+              仅在全屏后宿主按钮不可见时，舞台内才出现退出入口（Esc 亦可）；
+              page 模式（非 embedded）则始终在舞台内提供入口 */}
+          {(isFullscreen || !embedded) && (
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "退出全屏 (Esc)" : "全屏"}
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-md border border-[#0f2a30] bg-[#04090e]/85 text-[#9fc4bd] backdrop-blur-sm transition-colors hover:border-[#1d4a4a] hover:text-[#6fe0c6]"
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+            </button>
+          )}
           {!focused && (
             <button
               type="button"
@@ -181,4 +205,6 @@ export default function AbyssalWell({ variant = "page" }: { variant?: "page" | "
       )}
     </div>
   );
-}
+});
+
+export default AbyssalWell;

@@ -3,11 +3,11 @@
 import { motion } from "motion/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Eye, Loader2, MessageSquare } from "lucide-react";
-import WorkCanvas from "@/components/games/WorkCanvas";
-import AbyssalWell from "@/components/abyssal/AbyssalWell";
+import { ArrowLeft, Download, Expand, Eye, Loader2, MessageSquare, Minimize } from "lucide-react";
+import WorkCanvas, { type WorkCanvasHandle } from "@/components/games/WorkCanvas";
+import AbyssalWell, { type AbyssalWellHandle } from "@/components/abyssal/AbyssalWell";
 import StarRating from "@/components/games/StarRating";
 import GameComments from "@/components/games/GameComments";
 import { getVisitorVoterKey } from "@/lib/games-client";
@@ -58,6 +58,19 @@ export default function GameDetailPage() {
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [voterKey, setVoterKey] = useState("guest:ssr");
+  const gameRef = useRef<AbyssalWellHandle | null>(null);
+  const workCanvasRef = useRef<WorkCanvasHandle | null>(null);
+  const [isGameFullscreen, setIsGameFullscreen] = useState(false);
+  const handleGameFullscreenChange = useCallback((active: boolean) => setIsGameFullscreen(active), []);
+
+  /** 统一的全屏切换：根据场景类型调用对应组件的 toggleFullscreen */
+  const toggleFullscreen = useCallback(() => {
+    if (work?.sceneType === "abyssal-well") {
+      gameRef.current?.toggleFullscreen();
+    } else {
+      workCanvasRef.current?.toggleFullscreen();
+    }
+  }, [work?.sceneType]);
 
   useEffect(() => {
     setVoterKey(getVisitorVoterKey());
@@ -187,25 +200,39 @@ export default function GameDetailPage() {
 
   return (
     <div className="container mx-auto px-6 py-12">
-      <Link href="/games" className="inline-flex items-center gap-2 text-sm text-ink/55 transition-colors hover:text-ink">
-        <ArrowLeft className="h-4 w-4" />
-        返回互动小游戏
-      </Link>
+      {/* 返回行：左侧返回链接，右侧全屏切换——按钮固定在返回行，不悬浮在游戏画面内 */}
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/games" className="inline-flex items-center gap-2 text-sm text-ink/55 transition-colors hover:text-ink">
+          <ArrowLeft className="h-4 w-4" />
+          返回互动小游戏
+        </Link>
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          title={isGameFullscreen ? "退出全屏 (Esc)" : "全屏"}
+          className="inline-flex items-center gap-2 rounded-lg border border-ink/14 bg-ink/5 px-3 py-1.5 text-xs text-ink/60 transition-colors hover:border-accent/40 hover:text-accent"
+        >
+          {isGameFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Expand className="h-3.5 w-3.5" />}
+          {isGameFullscreen ? "退出全屏" : "全屏"}
+        </button>
+      </div>
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-5">
         {/* 上排：左 = WebGL 交互画布，右 = 侧边栏 */}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           {work.sceneType === "abyssal-well" ? (
             <div className="overflow-hidden rounded-2xl border border-ink/14 bg-[#03060a]">
-              <AbyssalWell variant="embedded" />
+              <AbyssalWell ref={gameRef} variant="embedded" onFullscreenChange={handleGameFullscreenChange} />
             </div>
           ) : (
             <div className="h-[420px] overflow-hidden rounded-2xl border border-ink/14 md:h-[540px]">
               <WorkCanvas
+                ref={workCanvasRef}
                 sceneType={work.sceneType}
                 sceneConfig={work.sceneConfig}
                 controlsHint={work.controlsHint}
                 title={work.title}
+                onFullscreenChange={handleGameFullscreenChange}
               />
             </div>
           )}

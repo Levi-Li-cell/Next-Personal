@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { interactiveRating, interactiveWork } from "@/db/schema/game";
-import { computeRatingSummary, ensureGameTables, resolveVoterKey } from "@/lib/games";
+import { computeRatingSummary, ensureGameTablesOnce, resolveVoterKey } from "@/lib/games";
 import { getServerSession } from "@/lib/auth/get-session";
 import { nanoid } from "nanoid";
 
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await ensureGameTables();
+    await ensureGameTablesOnce();
 
     const { id } = await params;
     const body = await request.json().catch(() => ({}));

@@ -1,9 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import * as THREE from "three";
 import { Gauge, MousePointer2, RotateCcw } from "lucide-react";
 import type { RenderMode, SceneConfig, SceneType } from "@/lib/games-types";
+
+export interface WorkCanvasHandle {
+  toggleFullscreen: () => void;
+}
+
+interface WorkCanvasProps {
+  sceneType: SceneType;
+  sceneConfig: SceneConfig;
+  controlsHint: string[];
+  title: string;
+  className?: string;
+  /** 全屏状态变化通知宿主页面 */
+  onFullscreenChange?: (isFullscreen: boolean) => void;
+}
 
 const MODE_OPTIONS: Array<{ value: RenderMode; label: string }> = [
   { value: "albedo", label: "Albedo" },
@@ -175,8 +189,12 @@ function buildSceneBundle(sceneType: SceneType, config: SceneConfig): SceneBundl
  * - FPS/帧耗时浮层用 ref 直接改 DOM（高频数据不进 React 状态）
  * - 渲染模式（Albedo/Normal/Wireframe/Depth）是低频 UI 状态，切换时遍历替换材质
  * - 轨道相机为组件内置（拖拽/滚轮/双击复位），无需外部依赖
+ * - 通过 ref 暴露全屏切换，宿主页面将全屏按钮放在返回行
  */
-export default function WorkCanvas({ sceneType, sceneConfig, controlsHint, title, className = "" }: WorkCanvasProps) {
+const WorkCanvas = forwardRef<WorkCanvasHandle, WorkCanvasProps>(function WorkCanvas(
+  { sceneType, sceneConfig, controlsHint, title, className = "", onFullscreenChange },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLSpanElement>(null);
   const modeApiRef = useRef<{ applyMode: (mode: RenderMode) => void } | null>(null);
@@ -184,6 +202,27 @@ export default function WorkCanvas({ sceneType, sceneConfig, controlsHint, title
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const configKey = JSON.stringify(sceneConfig);
+
+  // 全屏逻辑 —— ref 暴露给宿主页面，按钮由宿主放在返回行
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const toggleFullscreen = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else void el.requestFullscreen().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      const active = !!document.fullscreenElement;
+      setIsFullscreen(active);
+      onFullscreenChange?.(active);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, [onFullscreenChange]);
+
+  useImperativeHandle(ref, () => ({ toggleFullscreen }), [toggleFullscreen]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -445,4 +484,6 @@ export default function WorkCanvas({ sceneType, sceneConfig, controlsHint, title
       )}
     </div>
   );
-}
+});
+
+export default WorkCanvas;
