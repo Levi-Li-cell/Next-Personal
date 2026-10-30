@@ -23,6 +23,7 @@ const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
 
 /** 不同场景类型的封面图标与默认渐变兜底 */
 const SCENE_ICONS: Record<SceneType, typeof Gem> = {
+  "html-game": Gamepad2,
   "crystal-cluster": Gem,
   "wave-field": Waves,
   "torus-knot": Shell,

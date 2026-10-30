@@ -2,12 +2,13 @@
 
 import { BlogType } from "@/db/schema/blog";
 import { Button } from "@/components/ui/button";
-import { Eye, MoreHorizontal, Pencil, Send, Star, Trash2 } from "lucide-react";
+import { Clock, Eye, MoreHorizontal, Pencil, Send, Star, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Column } from "../data-table/data-table";
 
 interface BlogTableProps {
   onEdit: (blog: BlogType) => void;
+  onEditTime?: (blog: BlogType) => void;
   onDelete: (blog: BlogType) => void;
   onView?: (blog: BlogType) => void;
   onPublish?: (blog: BlogType) => void;
@@ -19,7 +20,7 @@ const audienceLabels: Record<string, string> = {
   client: "甲方",
 };
 
-export function getBlogColumns({ onEdit, onDelete, onView, onPublish }: BlogTableProps): Column<BlogType>[] {
+export function getBlogColumns({ onEdit, onEditTime, onDelete, onView, onPublish }: BlogTableProps): Column<BlogType>[] {
   return [
     {
       key: "title",
@@ -80,6 +81,12 @@ export function getBlogColumns({ onEdit, onDelete, onView, onPublish }: BlogTabl
               <Pencil className="mr-2 h-4 w-4" />
               编辑
             </DropdownMenuItem>
+            {onEditTime && (
+              <DropdownMenuItem onClick={() => onEditTime(blog)}>
+                <Clock className="mr-2 h-4 w-4" />
+                编辑时间
+              </DropdownMenuItem>
+            )}
             {onPublish && blog.status !== "published" && (
               <DropdownMenuItem onClick={() => onPublish(blog)}>
                 <Send className="mr-2 h-4 w-4" />

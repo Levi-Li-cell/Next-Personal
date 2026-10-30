@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { InteractiveWorkType } from "@/db/schema/game";
 import { DataTable, type Column } from "@/components/admin/data-table";
-import { ConfirmDialog, PageHeader, Toolbar, ToolbarIcons } from "@/components/admin/common";
+import { ConfirmDialog, PageHeader, TimeEditDialog, Toolbar, ToolbarIcons } from "@/components/admin/common";
 import { getGameColumns } from "@/components/admin/games/game-table";
+import { GameForm, type GameFormValues } from "@/components/admin/games/game-form";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function GamesManagePage() {
   const [games, setGames] = useState<InteractiveWorkType[]>([]);
@@ -22,8 +24,13 @@ export default function GamesManagePage() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; game: InteractiveWorkType | null }>({ open: false, game: null });
   const [publishDialog, setPublishDialog] = useState<{ open: boolean; game: InteractiveWorkType | null }>({ open: false, game: null });
+  const [timeDialog, setTimeDialog] = useState<{ open: boolean; game: InteractiveWorkType | null }>({ open: false, game: null });
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSavingTime, setIsSavingTime] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fetchGames = useCallback(async () => {
     setIsLoading(true);
@@ -80,6 +87,72 @@ export default function GamesManagePage() {
     }
   };
 
+  const handleTimeSave = async (values: { createdAt: string | null; publishedAt: string | null }) => {
+    if (!timeDialog.game) return;
+    setIsSavingTime(true);
+    try {
+      const response = await fetch(`/api/admin/games/${timeDialog.game.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ createdAt: values.createdAt, publishedAt: values.publishedAt }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "保存失败");
+      toast.success("时间已更新");
+      setTimeDialog({ open: false, game: null });
+      fetchGames();
+    } catch (error) {
+      console.error("Failed to update game time:", error);
+      toast.error("时间更新失败");
+    } finally {
+      setIsSavingTime(false);
+    }
+  };
+
+  const handleCreate = async (values: GameFormValues) => {
+    setIsCreating(true);
+    try {
+      const response = await fetch("/api/admin/games", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...values,
+          tags: (values.tags || "")
+            .split(/[,，]/)
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+          controlsHint: (values.controlsHint || "")
+            .split(/[,，\n]/)
+            .map((hint) => hint.trim())
+            .filter(Boolean),
+          sceneConfig: values.sceneType === "html-game"
+            ? { htmlUrl: values.htmlUrl }
+            : values.sceneConfig ? JSON.parse(values.sceneConfig) : {},
+          tagline: values.tagline || null,
+          coverImage: values.coverImage || null,
+          coverGradient: values.coverGradient || null,
+          authorLink: values.authorLink || null,
+        }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "创建失败");
+
+      toast.success(values.status === "published" ? "游戏已创建并发布" : "游戏草稿已创建");
+      setCreateDialogOpen(false);
+      setSelectedRows(new Set());
+      if (pagination.pageIndex === 0) {
+        fetchGames();
+      } else {
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+      }
+    } catch (error) {
+      console.error("Failed to create game:", error);
+      toast.error(error instanceof Error ? error.message : "创建游戏失败");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteDialog.game) return;
     setIsDeleting(true);
@@ -118,6 +191,7 @@ export default function GamesManagePage() {
     { key: "select", header: "", width: "40px" },
     ...getGameColumns({
       onEdit: () => toast.info("编辑功能开发中，请直接通过 API 或数据库修改"),
+      onEditTime: (game) => setTimeDialog({ open: true, game }),
       onDelete: (game) => setDeleteDialog({ open: true, game }),
       onPublish: (game) => setPublishDialog({ open: true, game }),
     }),
@@ -153,6 +227,7 @@ export default function GamesManagePage() {
             value: sceneTypeFilter,
             options: [
               { label: "全部类型", value: "all" },
+              { label: "HTML 游戏", value: "html-game" },
               { label: "晶体簇", value: "crystal-cluster" },
               { label: "波场", value: "wave-field" },
               { label: "环面纽结", value: "torus-knot" },
@@ -170,7 +245,7 @@ export default function GamesManagePage() {
         hasSelection={selectedRows.size > 0}
         selectedCount={selectedRows.size}
         batchActions={[{ label: "删除", icon: ToolbarIcons.Trash, onClick: handleBatchDelete, variant: "destructive", loading: isDeleting }]}
-        primaryActions={[{ label: "新增游戏", icon: ToolbarIcons.Plus, onClick: () => toast.info("新增游戏功能开发中") }]}
+        primaryActions={[{ label: "新增游戏", icon: ToolbarIcons.Plus, onClick: () => setCreateDialogOpen(true) }]}
       />
 
       <DataTable
@@ -206,6 +281,28 @@ export default function GamesManagePage() {
         onConfirm={handlePublish}
         isLoading={isPublishing}
       />
+
+      <TimeEditDialog
+        open={timeDialog.open}
+        onOpenChange={(open) => setTimeDialog({ open, game: open ? timeDialog.game : null })}
+        title={timeDialog.game?.title || ""}
+        createdAt={timeDialog.game?.createdAt}
+        publishedAt={timeDialog.game?.publishedAt}
+        isLoading={isSavingTime}
+        onSave={handleTimeSave}
+      />
+
+      <Dialog open={createDialogOpen} onOpenChange={(open) => {
+        if (!isCreating && !isUploading) setCreateDialogOpen(open);
+      }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>新增游戏</DialogTitle>
+            <DialogDescription>创建后可继续在列表中调整发布时间或发布状态。</DialogDescription>
+          </DialogHeader>
+          <GameForm open={createDialogOpen} onSubmit={handleCreate} isLoading={isCreating} onUploadingChange={setIsUploading} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

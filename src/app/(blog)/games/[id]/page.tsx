@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronDown, ChevronUp, Download, Expand, Eye, Heart, Loader2, MessageSquare, Minimize } from "lucide-react";
 import WorkCanvas, { type WorkCanvasHandle } from "@/components/games/WorkCanvas";
+import HtmlGame, { type HtmlGameHandle } from "@/components/games/HtmlGame";
 import AbyssalWell, { type AbyssalWellHandle } from "@/components/abyssal/AbyssalWell";
 import StarRating from "@/components/games/StarRating";
 import GameComments from "@/components/games/GameComments";
@@ -36,6 +37,7 @@ interface MetricsResponse {
 
 /** 场景类型的中文名（侧边栏创作者行展示用） */
 const SCENE_TYPE_LABELS: Record<string, string> = {
+  "html-game": "HTML 游戏",
   "crystal-cluster": "晶体簇",
   "wave-field": "波场",
   "torus-knot": "环面纽结",
@@ -62,13 +64,16 @@ export default function GameDetailPage() {
   const isLongDescription = (work?.description?.length ?? 0) > 320 || (work?.description?.split(/\n+/).filter(Boolean).length ?? 0) > 6;
   const [voterKey, setVoterKey] = useState("guest:ssr");
   const gameRef = useRef<AbyssalWellHandle | null>(null);
+  const htmlGameRef = useRef<HtmlGameHandle | null>(null);
   const workCanvasRef = useRef<WorkCanvasHandle | null>(null);
   const [isGameFullscreen, setIsGameFullscreen] = useState(false);
   const handleGameFullscreenChange = useCallback((active: boolean) => setIsGameFullscreen(active), []);
 
   /** 统一的全屏切换：根据场景类型调用对应组件的 toggleFullscreen */
   const toggleFullscreen = useCallback(() => {
-    if (work?.sceneType === "abyssal-well") {
+    if (work?.sceneType === "html-game") {
+      htmlGameRef.current?.toggleFullscreen();
+    } else if (work?.sceneType === "abyssal-well") {
       gameRef.current?.toggleFullscreen();
     } else {
       workCanvasRef.current?.toggleFullscreen();
@@ -247,7 +252,9 @@ export default function GameDetailPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-5">
         {/* 上排：左 = WebGL 交互画布，右 = 侧边栏 */}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          {work.sceneType === "abyssal-well" ? (
+          {work.sceneType === "html-game" ? (
+            <HtmlGame key={work.id} ref={htmlGameRef} url={work.sceneConfig.htmlUrl} title={work.title} onFullscreenChange={handleGameFullscreenChange} />
+          ) : work.sceneType === "abyssal-well" ? (
             <div className="overflow-hidden rounded-2xl border border-ink/14 bg-[#03060a]">
               <AbyssalWell ref={gameRef} variant="embedded" onFullscreenChange={handleGameFullscreenChange} />
             </div>
@@ -321,7 +328,7 @@ export default function GameDetailPage() {
                   <p className="text-[11px] text-ink/45">讨论</p>
                 </div>
               </div>
-              {work.sceneType !== "abyssal-well" && (
+              {work.sceneType !== "abyssal-well" && work.sceneType !== "html-game" && (
                 <button
                   type="button"
                   onClick={handleDownload}

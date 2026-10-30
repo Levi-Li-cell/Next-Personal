@@ -77,6 +77,9 @@ export default function BlogEditPage() {
         body: JSON.stringify({
           ...data,
           tags: data.tags ? data.tags.split(",").map((t) => t.trim()) : [],
+          // 携带既有时间：仅编辑内容时不刷新发布时间；草稿转发布（无既有时间）仍由 API 盖章 now
+          createdAt: blog.createdAt || undefined,
+          publishedAt: blog.publishedAt || undefined,
         }),
       });
 

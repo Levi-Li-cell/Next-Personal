@@ -1,12 +1,26 @@
-import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { interactiveWork } from "@/db/schema/game";
 import { nanoid } from "nanoid";
+import { requireGameAdmin } from "@/lib/admin/game-auth";
+import { gameInputSchema } from "@/lib/game-input";
+
+function normalizeSlug(value: unknown, title: string) {
+  const source = typeof value === "string" && value.trim() ? value : title;
+  return source
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/g, "");
+}
 
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireGameAdmin();
+    if (denied) return denied;
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
@@ -58,39 +72,47 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const slug =
-      body.slug?.trim() ||
-      (body.title || "work")
-        .toLowerCase()
-        .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 60) ||
-      nanoid(8);
+    const denied = await requireGameAdmin();
+    if (denied) return denied;
+    const raw = await request.json().catch(() => null);
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return NextResponse.json({ success: false, error: "请求格式不正确" }, { status: 400 });
+    }
+    const parsed = gameInputSchema.safeParse({ ...raw, slug: normalizeSlug(raw.slug, typeof raw.title === "string" ? raw.title : "") || `game-${nanoid(8).replace(/[^a-z0-9]/gi, "").toLowerCase()}` });
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: parsed.error.issues[0].message }, { status: 400 });
+    }
+    const body = parsed.data;
+    const { title, description, slug, sceneType, sceneConfig, status } = body;
+
+    const [existingWork] = await db.select({ id: interactiveWork.id }).from(interactiveWork).where(eq(interactiveWork.slug, slug)).limit(1);
+    if (existingWork) {
+      return NextResponse.json({ success: false, error: "URL Slug 已存在，请更换后重试" }, { status: 400 });
+    }
 
     const [newWork] = await db
       .insert(interactiveWork)
       .values({
         id: nanoid(),
         slug,
-        title: body.title,
-        tagline: body.tagline || null,
-        description: body.description || "",
-        authorName: body.authorName || "李伟",
-        authorLink: body.authorLink || null,
-        tags: body.tags || [],
-        coverImage: body.coverImage || null,
-        coverGradient: body.coverGradient || null,
-        sceneType: body.sceneType || "crystal-cluster",
-        sceneConfig: body.sceneConfig || {},
-        controlsHint: body.controlsHint || [],
-        status: body.status || "draft",
+        title,
+        tagline: typeof body.tagline === "string" && body.tagline.trim() ? body.tagline.trim() : null,
+        description,
+        authorName: typeof body.authorName === "string" && body.authorName.trim() ? body.authorName.trim() : "李伟",
+        authorLink: typeof body.authorLink === "string" && body.authorLink.trim() ? body.authorLink.trim() : null,
+        tags: body.tags,
+        coverImage: typeof body.coverImage === "string" && body.coverImage.trim() ? body.coverImage.trim() : null,
+        coverGradient: typeof body.coverGradient === "string" && body.coverGradient.trim() ? body.coverGradient.trim() : null,
+        sceneType,
+        sceneConfig,
+        controlsHint: body.controlsHint,
+        status,
         viewCount: 0,
         likeCount: 0,
         commentCount: 0,
         ratingSum: 0,
         ratingCount: 0,
-        publishedAt: body.status === "published" ? new Date() : null,
+        publishedAt: status === "published" ? new Date() : null,
       })
       .returning();
 

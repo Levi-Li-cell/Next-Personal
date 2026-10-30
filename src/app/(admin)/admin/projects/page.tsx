@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ProjectType } from "@/db/schema/project";
 import { DataTable, Column } from "@/components/admin/data-table";
-import { ConfirmDialog, PageHeader, Toolbar, ToolbarIcons } from "@/components/admin/common";
+import { ConfirmDialog, PageHeader, TimeEditDialog, Toolbar, ToolbarIcons } from "@/components/admin/common";
 import { getProjectColumns } from "@/components/admin/projects/project-table";
 
 export default function ProjectsManagePage() {
@@ -25,8 +25,10 @@ export default function ProjectsManagePage() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; project: ProjectType | null }>({ open: false, project: null });
   const [publishDialog, setPublishDialog] = useState<{ open: boolean; project: ProjectType | null }>({ open: false, project: null });
+  const [timeDialog, setTimeDialog] = useState<{ open: boolean; project: ProjectType | null }>({ open: false, project: null });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSavingTime, setIsSavingTime] = useState(false);
 
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
@@ -69,7 +71,7 @@ export default function ProjectsManagePage() {
       const response = await fetch(`/api/projects/${publishDialog.project.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...publishDialog.project, status: "published" }),
+        body: JSON.stringify({ ...publishDialog.project, status: "published", createdAt: undefined, publishedAt: undefined }),
       });
       const result = await response.json();
       if (!result.success) throw new Error(result.error || "发布失败");
@@ -81,6 +83,28 @@ export default function ProjectsManagePage() {
     } finally {
       setIsPublishing(false);
       setPublishDialog({ open: false, project: null });
+    }
+  };
+
+  const handleTimeSave = async (values: { createdAt: string | null; publishedAt: string | null }) => {
+    if (!timeDialog.project) return;
+    setIsSavingTime(true);
+    try {
+      const response = await fetch(`/api/projects/${timeDialog.project.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ createdAt: values.createdAt, publishedAt: values.publishedAt }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "保存失败");
+      toast.success("时间已更新");
+      setTimeDialog({ open: false, project: null });
+      fetchProjects();
+    } catch (error) {
+      console.error("Failed to update project time:", error);
+      toast.error("时间更新失败");
+    } finally {
+      setIsSavingTime(false);
     }
   };
 
@@ -122,6 +146,7 @@ export default function ProjectsManagePage() {
     { key: "select", header: "", width: "40px" },
     ...getProjectColumns({
       onEdit: (project) => router.push(`/admin/projects/${project.id}`),
+      onEditTime: (project) => setTimeDialog({ open: true, project }),
       onDelete: (project) => setDeleteDialog({ open: true, project }),
       onPublish: (project) => setPublishDialog({ open: true, project }),
     }),
@@ -219,6 +244,16 @@ export default function ProjectsManagePage() {
         confirmLabel="发布"
         onConfirm={handlePublish}
         isLoading={isPublishing}
+      />
+
+      <TimeEditDialog
+        open={timeDialog.open}
+        onOpenChange={(open) => setTimeDialog({ open, project: open ? timeDialog.project : null })}
+        title={timeDialog.project?.title || ""}
+        createdAt={timeDialog.project?.createdAt}
+        publishedAt={timeDialog.project?.publishedAt}
+        isLoading={isSavingTime}
+        onSave={handleTimeSave}
       />
     </div>
   );
