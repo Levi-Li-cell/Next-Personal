@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -65,6 +65,8 @@ export default function CardNav({
   adminHref = "/admin",
 }: CardNavProps) {
   const [expanded, setExpanded] = useState(false);
+  // 与 expanded 同步的 ref：供 useLayoutEffect 在重建 timeline 时读取最新状态
+  const expandedRef = useRef(false);
   const navRef = useRef<HTMLElement>(null);
   const cardRefs = useRef<Array<HTMLElement | null>>([]);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
@@ -76,11 +78,16 @@ export default function CardNav({
     if (!nav) return;
 
     const context = gsap.context(() => {
+      // 时间轴始终以折叠态为起点构建（保证 reverse 有位移可回退）；
+      // items 引用变化触发重建时，若当前处于展开态则 progress(1) 吸附回展开终点，
+      // 避免父组件重渲染把导航折叠回 64px（表现为“闪退”）。
+      // 整个过程在同步布局 effect 内完成，不会产生中间帧闪烁。
       gsap.set(nav, { height: 64 });
       gsap.set(cards, { y: 26, opacity: 0 });
       timelineRef.current = gsap.timeline({ paused: true })
         .to(nav, { height: "auto", duration: 0.42, ease: "power3.out" })
         .to(cards, { y: 0, opacity: 1, duration: 0.38, stagger: 0.08, ease: "power3.out" }, "-=0.18");
+      if (expandedRef.current) timelineRef.current.progress(1);
     }, nav);
 
     return () => {
@@ -92,18 +99,23 @@ export default function CardNav({
   const toggle = () => {
     const timeline = timelineRef.current;
     if (!timeline) return;
-    if (expanded) {
-      timeline.eventCallback("onReverseComplete", () => setExpanded(false));
+    if (expandedRef.current) {
+      timeline.eventCallback("onReverseComplete", () => {
+        expandedRef.current = false;
+        setExpanded(false);
+      });
       timeline.reverse();
     } else {
+      expandedRef.current = true;
       setExpanded(true);
       timeline.play(0);
     }
   };
 
   const close = () => {
-    if (!expanded) return;
+    if (!expandedRef.current) return;
     timelineRef.current?.reverse();
+    expandedRef.current = false;
     setExpanded(false);
   };
 

@@ -42,6 +42,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
     const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50);
     const offset = (page - 1) * limit;
+    // 排序：time = 最新（默认），hot = 热度（点赞数优先，同票按时间）
+    const sortMode = searchParams.get("sort") === "hot" ? "hot" : "time";
 
     const session = await getServerSession();
     const voter = searchParams.get("voter") || "";
@@ -58,7 +60,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         .select()
         .from(interactiveComment)
         .where(rootWhere)
-        .orderBy(desc(interactiveComment.createdAt))
+        .orderBy(
+          ...(sortMode === "hot"
+            ? [desc(interactiveComment.likeCount), desc(interactiveComment.createdAt)]
+            : [desc(interactiveComment.createdAt)]),
+        )
         .limit(limit)
         .offset(offset),
       db.select({ count: sql<number>`count(*)` }).from(interactiveComment).where(rootWhere),

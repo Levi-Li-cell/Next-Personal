@@ -120,7 +120,7 @@ const CommentItem = memo(function CommentItem({
   );
 });
 
-/** 评论区：输入框 + 一层回复树列表（根评论分页加载），支持点赞/回复，发表后联动“讨论”计数 */
+/** 评论区：输入框 + 排序切换（最新/最热）+ 一层回复树列表（根评论分页加载），支持点赞/回复，发表后联动“讨论”计数 */
 export default function GameComments({ workId, onCommentCountChange }: GameCommentsProps) {
   const { data: session } = useSession();
   const [comments, setComments] = useState<CommentNode[]>([]);
@@ -129,6 +129,8 @@ export default function GameComments({ workId, onCommentCountChange }: GameComme
   const [hasMore, setHasMore] = useState(false);
   const [rootTotal, setRootTotal] = useState(0);
   const [page, setPage] = useState(1);
+  /** 根评论排序：time = 最新（默认），hot = 热度（点赞量） */
+  const [sortMode, setSortMode] = useState<"time" | "hot">("time");
   const [submitting, setSubmitting] = useState(false);
   const [content, setContent] = useState("");
   const [guestName, setGuestName] = useState("");
@@ -151,8 +153,11 @@ export default function GameComments({ workId, onCommentCountChange }: GameComme
     let cancelled = false;
     async function fetchComments() {
       try {
+        setLoading(true);
         const key = getVisitorVoterKey();
-        const response = await fetch(`/api/games/${workId}/comments?voter=${encodeURIComponent(key)}&page=1&limit=${COMMENTS_PAGE_SIZE}`);
+        const response = await fetch(
+          `/api/games/${workId}/comments?voter=${encodeURIComponent(key)}&page=1&limit=${COMMENTS_PAGE_SIZE}&sort=${sortMode}`,
+        );
         const result = await response.json();
         if (!cancelled && result.success && result.data) {
           applyPage(result.data, false);
@@ -167,15 +172,17 @@ export default function GameComments({ workId, onCommentCountChange }: GameComme
     return () => {
       cancelled = true;
     };
-  }, [workId, applyPage]);
+  }, [workId, sortMode, applyPage]);
 
-  /** 追加下一页根评论（回复随根评论一并下发） */
+  /** 追加下一页根评论（回复随根评论一并下发，排序方式跟随当前 sortMode） */
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
       const key = getVisitorVoterKey();
-      const response = await fetch(`/api/games/${workId}/comments?voter=${encodeURIComponent(key)}&page=${page + 1}&limit=${COMMENTS_PAGE_SIZE}`);
+      const response = await fetch(
+        `/api/games/${workId}/comments?voter=${encodeURIComponent(key)}&page=${page + 1}&limit=${COMMENTS_PAGE_SIZE}&sort=${sortMode}`,
+      );
       const result = await response.json();
       if (result.success && result.data) {
         applyPage(result.data, true);
@@ -186,7 +193,7 @@ export default function GameComments({ workId, onCommentCountChange }: GameComme
     } finally {
       setLoadingMore(false);
     }
-  }, [applyPage, hasMore, loadingMore, page, workId]);
+  }, [applyPage, hasMore, loadingMore, page, sortMode, workId]);
 
   const submitComment = async (payload: { content: string; parentId?: string }) => {
     const body = {
@@ -356,6 +363,31 @@ export default function GameComments({ workId, onCommentCountChange }: GameComme
       </form>
 
       <div className="mt-5 min-h-0 flex-1">
+        {/* 排序切换：最新（时间倒序）/ 最热（点赞量优先） */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-medium text-ink">
+            评论列表
+            <span className="ml-2 text-xs font-normal text-ink/45">{rootTotal} 条</span>
+          </h2>
+          <div className="flex items-center gap-1 rounded-lg border border-ink/12 bg-ink/[0.04] p-0.5" role="group" aria-label="评论排序方式">
+            {([
+              { key: "time", label: "最新" },
+              { key: "hot", label: "最热" },
+            ] as const).map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setSortMode(option.key)}
+                aria-pressed={sortMode === option.key}
+                className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                  sortMode === option.key ? "bg-white font-medium text-ink shadow-sm" : "text-ink/55 hover:text-ink"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
         {loading ? (
           <div className="flex items-center gap-2 py-8 text-sm text-ink/50">
             <Loader2 className="h-4 w-4 animate-spin" />

@@ -14,6 +14,10 @@ function normalizeCta(value: string | undefined) {
   return value === "hr" || value === "client" ? value : "both";
 }
 
+function normalizeCategory(value: string | undefined) {
+  return value === "公告" || value === "技术" ? value : "生活";
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest) {
     const contentHtml = String(body.content || "");
     const markdownContent = htmlToMarkdown(contentHtml);
     const imageLinks = [...new Set([...extractImageUrlsFromHtml(contentHtml), body.coverImage].filter(Boolean))];
-    const category = body.category === "公告" ? "公告" : "生活";
+    const category = normalizeCategory(body.category);
 
     const [existingBlog] = await db.select().from(blog).where(eq(blog.slug, body.slug));
     if (existingBlog) {

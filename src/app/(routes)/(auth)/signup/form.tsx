@@ -13,7 +13,7 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUp } from "@/lib/auth/client";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -28,6 +28,8 @@ import { TurnstileWidget } from "../components/turnstile-widget";
 export default function SignUpForm() {
   const [isPending, startTransition] = useTransition();
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const router = useRouter();
   const turnstileSiteKey = useMemo(() => String(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "").trim(), []);
   const form = useForm<SignUpValues>({
     resolver: zodResolver(SignUpSchema),
@@ -42,9 +44,13 @@ export default function SignUpForm() {
   });
 
   function onSubmit(data: SignUpValues) {
+    if (!turnstileSiteKey || !captchaToken) {
+      toast.error(turnstileSiteKey ? "请先完成验证码验证" : "验证码服务未配置，请联系管理员");
+      return;
+    }
+    const token = captchaToken;
     startTransition(async () => {
-      console.log("submit data:", data);
-
+      try {
       const guardResponse = await fetch("/api/auth/register-guard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,32 +68,15 @@ export default function SignUpForm() {
         return;
       }
 
-      if (!turnstileSiteKey) {
-        toast.error("验证码服务未配置，请联系管理员");
-        return;
-      }
-
-      if (!captchaToken) {
-        toast.error("请先完成验证码验证");
-        return;
-      }
-
-      const captchaResponse = await fetch("/api/auth/captcha/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: captchaToken }),
-      });
-      const captchaResult = await captchaResponse.json();
-      if (!captchaResult?.success) {
-        toast.error(captchaResult?.error || "验证码校验失败，请重试");
-        setCaptchaToken(null);
-        return;
-      }
-
-      const response = await signUp.email(data);
+      const response = await signUp.email({
+        name: data.name,
+        email: data.email,
+        username: data.username,
+        password: data.password,
+        // 服务端 user.additionalFields 将 gender 设为 input:false，注册接口不接受该字段，传入会被忽略
+      }, { headers: { "x-turnstile-token": token } });
 
       if (response.error) {
-        console.log("SIGN_UP:", response.error.status);
         toast.error(response.error.message);
       } else {
         try {
@@ -114,8 +103,14 @@ export default function SignUpForm() {
           console.error("Create signup notification failed:", error);
         }
 
+        router.push("/");
+        router.refresh();
+      }
+      } catch {
+        toast.error("注册请求失败，请稍后重试");
+      } finally {
         setCaptchaToken(null);
-        redirect("/");
+        setCaptchaResetKey((value) => value + 1);
       }
     });
   }
@@ -249,13 +244,13 @@ export default function SignUpForm() {
 
         {turnstileSiteKey ? (
           <div className="rounded-md border border-white/10 p-2">
-            <TurnstileWidget siteKey={turnstileSiteKey} onTokenChange={setCaptchaToken} />
+            <TurnstileWidget siteKey={turnstileSiteKey} onTokenChange={setCaptchaToken} resetKey={captchaResetKey} />
           </div>
         ) : (
           <div className="text-xs text-destructive">验证码服务未配置，无法完成注册。</div>
         )}
 
-        <Button type="submit" disabled={isPending} className="mt-5 w-full">
+        <Button type="submit" disabled={isPending || !captchaToken || !turnstileSiteKey} className="mt-5 w-full">
           Sign Up
         </Button>
       </form>

@@ -2,18 +2,24 @@
 
 import type { InteractiveWorkType } from "@/db/schema/game";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, MoreHorizontal, Pencil, Send, Trash2 } from "lucide-react";
+import { Clock, ExternalLink, MoreHorizontal, Pencil, Send, Trash2, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Column } from "../data-table/data-table";
 
+/** 发布状态：published = 发布（前台可见），draft = 转草稿（下架） */
+export type GameStatus = "draft" | "published";
+
 interface GameTableProps {
   onEdit: (game: InteractiveWorkType) => void;
+  onEditTime?: (game: InteractiveWorkType) => void;
   onDelete: (game: InteractiveWorkType) => void;
-  onPublish?: (game: InteractiveWorkType) => void;
+  /** 调整单个游戏的发布状态（发布 / 转草稿） */
+  onSetStatus?: (game: InteractiveWorkType, status: GameStatus) => void;
 }
 
 const SCENE_TYPE_LABELS: Record<string, string> = {
+  "html-game": "HTML 游戏",
   "crystal-cluster": "晶体簇",
   "wave-field": "波场",
   "torus-knot": "环面纽结",
@@ -21,7 +27,7 @@ const SCENE_TYPE_LABELS: Record<string, string> = {
   "abyssal-well": "原生 WebGL2",
 };
 
-export function getGameColumns({ onEdit, onDelete, onPublish }: GameTableProps): Column<InteractiveWorkType>[] {
+export function getGameColumns({ onEdit, onEditTime, onDelete, onSetStatus }: GameTableProps): Column<InteractiveWorkType>[] {
   return [
     {
       key: "title",
@@ -121,12 +127,23 @@ export function getGameColumns({ onEdit, onDelete, onPublish }: GameTableProps):
               <Pencil className="mr-2 h-4 w-4" />
               编辑
             </DropdownMenuItem>
-            {onPublish && game.status !== "published" && (
-              <DropdownMenuItem onClick={() => onPublish(game)}>
+            {onEditTime && (
+              <DropdownMenuItem onClick={() => onEditTime(game)}>
+                <Clock className="mr-2 h-4 w-4" />
+                编辑时间
+              </DropdownMenuItem>
+            )}
+            {onSetStatus && game.status === "published" ? (
+              <DropdownMenuItem onClick={() => onSetStatus(game, "draft")}>
+                <EyeOff className="mr-2 h-4 w-4" />
+                转为草稿
+              </DropdownMenuItem>
+            ) : onSetStatus ? (
+              <DropdownMenuItem onClick={() => onSetStatus(game, "published")}>
                 <Send className="mr-2 h-4 w-4" />
                 发布
               </DropdownMenuItem>
-            )}
+            ) : null}
             <DropdownMenuItem onClick={() => onDelete(game)} className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               删除

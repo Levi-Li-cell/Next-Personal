@@ -3,7 +3,7 @@ import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { project } from "@/db/schema/project";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 const fallbackProjects = [
   {
@@ -70,6 +70,6 @@ export async function GET(request: NextRequest) {
         totalPages: 1,
       },
       degraded: true,
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   }
 }

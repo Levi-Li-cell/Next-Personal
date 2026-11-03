@@ -2,12 +2,13 @@
 
 import { ProjectType } from "@/db/schema/project";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, MoreHorizontal, Pencil, Send, Star, Trash2 } from "lucide-react";
+import { Clock, ExternalLink, MoreHorizontal, Pencil, Send, Star, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Column } from "../data-table/data-table";
 
 interface ProjectTableProps {
   onEdit: (project: ProjectType) => void;
+  onEditTime?: (project: ProjectType) => void;
   onDelete: (project: ProjectType) => void;
   onPublish?: (project: ProjectType) => void;
 }
@@ -18,7 +19,7 @@ const audienceLabels: Record<string, string> = {
   client: "甲方",
 };
 
-export function getProjectColumns({ onEdit, onDelete, onPublish }: ProjectTableProps): Column<ProjectType>[] {
+export function getProjectColumns({ onEdit, onEditTime, onDelete, onPublish }: ProjectTableProps): Column<ProjectType>[] {
   return [
     {
       key: "title",
@@ -88,6 +89,12 @@ export function getProjectColumns({ onEdit, onDelete, onPublish }: ProjectTableP
               <Pencil className="mr-2 h-4 w-4" />
               编辑
             </DropdownMenuItem>
+            {onEditTime && (
+              <DropdownMenuItem onClick={() => onEditTime(project)}>
+                <Clock className="mr-2 h-4 w-4" />
+                编辑时间
+              </DropdownMenuItem>
+            )}
             {onPublish && project.status !== "published" && (
               <DropdownMenuItem onClick={() => onPublish(project)}>
                 <Send className="mr-2 h-4 w-4" />

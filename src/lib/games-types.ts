@@ -18,7 +18,9 @@ export type SceneType =
   | "torus-knot"
   | "orbiting-spheres"
   /** 原生 WebGL2 外部引擎（iframe + AWP 协议承载），不走内置 Three.js 画布 */
-  | "abyssal-well";
+  | "abyssal-well"
+  /** Uploaded standalone HTML, executed in a sandboxed iframe. */
+  | "html-game";
 
 /** 场景配色与参数（宽松结构，由各场景自行消费） */
 export interface SceneConfig {

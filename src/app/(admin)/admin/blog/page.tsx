@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BlogType } from "@/db/schema/blog";
 import { DataTable, Column } from "@/components/admin/data-table";
-import { ConfirmDialog, PageHeader, Toolbar, ToolbarIcons } from "@/components/admin/common";
+import { ConfirmDialog, PageHeader, TimeEditDialog, Toolbar, ToolbarIcons } from "@/components/admin/common";
 import { getBlogColumns } from "@/components/admin/blog/blog-table";
 
 export default function BlogManagePage() {
@@ -25,8 +25,10 @@ export default function BlogManagePage() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; blog: BlogType | null }>({ open: false, blog: null });
   const [publishDialog, setPublishDialog] = useState<{ open: boolean; blog: BlogType | null }>({ open: false, blog: null });
+  const [timeDialog, setTimeDialog] = useState<{ open: boolean; blog: BlogType | null }>({ open: false, blog: null });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSavingTime, setIsSavingTime] = useState(false);
 
   const fetchBlogs = useCallback(async () => {
     setIsLoading(true);
@@ -69,7 +71,7 @@ export default function BlogManagePage() {
       const response = await fetch(`/api/blog/${publishDialog.blog.slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...publishDialog.blog, status: "published" }),
+        body: JSON.stringify({ ...publishDialog.blog, status: "published", createdAt: undefined, publishedAt: undefined }),
       });
       const result = await response.json();
       if (!result.success) throw new Error(result.error || "发布失败");
@@ -81,6 +83,28 @@ export default function BlogManagePage() {
     } finally {
       setIsPublishing(false);
       setPublishDialog({ open: false, blog: null });
+    }
+  };
+
+  const handleTimeSave = async (values: { createdAt: string | null; publishedAt: string | null }) => {
+    if (!timeDialog.blog) return;
+    setIsSavingTime(true);
+    try {
+      const response = await fetch(`/api/blog/${timeDialog.blog.slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ createdAt: values.createdAt, publishedAt: values.publishedAt }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || "保存失败");
+      toast.success("时间已更新");
+      setTimeDialog({ open: false, blog: null });
+      fetchBlogs();
+    } catch (error) {
+      console.error("Failed to update blog time:", error);
+      toast.error("时间更新失败");
+    } finally {
+      setIsSavingTime(false);
     }
   };
 
@@ -128,7 +152,7 @@ export default function BlogManagePage() {
             fetch(`/api/blog/${item.slug}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...item, status: "published" }),
+              body: JSON.stringify({ ...item, status: "published", createdAt: undefined, publishedAt: undefined }),
             })
           )
       );
@@ -145,6 +169,7 @@ export default function BlogManagePage() {
     { key: "select", header: "", width: "40px" },
     ...getBlogColumns({
       onEdit: (blog) => router.push(`/admin/blog/${blog.id}`),
+      onEditTime: (blog) => setTimeDialog({ open: true, blog }),
       onDelete: (blog) => setDeleteDialog({ open: true, blog }),
       onView: (blog) => window.open(`/blog/${blog.slug}`, "_blank"),
       onPublish: (blog) => setPublishDialog({ open: true, blog }),
@@ -246,6 +271,16 @@ export default function BlogManagePage() {
         confirmLabel="发布"
         onConfirm={handlePublish}
         isLoading={isPublishing}
+      />
+
+      <TimeEditDialog
+        open={timeDialog.open}
+        onOpenChange={(open) => setTimeDialog({ open, blog: open ? timeDialog.blog : null })}
+        title={timeDialog.blog?.title || ""}
+        createdAt={timeDialog.blog?.createdAt}
+        publishedAt={timeDialog.blog?.publishedAt}
+        isLoading={isSavingTime}
+        onSave={handleTimeSave}
       />
     </div>
   );

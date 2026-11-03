@@ -4,7 +4,7 @@ import { authorProfile, authorSkill, authorExperience, authorEducation, authorHo
 import { asc, desc } from "drizzle-orm";
 import { DEFAULT_AUTHOR_PHOTOS } from "@/lib/author-defaults";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 /**
  * 检测 UTF-8 字节被当作 Latin-1 解码导致的乱码。
@@ -253,6 +253,6 @@ export async function GET() {
         honors: fallbackHonors,
       },
       degraded: true,
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   }
 }

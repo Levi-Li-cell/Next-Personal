@@ -14,35 +14,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useAdminNotificationStore } from "@/stores/admin-notifications";
 
-export function AdminHeader() {
+interface AdminHeaderProps {
+  user: { name?: string; email?: string; image?: string | null };
+}
+
+export function AdminHeader({ user }: AdminHeaderProps) {
   const router = useRouter();
-  const [user, setUser] = useState<{ name?: string; email?: string; image?: string } | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  // 未读数来自全局 store：通知中心标记已读 / 新通知实时到达都会即时同步到铃铛角标
+  const unreadCount = useAdminNotificationStore((state) => state.unreadCount);
+  const refreshUnreadCount = useAdminNotificationStore((state) => state.refreshUnreadCount);
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      setUser(JSON.parse(userStr));
-    }
-
-    const fetchUnreadCount = async () => {
-      try {
-        const response = await fetch("/api/admin/notifications?unreadOnly=true&limit=1&page=1");
-        const result = await response.json();
-        if (result.success) {
-          setUnreadCount(result.unreadCount || 0);
-        }
-      } catch (error) {
-        console.error("Fetch unread notifications failed:", error);
-      }
-    };
-
-    fetchUnreadCount();
-    const timer = window.setInterval(fetchUnreadCount, 30000);
+    void refreshUnreadCount();
+    const timer = window.setInterval(() => void refreshUnreadCount(), 30000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [refreshUnreadCount]);
 
   const handleLogout = async () => {
     try {
@@ -101,7 +90,7 @@ export function AdminHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.image} alt={user?.name || "User"} />
+                <AvatarImage src={user.image || undefined} alt={user.name || "User"} />
                 <AvatarFallback>
                   {user?.name?.charAt(0)?.toUpperCase() || <User className="h-4 w-4" />}
                 </AvatarFallback>

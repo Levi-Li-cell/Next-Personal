@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth/server";
 import { toNextJsHandler } from "better-auth/next-js";
 import { NextResponse } from "next/server";
+import { verifySignupCaptcha } from "@/lib/auth/turnstile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (new URL(request.url).pathname.replace(/\/+$/, "") === "/api/auth/sign-up/email") {
+      const verification = await verifySignupCaptcha(request.headers.get("x-turnstile-token"));
+      if (!verification.success) {
+        return NextResponse.json({ code: verification.code, message: verification.error }, { status: verification.status });
+      }
+    }
     return await handler.POST(request);
   } catch (error) {
     console.error("[better-auth] POST handler error", error);

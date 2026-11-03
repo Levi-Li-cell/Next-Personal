@@ -51,10 +51,8 @@ export default function FrontendNotificationBell() {
   const [eventFilter, setEventFilter] = useState<"all" | "announcement" | "blog_published" | "project_published">("all");
 
   useEffect(() => {
+    // 未登录：不发起加载，保持初始空态（渲染层按“暂无消息”兜底，避免 effect 内同步 setState）
     if (!session?.user?.id) {
-      setItems([]);
-      setIsLoading(false);
-      setHasUnreadPulse(false);
       return;
     }
 
@@ -184,7 +182,7 @@ export default function FrontendNotificationBell() {
         align="end"
         side="bottom"
         sideOffset={8}
-        className="w-[360px] max-w-[calc(100vw-24px)] bg-black/95 border-white/10 text-white p-0 overflow-hidden"
+        className="w-[min(92vw,420px)] bg-black/95 border-white/10 text-white p-0 overflow-hidden"
       >
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
           <div className="font-medium">消息通知</div>
@@ -216,7 +214,7 @@ export default function FrontendNotificationBell() {
           </button>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
-          {isLoading ? (
+          {isLoading && session?.user?.id ? (
             <div className="px-4 py-6 text-sm text-white/60">加载中...</div>
           ) : sortedItems.length === 0 ? (
             <div className="px-4 py-8 text-sm text-white/60 flex items-center gap-2">
