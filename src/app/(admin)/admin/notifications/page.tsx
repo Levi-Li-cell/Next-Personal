@@ -92,7 +92,9 @@ export default function NotificationsPage() {
         ...prev,
       ]);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      void subscription.unsubscribe();
+    };
   }, []);
 
   /** 标记已读：乐观更新列表 + 全局未读数；失败则回滚重取 */

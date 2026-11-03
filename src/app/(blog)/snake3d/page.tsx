@@ -144,24 +144,21 @@ export default function Snake3DPage() {
   const controlRef = useRef({ started: false, paused: false, gameOver: false });
 
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  const [highScore, setHighScore] = useState(() => {
+    // 惰性初始化读取本地存档：避免在 effect 中直接 setState（react-hooks/set-state-in-effect）
+    if (typeof window === "undefined") return 0;
+    const saved = Number(window.localStorage.getItem("snake3d-high-score") || "0");
+    return Number.isFinite(saved) && saved > 0 ? saved : 0;
+  });
   const [lastScore, setLastScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
-  const [theme, setTheme] = useState<ThemeName>("forest");
+  const [theme, setTheme] = useState<ThemeName>(() => {
+    if (typeof window === "undefined") return "forest";
+    const savedTheme = window.localStorage.getItem("snake3d-theme");
+    return savedTheme === "forest" || savedTheme === "desert" ? savedTheme : "forest";
+  });
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    const savedTheme = window.localStorage.getItem("snake3d-theme");
-    if (savedTheme === "forest" || savedTheme === "desert") {
-      setTheme(savedTheme);
-    }
-
-    const savedHighScore = Number(window.localStorage.getItem("snake3d-high-score") || "0");
-    if (Number.isFinite(savedHighScore) && savedHighScore > 0) {
-      setHighScore(savedHighScore);
-    }
-  }, []);
 
   useEffect(() => {
     window.localStorage.setItem("snake3d-theme", theme);
