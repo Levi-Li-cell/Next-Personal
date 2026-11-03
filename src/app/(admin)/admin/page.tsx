@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, FolderKanban, Eye, ArrowRight, Activity } from "lucide-react";
+import { Users, FileText, FolderKanban, Eye, ArrowRight, Activity, Gamepad2 } from "lucide-react";
 import Link from "next/link";
 
 interface DashboardStats {
@@ -15,9 +15,11 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string;
-  type: "blog" | "project";
+  type: "blog" | "project" | "game";
   title: string;
   time: string;
+  /** 排序用原始时间戳（毫秒），用于跨类型按时间混合排序 */
+  sortTime: number;
 }
 
 function formatRelativeTime(input: string | Date | null | undefined) {
@@ -49,15 +51,17 @@ export default function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         // 获取统计数据
-        const [usersRes, blogsRes, projectsRes] = await Promise.all([
+        const [usersRes, blogsRes, projectsRes, gamesRes] = await Promise.all([
           fetch("/api/admin/users?limit=1"),
           fetch("/api/admin/blog?limit=5&status=all"),
           fetch("/api/admin/projects?limit=5&status=all"),
+          fetch("/api/admin/games?limit=5&status=all"),
         ]);
 
         const usersData = await usersRes.json();
         const blogsData = await blogsRes.json();
         const projectsData = await projectsRes.json();
+        const gamesData = await gamesRes.json();
 
         setStats({
           users: usersData.pagination?.total || 0,
@@ -73,6 +77,7 @@ export default function AdminDashboard() {
             type: "blog" as const,
             title: `${item.status === "published" ? "发布" : "更新"}文章：${item.title}`,
             time: formatRelativeTime(item.createdAt),
+            sortTime: new Date(item.createdAt || 0).getTime() || 0,
           })
         );
         const projectActivities = (projectsData.data || []).map(
@@ -81,10 +86,25 @@ export default function AdminDashboard() {
             type: "project" as const,
             title: `${item.status === "published" ? "发布" : "更新"}项目：${item.title}`,
             time: formatRelativeTime(item.createdAt),
+            sortTime: new Date(item.createdAt || 0).getTime() || 0,
+          })
+        );
+        const gameActivities = (gamesData.data || []).map(
+          (item: { id: string; title: string; createdAt?: string; status?: string }) => ({
+            id: `game-${item.id}`,
+            type: "game" as const,
+            title: `${item.status === "published" ? "发布" : "更新"}游戏：${item.title}`,
+            time: formatRelativeTime(item.createdAt),
+            sortTime: new Date(item.createdAt || 0).getTime() || 0,
           })
         );
 
-        setRecentActivities([...blogActivities, ...projectActivities].slice(0, 6));
+        // 博客 / 项目 / 游戏三类活动按时间倒序混合排列，取最近 6 条
+        setRecentActivities(
+          [...blogActivities, ...projectActivities, ...gameActivities]
+            .sort((a, b) => b.sortTime - a.sortTime)
+            .slice(0, 6)
+        );
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -174,6 +194,9 @@ export default function AdminDashboard() {
                     )}
                     {activity.type === "project" && (
                       <FolderKanban className="h-4 w-4 text-purple-500" />
+                    )}
+                    {activity.type === "game" && (
+                      <Gamepad2 className="h-4 w-4 text-amber-500" />
                     )}
                     <span className="text-sm">{activity.title}</span>
                   </div>
