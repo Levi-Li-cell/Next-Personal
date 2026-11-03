@@ -140,7 +140,7 @@ function createInitialState() {
 export default function Snake3DPage() {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef(createInitialState());
-  const timingRef = useRef({ lastMove: performance.now() });
+  const timingRef = useRef({ lastMove: 0 });
   const controlRef = useRef({ started: false, paused: false, gameOver: false });
 
   const [score, setScore] = useState(0);

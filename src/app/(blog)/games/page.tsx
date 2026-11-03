@@ -22,6 +22,8 @@ const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
 ];
 
 /** 不同场景类型的封面图标与默认渐变兜底 */
+const COVER_HEIGHT = "h-44";
+
 const SCENE_ICONS: Record<SceneType, typeof Gem> = {
   "html-game": Gamepad2,
   "crystal-cluster": Gem,
@@ -30,15 +32,6 @@ const SCENE_ICONS: Record<SceneType, typeof Gem> = {
   "orbiting-spheres": Orbit,
   "abyssal-well": Flame,
 };
-
-/** 由 slug 派生封面高度，制造瀑布流的高低差 */
-const COVER_HEIGHTS = ["h-44", "h-52", "h-60", "h-48"];
-
-function coverHeight(slug: string) {
-  let hash = 0;
-  for (let i = 0; i < slug.length; i += 1) hash = (hash * 31 + slug.charCodeAt(i)) % 997;
-  return COVER_HEIGHTS[hash % COVER_HEIGHTS.length];
-}
 
 function StatItem({ icon, value, label }: { icon: ReactNode; value: number; label: string }) {
   return (
@@ -66,7 +59,7 @@ function WorkCover({ work }: { work: WorkSummary }) {
   }
   return (
     <div
-      className={`relative ${coverHeight(work.slug)} w-full overflow-hidden`}
+      className={`relative ${COVER_HEIGHT} w-full overflow-hidden`}
       style={{ background: work.coverGradient || "linear-gradient(140deg, #2b3a55 0%, #a8c0e6 100%)" }}
     >
       {/* 细网格纹理，呼应全站 site-shell 背景 */}
@@ -150,7 +143,7 @@ export default function GamesPage() {
         <h1 className="mb-4 text-4xl font-bold md:text-5xl">
           <span className="bg-gradient-to-r from-accent via-peach to-ink bg-clip-text text-transparent">互动小游戏</span>
         </h1>
-        <p className="text-lg text-ink/60">AI 与程序化生成的交互作品展示，瀑布流缓慢更新中。</p>
+        <p className="text-lg text-ink/60">AI 与程序化生成的交互作品展示，按最新、最热、评分排序持续更新。</p>
       </motion.div>
 
       {/* 标签 + 排序工具条 */}
@@ -193,10 +186,10 @@ export default function GamesPage() {
       </div>
 
       {loading ? (
-        <div className="columns-1 gap-6 md:columns-2 lg:columns-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="mb-6 break-inside-avoid overflow-hidden rounded-2xl border border-ink/14 bg-ink/5">
-              <div className={`${COVER_HEIGHTS[index % COVER_HEIGHTS.length]} w-full animate-pulse bg-ink/10`} />
+            <div key={index} className="overflow-hidden rounded-2xl border border-ink/14 bg-ink/5">
+              <div className={`${COVER_HEIGHT} w-full animate-pulse bg-ink/10`} />
               <div className="space-y-3 p-5">
                 <div className="h-5 w-2/3 animate-pulse rounded bg-ink/10" />
                 <div className="h-4 w-full animate-pulse rounded bg-ink/10" />
@@ -218,19 +211,19 @@ export default function GamesPage() {
           <p className="mt-4 text-ink/60">{activeTag ? "该标签下暂无作品" : "暂无作品"}</p>
         </div>
       ) : (
-        <div className="columns-1 gap-6 [column-fill:_balance] md:columns-2 lg:columns-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {works.map((work) => (
-            <Link key={work.id} href={`/games/${work.slug}`} className="mb-6 block break-inside-avoid">
+            <Link key={work.id} href={`/games/${work.slug}`} className="block">
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "80px" }}
                 transition={{ duration: 0.3 }}
                 whileHover={{ y: -5 }}
-                className="group overflow-hidden rounded-2xl border border-ink/14 bg-ink/5 backdrop-blur-sm transition-colors hover:border-accent/40"
+                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-ink/14 bg-ink/5 backdrop-blur-sm transition-colors hover:border-accent/40"
               >
                 <WorkCover work={work} />
-                <div className="p-5">
+                <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-start justify-between gap-3">
                     <h2 className="text-lg font-semibold leading-snug text-ink transition-colors group-hover:text-accent">
                       {work.title}
@@ -247,7 +240,7 @@ export default function GamesPage() {
                       </span>
                     ))}
                   </div>
-                  <div className="mt-4 flex items-center gap-4 border-t border-ink/10 pt-3 text-xs text-ink/50">
+                  <div className="mt-auto flex items-center gap-4 border-t border-ink/10 pt-3 text-xs text-ink/50">
                     <StatItem icon={<Eye className="h-3.5 w-3.5" />} value={work.viewCount} label="浏览" />
                     <StatItem icon={<Heart className="h-3.5 w-3.5" />} value={work.likeCount} label="喜欢" />
                     <StatItem icon={<MessageSquare className="h-3.5 w-3.5" />} value={work.commentCount} label="讨论" />

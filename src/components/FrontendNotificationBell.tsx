@@ -184,7 +184,7 @@ export default function FrontendNotificationBell() {
         align="end"
         side="bottom"
         sideOffset={8}
-        className="w-[360px] max-w-[calc(100vw-24px)] bg-black/95 border-white/10 text-white p-0 overflow-hidden"
+        className="w-[min(92vw,420px)] bg-black/95 border-white/10 text-white p-0 overflow-hidden"
       >
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
           <div className="font-medium">消息通知</div>

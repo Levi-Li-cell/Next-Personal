@@ -5,11 +5,13 @@ import { interactiveWork } from "@/db/schema/game";
 import { requireGameAdmin } from "@/lib/admin/game-auth";
 import { gameInputSchema } from "@/lib/game-input";
 import { isUploadedGameHtmlUrl } from "@/lib/game-assets";
+import { ensureGameTablesOnce } from "@/lib/games";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const denied = await requireGameAdmin();
     if (denied) return denied;
+    await ensureGameTablesOnce();
     const { id } = await params;
     const [work] = await db.select().from(interactiveWork).where(eq(interactiveWork.id, id)).limit(1);
     if (!work) {
@@ -26,6 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const denied = await requireGameAdmin();
     if (denied) return denied;
+    await ensureGameTablesOnce();
     const { id } = await params;
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -49,6 +52,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const updateData: Record<string, unknown> = {};
     if (body.title !== undefined) updateData.title = body.title;
+    if (body.slug !== undefined && body.slug !== existing.slug) {
+      // Slug 变更时做唯一性校验（排除自身），避免与其它作品冲突
+      const [conflict] = await db
+        .select({ id: interactiveWork.id })
+        .from(interactiveWork)
+        .where(eq(interactiveWork.slug, body.slug))
+        .limit(1);
+      if (conflict && conflict.id !== id) {
+        return NextResponse.json({ success: false, error: "URL Slug 已存在，请更换后重试" }, { status: 400 });
+      }
+      updateData.slug = body.slug;
+    }
     if (body.tagline !== undefined) updateData.tagline = body.tagline;
     if (body.description !== undefined) updateData.description = body.description;
     if (body.authorName !== undefined) updateData.authorName = body.authorName;
@@ -63,7 +78,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.publishedAt !== undefined) updateData.publishedAt = body.publishedAt ? new Date(body.publishedAt) : null;
     if (body.status !== undefined) {
       updateData.status = body.status;
-      if (body.status === "published") {
+      // 仅在 草稿 → 发布 的转变时刷新发布时间；编辑已发布作品或转草稿都不改写历史发布时间
+      if (body.status === "published" && existing.status !== "published") {
         updateData.publishedAt = new Date();
       }
     }
@@ -88,6 +104,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   try {
     const denied = await requireGameAdmin();
     if (denied) return denied;
+    await ensureGameTablesOnce();
     // 外键 ON DELETE CASCADE 会自动删除关联的评分、评论、评论点赞
     const { id } = await params;
     const [deleted] = await db.delete(interactiveWork).where(eq(interactiveWork.id, id)).returning();

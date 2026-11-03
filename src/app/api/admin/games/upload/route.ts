@@ -1,8 +1,8 @@
-import { put } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { requireGameAdmin } from "@/lib/admin/game-auth";
-import { isGameHtmlFilename, MAX_GAME_HTML_BYTES, validateGameHtmlFile } from "@/lib/game-assets";
+import { isGameHtmlFilename, isUploadedGameHtmlUrl, MAX_GAME_HTML_BYTES, validateGameHtmlFile } from "@/lib/game-assets";
 
 export const runtime = "nodejs";
 
@@ -66,5 +66,31 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Failed to upload game HTML:", error);
     return NextResponse.json({ success: false, error: "HTML 上传失败，请稍后重试" }, { status: 500 });
+  }
+}
+
+/** 清理上传后未保存的孤儿文件：仅允许删除 games/html/ 白名单下的 Blob，防越权删除 */
+export async function DELETE(request: Request) {
+  try {
+    const denied = await requireGameAdmin();
+    if (denied) return denied;
+    const url = new URL(request.url).searchParams.get("url") || "";
+    if (!isUploadedGameHtmlUrl(url)) {
+      return NextResponse.json({ success: false, error: "无效的游戏文件地址" }, { status: 400 });
+    }
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json({ success: false, error: "文件存储未配置，请设置 BLOB_READ_WRITE_TOKEN" }, { status: 503 });
+    }
+    await del(url);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    // Blob 不存在（已被清理）视为成功，保证清理幂等
+    const code = (error as { code?: string } | null)?.code;
+    const status = (error as { status?: number } | null)?.status;
+    if (code === "blob_not_found" || code === "not_found" || status === 404) {
+      return NextResponse.json({ success: true });
+    }
+    console.error("Failed to delete game HTML:", error);
+    return NextResponse.json({ success: false, error: "HTML 清理失败，请稍后重试" }, { status: 500 });
   }
 }

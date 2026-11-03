@@ -34,12 +34,12 @@ export default function StarRating({
     const percent = (clamped / 5) * 100;
     return (
       <span className={`relative inline-flex shrink-0 ${className}`} aria-label={`平均评分 ${clamped.toFixed(1)} / 5`}>
-        <span className="flex gap-0.5 text-ink/25">
+        <span className="flex gap-0.5 text-ink/30">
           {Array.from({ length: 5 }, (_, index) => (
             <Star key={index} style={{ width: size, height: size }} aria-hidden="true" />
           ))}
         </span>
-        <span className="absolute inset-0 flex gap-0.5 overflow-hidden text-accent" style={{ width: `${percent}%` }}>
+        <span className="absolute inset-0 flex gap-0.5 overflow-hidden text-amber-500" style={{ width: `${percent}%` }}>
           {Array.from({ length: 5 }, (_, index) => (
             <Star
               key={index}
@@ -77,7 +77,7 @@ export default function StarRating({
         >
           <Star
             style={{ width: size, height: size }}
-            className={score <= activeScore ? "text-accent" : "text-ink/25"}
+            className={score <= activeScore ? "text-amber-500 drop-shadow-[0_1px_1px_rgba(180,83,9,0.35)]" : "text-ink/30"}
             fill={score <= activeScore ? "currentColor" : "none"}
             aria-hidden="true"
           />

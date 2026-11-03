@@ -85,7 +85,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   // 不是管理员
-  if (!isAdmin) {
+  if (!isAdmin || !session?.user) {
     return null;
   }
 
@@ -94,7 +94,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <AdminSidebar />
       <SidebarInset>
         <RealtimeAdminNotification />
-        <AdminHeader />
+        <AdminHeader user={session.user} />
         <div className="flex flex-col">
           <div className="border-b px-6 py-4">
             <AdminBreadcrumb />

@@ -345,7 +345,7 @@ export default function GameDetailPage() {
             <Card>
               <div className="flex items-baseline justify-between">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-ink/55">作品评分</h2>
-                <p className="text-2xl font-bold text-accent">
+                <p className="text-2xl font-bold text-amber-600">
                   {rating.average.toFixed(1)}
                   <span className="ml-1 text-xs font-normal text-ink/45">/ 5</span>
                 </p>
@@ -374,7 +374,7 @@ export default function GameDetailPage() {
                       <span className="w-7 shrink-0 text-ink/55">{score} 星</span>
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink/10">
                         <div
-                          className="h-full rounded-full bg-accent transition-[width] duration-500"
+                          className="h-full rounded-full bg-amber-500 transition-[width] duration-500"
                           style={{ width: `${percent}%` }}
                           role="progressbar"
                           aria-valuenow={percent}
@@ -392,14 +392,14 @@ export default function GameDetailPage() {
           </aside>
         </div>
 
-          {/* 下排：左 = 作品描述，右 = 评论区 */}
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {/* 下排：上 = 作品描述（全宽），下 = 评论区（全宽，便于评论按时间/热度排序浏览） */}
+          <div className="mt-6 grid gap-6">
             <Card>
               <div className="flex items-baseline justify-between">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-ink/55">作品描述</h2>
                 <span className="text-xs text-ink/45">{work.description.length} 字</span>
               </div>
-              <div className="relative mt-4">
+              <div className="relative mt-4 max-w-3xl">
                 <div
                   className={`space-y-3.5 overflow-hidden transition-[max-height] duration-500 ${
                     descExpanded ? "max-h-[2400px]" : "max-h-56"

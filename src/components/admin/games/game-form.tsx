@@ -74,6 +74,12 @@ interface GameFormProps {
   onSubmit: (data: GameFormValues) => void | Promise<void>;
   isLoading?: boolean;
   onUploadingChange?: (uploading: boolean) => void;
+  /** 已上传但尚未随表单保存的 Blob 地址变化时通知父级（null = 已移除），用于孤儿文件清理 */
+  onUploadedChange?: (url: string | null) => void;
+  /** 编辑模式：传入被编辑游戏的表单初始值；缺省 = 新增模式 */
+  initialValues?: GameFormValues | null;
+  /** 提交按钮文案（新增默认“创建游戏”，编辑传“保存修改”） */
+  submitLabel?: string;
 }
 
 const defaultValues: GameFormValues = {
@@ -102,7 +108,17 @@ const sceneLabels: Record<(typeof SCENE_TYPES)[number], string> = {
   "abyssal-well": "原生 WebGL2",
 };
 
-export function GameForm({ open, onSubmit, isLoading = false, onUploadingChange }: GameFormProps) {
+/** 从已上传的 Blob 地址推断原始文件名（编辑模式回显“已上传文件”时使用） */
+function fileNameFromUrl(url: string): string {
+  try {
+    const lastSegment = new URL(url).pathname.split("/").pop() || "";
+    return decodeURIComponent(lastSegment) || "HTML 文件";
+  } catch {
+    return "HTML 文件";
+  }
+}
+
+export function GameForm({ open, onSubmit, isLoading = false, onUploadingChange, onUploadedChange, initialValues = null, submitLabel }: GameFormProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadedName, setUploadedName] = useState("");
@@ -112,12 +128,18 @@ export function GameForm({ open, onSubmit, isLoading = false, onUploadingChange 
   const fileInput = useRef<HTMLInputElement | null>(null);
   const form = useForm<GameFormValues>({
     resolver: zodResolver(gameFormSchema),
-    defaultValues,
+    defaultValues: initialValues ?? defaultValues,
   });
 
   useEffect(() => {
-    if (open) form.reset(defaultValues);
-  }, [form, open]);
+    if (!open) return;
+    const values = initialValues ?? defaultValues;
+    form.reset(values);
+    // 编辑模式回显已上传文件名（新增模式无文件）
+    setUploadedName(values.htmlUrl ? fileNameFromUrl(values.htmlUrl) : "");
+    setUploadError("");
+    setPreviewOpen(false);
+  }, [form, open, initialValues]);
 
   useEffect(() => () => uploadController.current?.abort(), []);
 
@@ -149,6 +171,7 @@ export function GameForm({ open, onSubmit, isLoading = false, onUploadingChange 
       }
       form.setValue("htmlUrl", result.data.url, { shouldDirty: true, shouldValidate: true });
       setUploadedName(file.name);
+      onUploadedChange?.(result.data.url);
     } catch (error) {
       if (!controller.signal.aborted) setUploadError(error instanceof Error ? error.message : "HTML 上传失败，请重试");
     } finally {
@@ -328,6 +351,7 @@ export function GameForm({ open, onSubmit, isLoading = false, onUploadingChange 
                       setUploadedName("");
                       setUploadError("");
                       setPreviewOpen(false);
+                      onUploadedChange?.(null);
                     }}><X className="size-4" /></Button>
                   </div>
                 ) : null}
@@ -465,7 +489,7 @@ export function GameForm({ open, onSubmit, isLoading = false, onUploadingChange 
         <div className="flex justify-end pt-1">
           <Button type="submit" disabled={isLoading || uploading}>
             {(isLoading || uploading) && <Loader2 className="mr-2 size-4 animate-spin" />}
-            {uploading ? "上传中..." : isLoading ? "创建中..." : "创建游戏"}
+            {uploading ? "上传中..." : isLoading ? (initialValues ? "保存中..." : "创建中...") : (submitLabel ?? (initialValues ? "保存修改" : "创建游戏"))}
           </Button>
         </div>
       </form>

@@ -15,7 +15,7 @@ import tailwindcss from "@tailwindcss/postcss";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 const assetUrl = "https://teststore.public.blob.vercel-storage.com/games/html/test-game.html";
-const state = { denied: false, existing: [], inserted: null, uploads: [], throwUpload: false };
+const state = { denied: false, existing: [], inserted: null, uploads: [], throwUpload: false, throwUnique: false, deletions: [] };
 globalThis.__gameTest = state;
 
 const mockPlugin = {
@@ -25,14 +25,19 @@ const mockPlugin = {
       "@/lib/admin/game-auth": `export async function requireGameAdmin() { return globalThis.__gameTest.denied ? Response.json({success:false}, {status:403}) : null; }`,
       "@/db": `export const db = {
         select: () => ({ from: () => ({ where: () => ({ limit: async () => globalThis.__gameTest.existing }) }) }),
-        insert: () => ({ values: (data) => { globalThis.__gameTest.inserted = data; return { returning: async () => [data] }; } }),
+        insert: () => ({ values: (data) => {
+          if (globalThis.__gameTest.throwUnique) { const error = new Error("duplicate key"); error.code = "23505"; throw error; }
+          globalThis.__gameTest.inserted = data; return { returning: async () => [data] };
+        } }),
         update: () => ({ set: (data) => { globalThis.__gameTest.updated = data; return { where: () => ({returning: async () => [data]}) }; } }),
+        execute: async () => {},
       };`,
       "@vercel/blob": `export async function put(name, bytes, options) {
         if (globalThis.__gameTest.throwUpload) throw new Error("Simulated storage failure");
         globalThis.__gameTest.uploads.push({name, size: bytes.length, options});
         return {url: ${JSON.stringify(assetUrl)}};
-      }`,
+      }
+      export async function del(url) { globalThis.__gameTest.deletions = (globalThis.__gameTest.deletions || []).concat(url); }`,
     };
     bundler.onResolve({ filter: /^(@\/db$|@\/lib\/admin\/game-auth$|@vercel\/blob$)/ }, (args) => ({ path: args.path, namespace: "test-mock" }));
     bundler.onLoad({ filter: /.*/, namespace: "test-mock" }, (args) => ({ contents: mocks[args.path], loader: "js" }));
@@ -102,6 +107,25 @@ assert.equal((await games.POST(jsonRequest(validInput))).status, 400);
 assert.equal((await game.PUT(jsonRequest({ createdAt: "2026-10-01T00:00:00Z" }, "PUT"), { params: Promise.resolve({ id: "existing" }) })).status, 200);
 assert.equal((await game.PUT(jsonRequest({ sceneConfig: {} }, "PUT"), { params: Promise.resolve({ id: "existing" }) })).status, 400);
 console.log("PASS: file validation, URL validation, authorization gate, upload failures, save/publish, duplicate slug, time editing");
+
+// 并发同 slug 竞态：预检查通过但插入撞唯一约束 → 友好 400 而非 500
+state.throwUnique = true;
+state.existing = [];
+const conflictResponse = await games.POST(jsonRequest(validInput));
+assert.equal(conflictResponse.status, 400);
+assert.equal((await conflictResponse.json()).error, "URL Slug 已存在，请更换后重试");
+state.throwUnique = false;
+console.log("PASS: concurrent duplicate slug maps unique violation to friendly 400");
+
+// 孤儿文件清理接口：权限门、URL 白名单、幂等删除（前面的 finally 已删掉 BLOB token，这里补一个假凭据）
+process.env.BLOB_READ_WRITE_TOKEN = "test-only-not-a-secret";
+state.denied = true;
+assert.equal((await upload.DELETE(new Request(`http://localhost/api/admin/games/upload?url=${encodeURIComponent(assetUrl)}`, { method: "DELETE" }))).status, 403);
+state.denied = false;
+assert.equal((await upload.DELETE(new Request("http://localhost/api/admin/games/upload?url=https://example.com/games/html/x.html", { method: "DELETE" }))).status, 400);
+assert.equal((await upload.DELETE(new Request(`http://localhost/api/admin/games/upload?url=${encodeURIComponent(assetUrl)}`, { method: "DELETE" }))).status, 200);
+assert.deepEqual(state.deletions, [assetUrl]);
+console.log("PASS: orphan blob cleanup gated by admin and upload URL allowlist");
 
 const fixtureHtml = `<!doctype html><html><body style="margin:0;background:#176f56;color:white;font:24px sans-serif"><canvas id="scene" width="320" height="160"></canvas><button id="play">Play</button><p id="score">0</p><script>const c=document.querySelector('canvas').getContext('2d');c.fillStyle='#f2ce56';c.fillRect(20,20,280,120);document.querySelector('#play').onclick=()=>document.querySelector('#score').textContent='1';try{parent.document.body.dataset.escaped='yes'}catch{document.body.dataset.isolated='yes'}</script></body></html>`;
 const browserBundle = await build({
