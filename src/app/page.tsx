@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import CardNav from "@/components/CardNav";
+import GameEntry from "@/components/liwei-3d/ui/GameEntry";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useScrollGuard } from "@/hooks/useScrollGuard";
 import { buildSiteNavItems } from "@/lib/site-nav";
@@ -37,6 +38,8 @@ export default function HomePage() {
     <>
       <div className="liwei-3d">
         <LiweiApp adminMode={flags.enable3DTools && isAdmin} />
+        {/* 互动小游戏快捷入口：跟随开关，与顶部导航的游戏项保持一致 */}
+        {flags.showInteractiveGames && <GameEntry />}
       </div>
       <CardNav
         items={navItems}
